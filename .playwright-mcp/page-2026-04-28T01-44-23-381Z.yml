@@ -1,0 +1,63 @@
+- generic [ref=e26]:
+  - generic [ref=e29]:
+    - generic [ref=e32]:
+      - generic [ref=e33]: Meal Prep Dashboard
+      - generic [ref=e34]: Plan your week, get a smart grocery list, stay on your macros.
+      - generic [ref=e36]:
+        - generic [ref=e39]: This week
+        - generic [ref=e41]:
+          - generic [ref=e42]:
+            - generic [ref=e43]: "0"
+            - generic [ref=e44]: Recipes
+          - generic [ref=e45]:
+            - generic [ref=e46]: "0"
+            - generic [ref=e47]: Servings
+          - generic [ref=e48]:
+            - generic [ref=e49]: —
+            - generic [ref=e50]: Est. cost
+      - generic [ref=e52]:
+        - generic [ref=e55]: Daily nutrition vs goal
+        - generic [ref=e56]:
+          - generic [ref=e57]:
+            - generic [ref=e58]:
+              - generic [ref=e59]: Calories
+              - generic [ref=e60]: 0 / 2000 (-100%)
+            - progressbar [ref=e61]
+          - generic [ref=e64]:
+            - generic [ref=e65]:
+              - generic [ref=e66]: Protein
+              - generic [ref=e67]: 0g / 150g (-100%)
+            - progressbar [ref=e68]
+          - generic [ref=e71]:
+            - generic [ref=e72]:
+              - generic [ref=e73]: Carbs
+              - generic [ref=e74]: 0g / 200g (-100%)
+            - progressbar [ref=e75]
+          - generic [ref=e78]:
+            - generic [ref=e79]:
+              - generic [ref=e80]: Fat
+              - generic [ref=e81]: 0g / 67g (-100%)
+            - progressbar [ref=e82]
+      - generic [ref=e85]:
+        - button "Plan this week" [ref=e87] [cursor=pointer]:
+          - generic [ref=e88]:
+            - generic [ref=e89]:
+              - img: 󰨳
+            - generic [ref=e90]: Plan this week
+        - button "Grocery list" [ref=e92] [cursor=pointer]:
+          - generic [ref=e93]:
+            - generic [ref=e94]:
+              - img: 󰄐
+            - generic [ref=e95]: Grocery list
+    - heading "Dashboard" [level=1] [ref=e98]
+  - generic [ref=e103]:
+    - tab "󰋞" [ref=e104] [cursor=pointer]:
+      - generic [ref=e105]: 󰋞
+    - tab "󱓷" [ref=e106] [cursor=pointer]:
+      - generic [ref=e107]: 󱓷
+    - tab "󰨳" [ref=e108] [cursor=pointer]:
+      - generic [ref=e109]: 󰨳
+    - tab "󱗫" [ref=e110] [cursor=pointer]:
+      - generic [ref=e111]: 󱗫
+    - tab "󰒓" [ref=e112] [cursor=pointer]:
+      - generic [ref=e113]: 󰒓
