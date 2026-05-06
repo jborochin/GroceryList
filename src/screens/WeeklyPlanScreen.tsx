@@ -1,5 +1,9 @@
 import React, { useMemo } from 'react';
-import { ScrollView, View } from 'react-native';
+import { View } from 'react-native';
+import Animated, {
+  useAnimatedScrollHandler,
+  useSharedValue,
+} from 'react-native-reanimated';
 import { useNavigation } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -13,6 +17,8 @@ import { NutritionBar } from '../components/NutritionBar';
 import { TabParamList } from '../navigation/types';
 import { useAppTheme } from '../theme/tokens';
 import {
+  AmbientBackground,
+  CollapsingHeader,
   Header,
   Surface,
   Text,
@@ -54,6 +60,13 @@ export function WeeklyPlanScreen() {
 
   const totalServings = plan.reduce((acc, p) => acc + p.desiredServings, 0);
 
+  const scrollY = useSharedValue(0);
+  const onScroll = useAnimatedScrollHandler({
+    onScroll: (e) => {
+      scrollY.value = e.contentOffset.y;
+    },
+  });
+
   if (recipes.length === 0) {
     return (
       <View style={{ flex: 1, backgroundColor: t.palette.bg, paddingTop: insets.top }}>
@@ -68,13 +81,16 @@ export function WeeklyPlanScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: t.palette.bg }}>
-      <ScrollView
+      <AmbientBackground />
+      <Animated.ScrollView
         contentContainerStyle={{
           paddingTop: insets.top,
           paddingHorizontal: t.spacing.lg,
           paddingBottom: TAB_BAR_SPACE + (planned.length > 0 ? 80 : t.spacing.lg),
         }}
         showsVerticalScrollIndicator={false}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
       >
         <Header
           title="This week"
@@ -128,19 +144,19 @@ export function WeeklyPlanScreen() {
                 label="Protein"
                 actual={nutrition.daily.proteinG}
                 target={nutrition.target.dailyProteinG}
-                color="#C44A6E"
+                color={t.palette.textPrimary}
               />
               <NutritionBar
                 label="Carbs"
                 actual={nutrition.daily.carbsG}
                 target={nutrition.target.dailyCarbsG}
-                color="#7C3AED"
+                color={t.palette.textSecondary}
               />
               <NutritionBar
                 label="Fat"
                 actual={nutrition.daily.fatG}
                 target={nutrition.target.dailyFatG}
-                color="#D97706"
+                color={t.palette.textTertiary}
               />
             </Surface>
           </>
@@ -181,7 +197,8 @@ export function WeeklyPlanScreen() {
             </View>
           </>
         ) : null}
-      </ScrollView>
+      </Animated.ScrollView>
+      <CollapsingHeader title="This week" scrollY={scrollY} />
 
       {planned.length > 0 ? (
         <View

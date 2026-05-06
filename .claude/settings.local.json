@@ -8,7 +8,9 @@
       "mcp__plugin_playwright_playwright__browser_console_messages",
       "mcp__plugin_playwright_playwright__browser_snapshot",
       "Bash(python *)",
-      "Bash(dir *)"
+      "Bash(dir *)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\vorte\\\\OneDrive\\\\Desktop\\\\Projects\\\\GroceryList\" -Recurse -Directory)",
+      "Bash(Select-Object -ExpandProperty FullName)"
     ]
   }
 }

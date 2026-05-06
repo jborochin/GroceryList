@@ -7,10 +7,13 @@ import Animated, {
   withTiming,
   interpolate,
 } from 'react-native-reanimated';
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { tokens, useAppTheme } from '../../theme/tokens';
+import { useSettingsStore } from '../../store/useSettingsStore';
 import { Text } from './Text';
 import { haptics } from '../../utils/haptics';
 
@@ -48,6 +51,7 @@ export function AppTabBar({ state, navigation }: BottomTabBarProps) {
   const t = useAppTheme();
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
+  const reduceEffects = useSettingsStore((s) => s.settings.reduceVisualEffects);
 
   const tabCount = state.routes.length;
   const innerWidth = windowWidth - HORIZONTAL_PADDING * 2 - INNER_PAD * 2;
@@ -63,6 +67,8 @@ export function AppTabBar({ state, navigation }: BottomTabBarProps) {
     transform: [{ translateX: indicatorX.value }],
     width: tabWidth,
   }));
+
+  const allowBlur = !reduceEffects && Platform.OS !== 'web';
 
   return (
     <View
@@ -80,13 +86,43 @@ export function AppTabBar({ state, navigation }: BottomTabBarProps) {
         style={[
           styles.bar,
           {
-            backgroundColor: t.palette.surface,
-            borderColor: t.palette.border,
             borderRadius: t.radius.xl,
-            ...t.shadow.medium,
+            ...t.shadow.strong,
           },
         ]}
       >
+        {/* Layered glass: blur → translucent fill → rim gradient */}
+        {allowBlur ? (
+          <BlurView
+            intensity={t.blur.thick}
+            tint={t.palette.blurTint}
+            experimentalBlurMethod="dimezisBlurView"
+            style={StyleSheet.absoluteFill}
+          />
+        ) : null}
+        <View
+          style={[
+            StyleSheet.absoluteFill,
+            { backgroundColor: allowBlur ? t.palette.glassThick : t.palette.surface },
+          ]}
+        />
+        <LinearGradient
+          pointerEvents="none"
+          colors={[t.palette.rimLight, 'transparent', t.palette.rimGround]}
+          locations={[0, 0.5, 1]}
+          style={StyleSheet.absoluteFill}
+        />
+        <View
+          pointerEvents="none"
+          style={[
+            StyleSheet.absoluteFill,
+            {
+              borderRadius: t.radius.xl,
+              borderWidth: StyleSheet.hairlineWidth,
+              borderColor: t.palette.border,
+            },
+          ]}
+        />
         <View style={[styles.row, { padding: INNER_PAD }]}>
           <Animated.View
             pointerEvents="none"
@@ -98,10 +134,18 @@ export function AppTabBar({ state, navigation }: BottomTabBarProps) {
                 left: INNER_PAD,
                 borderRadius: t.radius.lg,
                 backgroundColor: t.palette.primary,
+                overflow: 'hidden',
               },
               indicatorStyle,
             ]}
-          />
+          >
+            {/* Subtle gloss on the active indicator so it catches light */}
+            <LinearGradient
+              colors={['rgba(255,255,255,0.18)', 'rgba(255,255,255,0)']}
+              locations={[0, 0.6]}
+              style={StyleSheet.absoluteFill}
+            />
+          </Animated.View>
           {state.routes.map((route, index) => {
             const focused = state.index === index;
             const iconName = focused
@@ -198,7 +242,6 @@ const styles = StyleSheet.create({
   },
   bar: {
     height: BAR_HEIGHT,
-    borderWidth: Platform.OS === 'android' ? 0 : StyleSheet.hairlineWidth,
     overflow: 'hidden',
   },
   row: {

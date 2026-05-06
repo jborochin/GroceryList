@@ -16,6 +16,7 @@ import { RootNavigator } from './src/navigation/RootNavigator';
 import { lightTheme, darkTheme } from './src/theme/theme';
 import { useHydration } from './src/store/hydration';
 import { seedIfFirstLaunch } from './src/store/seedFirstLaunch';
+import { ToastHost } from './src/components/ui/ToastHost';
 
 export default function App() {
   const scheme = useColorScheme();
@@ -58,7 +59,9 @@ export default function App() {
               notification: theme.colors.secondary,
             },
           }}>
-            <RootNavigator />
+            <ToastHost>
+              <RootNavigator />
+            </ToastHost>
             <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} translucent />
           </NavigationContainer>
         </PaperProvider>

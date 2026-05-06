@@ -1,5 +1,14 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Platform, ScrollView, View } from 'react-native';
+import Animated, {
+  Easing,
+  cancelAnimation,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,14 +26,19 @@ import { Ingredient, NutritionPerServing } from '../types';
 import { RootStackParamList } from '../navigation/types';
 import { useAppTheme } from '../theme/tokens';
 import {
+  AmbientBackground,
   Button,
+  GlassSurface,
   IconButton,
   Input,
   SectionHeader,
   SegmentedControl,
   Surface,
   Text,
+  useToast,
 } from '../components/ui';
+import { useReducedMotion } from '../hooks/useReducedMotion';
+import { haptics } from '../utils/haptics';
 
 type ImportErrorKind = RecipeParseErrorKind | 'unknown';
 
@@ -88,12 +102,51 @@ export function AddRecipeScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<Nav>();
   const route = useRoute<Rt>();
+  const toast = useToast();
+  const reduceMotion = useReducedMotion();
   const addRecipe = useRecipeStore((s) => s.addRecipe);
 
   const [mode, setMode] = useState<Mode>(route.params?.prefilledUrl ? 'url' : 'manual');
   const [url, setUrl] = useState(route.params?.prefilledUrl ?? '');
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState<{ kind: ImportErrorKind; message: string } | null>(null);
+
+  // Pulse the URL input border while parsing; shake on error.
+  const pulse = useSharedValue(0);
+  const shake = useSharedValue(0);
+
+  useEffect(() => {
+    if (importing && !reduceMotion) {
+      pulse.value = withRepeat(
+        withTiming(1, { duration: 700, easing: Easing.inOut(Easing.quad) }),
+        -1,
+        true
+      );
+    } else {
+      cancelAnimation(pulse);
+      pulse.value = withTiming(0, { duration: 220 });
+    }
+  }, [importing, reduceMotion, pulse]);
+
+  useEffect(() => {
+    if (importError && !reduceMotion) {
+      shake.value = 0;
+      shake.value = withSequence(
+        withTiming(-8, { duration: 60 }),
+        withTiming(8, { duration: 60 }),
+        withTiming(-4, { duration: 60 }),
+        withTiming(4, { duration: 60 }),
+        withTiming(0, { duration: 60 })
+      );
+      haptics.warn();
+    }
+  }, [importError, reduceMotion, shake]);
+
+  const urlBoxStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: shake.value }],
+    // Pulse: tighten the visible glow via opacity-driven shadow halo.
+    opacity: 1 - pulse.value * 0.08,
+  }));
 
   const [title, setTitle] = useState('');
   const [sourceUrl, setSourceUrl] = useState<string | undefined>(undefined);
@@ -122,6 +175,8 @@ export function AddRecipeScreen() {
       const parsed = await parseRecipeFromUrl(trimmed);
       applyParsed(parsed);
       setMode('manual');
+      haptics.success();
+      toast.show({ message: `Imported "${parsed.title}"`, tone: 'success' });
     } catch (err) {
       if (err instanceof RecipeParseError) {
         setImportError({ kind: err.kind, message: err.message });
@@ -179,16 +234,18 @@ export function AddRecipeScreen() {
   };
 
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: t.palette.bg }}
-      contentContainerStyle={{
-        paddingTop: insets.top + t.spacing.sm,
-        paddingHorizontal: t.spacing.lg,
-        paddingBottom: insets.bottom + t.spacing.xxl,
-      }}
-      showsVerticalScrollIndicator={false}
-      keyboardShouldPersistTaps="handled"
-    >
+    <View style={{ flex: 1, backgroundColor: t.palette.bg }}>
+      <AmbientBackground />
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{
+          paddingTop: insets.top + t.spacing.sm,
+          paddingHorizontal: t.spacing.lg,
+          paddingBottom: insets.bottom + t.spacing.xxl,
+        }}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: t.spacing.md }}>
         <IconButton
           icon="chevron-left"
@@ -214,26 +271,27 @@ export function AddRecipeScreen() {
       />
 
       {mode === 'url' ? (
-        <Surface variant="outlined" pad={t.spacing.lg}>
-          <Input
-            label="Recipe URL"
-            value={url}
-            onChangeText={onUrlChange}
-            placeholder="https://..."
-            autoCapitalize="none"
-            autoCorrect={false}
-            keyboardType="url"
-            leftIcon="link-variant"
-            containerStyle={{ marginBottom: t.spacing.md }}
-          />
-          <Button
-            label={importing ? 'Importing…' : 'Import recipe'}
-            icon="download"
-            onPress={handleImport}
-            disabled={importing || !url.trim()}
-            loading={importing}
-            fullWidth
-          />
+        <Animated.View style={urlBoxStyle}>
+          <GlassSurface variant="hero" pad={t.spacing.lg}>
+            <Input
+              label="Recipe URL"
+              value={url}
+              onChangeText={onUrlChange}
+              placeholder="https://..."
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="url"
+              leftIcon="link-variant"
+              containerStyle={{ marginBottom: t.spacing.md }}
+            />
+            <Button
+              label={importing ? 'Importing…' : 'Import recipe'}
+              icon="download"
+              onPress={handleImport}
+              disabled={importing || !url.trim()}
+              loading={importing}
+              fullWidth
+            />
 
           {importing ? (
             <View style={{ marginTop: t.spacing.md, alignItems: 'center' }}>
@@ -308,7 +366,8 @@ export function AddRecipeScreen() {
                 : "We read the page's embedded recipe schema (JSON-LD). If the page doesn't have one, switch to Manual."}
             </Text>
           )}
-        </Surface>
+          </GlassSurface>
+        </Animated.View>
       ) : (
         <View>
           <Input
@@ -381,6 +440,7 @@ export function AddRecipeScreen() {
           />
         </View>
       )}
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }

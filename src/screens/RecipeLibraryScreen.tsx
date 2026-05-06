@@ -1,5 +1,9 @@
 import React, { useMemo, useState } from 'react';
-import { FlatList, View } from 'react-native';
+import { View } from 'react-native';
+import Animated, {
+  useAnimatedScrollHandler,
+  useSharedValue,
+} from 'react-native-reanimated';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,7 +12,15 @@ import { RecipeCard } from '../components/RecipeCard';
 import { EmptyState } from '../components/EmptyState';
 import { RootStackParamList } from '../navigation/types';
 import { useAppTheme } from '../theme/tokens';
-import { Header, Input, Button, Text, TAB_BAR_SPACE } from '../components/ui';
+import {
+  AmbientBackground,
+  CollapsingHeader,
+  Header,
+  Input,
+  Button,
+  Text,
+  TAB_BAR_SPACE,
+} from '../components/ui';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -29,9 +41,17 @@ export function RecipeLibraryScreen() {
     );
   }, [recipes, query]);
 
+  const scrollY = useSharedValue(0);
+  const onScroll = useAnimatedScrollHandler({
+    onScroll: (e) => {
+      scrollY.value = e.contentOffset.y;
+    },
+  });
+
   return (
     <View style={{ flex: 1, backgroundColor: t.palette.bg }}>
-      <FlatList
+      <AmbientBackground />
+      <Animated.FlatList
         data={filtered}
         keyExtractor={(r) => r.id}
         contentContainerStyle={{
@@ -40,6 +60,8 @@ export function RecipeLibraryScreen() {
           paddingBottom: TAB_BAR_SPACE + t.spacing.lg,
         }}
         showsVerticalScrollIndicator={false}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
         ListHeaderComponent={
           <View>
             <Header
@@ -108,6 +130,7 @@ export function RecipeLibraryScreen() {
           style={t.shadow.medium}
         />
       </View>
+      <CollapsingHeader title="Recipes" scrollY={scrollY} />
     </View>
   );
 }

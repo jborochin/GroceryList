@@ -7,12 +7,14 @@ interface SettingsState {
   settings: UserSettings;
   setCalorieTarget: (target: number) => void;
   setMacroSplit: (proteinPct: number, carbsPct: number, fatPct: number) => void;
+  setReduceVisualEffects: (value: boolean) => void;
   resetSettings: () => void;
 }
 
 const DEFAULT_SETTINGS: UserSettings = {
   dailyCalorieTarget: 2000,
   macroSplit: { proteinPct: 30, carbsPct: 40, fatPct: 30 },
+  reduceVisualEffects: false,
 };
 
 export const useSettingsStore = create<SettingsState>()(
@@ -34,11 +36,26 @@ export const useSettingsStore = create<SettingsState>()(
           },
         }));
       },
+      setReduceVisualEffects: (value) =>
+        set((s) => ({ settings: { ...s.settings, reduceVisualEffects: value } })),
       resetSettings: () => set({ settings: DEFAULT_SETTINGS }),
     }),
     {
       name: STORAGE_KEYS.settings,
       storage: zustandStorage,
+      // Hydrate older persisted blobs that predate `reduceVisualEffects`.
+      merge: (persisted, current) => {
+        const p = persisted as Partial<SettingsState> | undefined;
+        return {
+          ...current,
+          ...p,
+          settings: {
+            ...current.settings,
+            ...(p?.settings ?? {}),
+            reduceVisualEffects: p?.settings?.reduceVisualEffects ?? false,
+          },
+        };
+      },
     }
   )
 );

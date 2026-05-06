@@ -1,5 +1,9 @@
 import React, { useState } from 'react';
-import { Alert, ScrollView, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, Switch, View } from 'react-native';
+import Animated, {
+  useAnimatedScrollHandler,
+  useSharedValue,
+} from 'react-native-reanimated';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,13 +16,19 @@ import { usePriceOverrideStore } from '../store/usePriceOverrideStore';
 import { RootStackParamList } from '../navigation/types';
 import { useAppTheme } from '../theme/tokens';
 import {
+  AmbientBackground,
+  Button,
+  CollapsingHeader,
+  GlassSurface,
   Header,
   Surface,
   Text,
   Input,
   SectionHeader,
   TAB_BAR_SPACE,
+  useToast,
 } from '../components/ui';
+import { haptics } from '../utils/haptics';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -26,10 +36,13 @@ export function SettingsScreen() {
   const t = useAppTheme();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<Nav>();
+  const toast = useToast();
   const settings = useSettingsStore((s) => s.settings);
   const setCalorieTarget = useSettingsStore((s) => s.setCalorieTarget);
   const setMacroSplit = useSettingsStore((s) => s.setMacroSplit);
+  const setReduceVisualEffects = useSettingsStore((s) => s.setReduceVisualEffects);
   const resetSettings = useSettingsStore((s) => s.resetSettings);
+  const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
 
   const resetRecipes = useRecipeStore((s) => s.replaceAll);
   const clearPlan = useMealPlanStore((s) => s.clearPlan);
@@ -57,38 +70,43 @@ export function SettingsScreen() {
   const macroTotal =
     (parseInt(protein, 10) || 0) + (parseInt(carbs, 10) || 0) + (parseInt(fat, 10) || 0);
 
+  const scrollY = useSharedValue(0);
+  const onScroll = useAnimatedScrollHandler({
+    onScroll: (e) => {
+      scrollY.value = e.contentOffset.y;
+    },
+  });
+
   const handleReset = () => {
-    Alert.alert(
-      'Reset all data?',
-      'This clears all recipes, meal plan, pantry, and price overrides. Cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Reset',
-          style: 'destructive',
-          onPress: () => {
-            resetRecipes([]);
-            clearPlan();
-            resetPantry([]);
-            clearOverrides();
-            resetSettings();
-          },
-        },
-      ]
-    );
+    haptics.warn();
+    setResetConfirmOpen(true);
+  };
+
+  const performReset = () => {
+    resetRecipes([]);
+    clearPlan();
+    resetPantry([]);
+    clearOverrides();
+    resetSettings();
+    setResetConfirmOpen(false);
+    toast.show({ message: 'All data reset.', tone: 'warning' });
   };
 
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: t.palette.bg }}
-      contentContainerStyle={{
-        paddingTop: insets.top,
-        paddingHorizontal: t.spacing.lg,
-        paddingBottom: TAB_BAR_SPACE,
-      }}
-      showsVerticalScrollIndicator={false}
-    >
-      <Header title="You" subtitle="Tune your goals and your data." />
+    <View style={{ flex: 1, backgroundColor: t.palette.bg }}>
+      <AmbientBackground />
+      <Animated.ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{
+          paddingTop: insets.top,
+          paddingHorizontal: t.spacing.lg,
+          paddingBottom: TAB_BAR_SPACE,
+        }}
+        showsVerticalScrollIndicator={false}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
+      >
+        <Header title="You" subtitle="Tune your goals and your data." />
 
       <SectionHeader title="Daily target" marginTop={0} />
       <Surface variant="outlined" pad={t.spacing.lg}>
@@ -149,6 +167,20 @@ export function SettingsScreen() {
         </Text>
       </Surface>
 
+      <SectionHeader title="Appearance" />
+      <Surface variant="outlined" pad={0}>
+        <SettingsToggleRow
+          icon="motion-outline"
+          title="Reduce visual effects"
+          subtitle="Disables blur, ambient backgrounds, and decorative motion"
+          value={settings.reduceVisualEffects}
+          onValueChange={(v) => {
+            haptics.selection();
+            setReduceVisualEffects(v);
+          }}
+        />
+      </Surface>
+
       <SectionHeader title="Data" />
       <Surface variant="outlined" pad={0}>
         <SettingsRow
@@ -167,14 +199,80 @@ export function SettingsScreen() {
         />
       </Surface>
 
-      <Text
-        variant="caption"
-        tone="tertiary"
-        style={{ textAlign: 'center', marginTop: t.spacing.xxl }}
+        <Text
+          variant="caption"
+          tone="tertiary"
+          style={{ textAlign: 'center', marginTop: t.spacing.xxl }}
+        >
+          MealPrep · Offline-first · All data lives on your device.
+        </Text>
+      </Animated.ScrollView>
+      <CollapsingHeader title="You" scrollY={scrollY} />
+      <ResetConfirm
+        visible={resetConfirmOpen}
+        onCancel={() => setResetConfirmOpen(false)}
+        onConfirm={performReset}
+      />
+    </View>
+  );
+}
+
+function ResetConfirm({
+  visible,
+  onCancel,
+  onConfirm,
+}: {
+  visible: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const t = useAppTheme();
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      onRequestClose={onCancel}
+      animationType="fade"
+      statusBarTranslucent
+    >
+      <Pressable
+        onPress={onCancel}
+        style={[
+          StyleSheet.absoluteFill,
+          { backgroundColor: t.palette.scrim, justifyContent: 'center', padding: t.spacing.lg },
+        ]}
       >
-        MealPrep · Offline-first · All data lives on your device.
-      </Text>
-    </ScrollView>
+        <Pressable onPress={() => {}}>
+          <GlassSurface variant="chrome" radius={t.radius.xl} pad={t.spacing.xl} shadow="strong">
+            <Text variant="eyebrow" tone="danger" style={{ marginBottom: 6 }}>
+              Destructive
+            </Text>
+            <Text variant="display" style={{ marginBottom: t.spacing.sm }}>
+              Reset all data?
+            </Text>
+            <Text variant="body" tone="secondary" style={{ marginBottom: t.spacing.xl }}>
+              This clears all recipes, meal plan, pantry, and price overrides. This cannot be undone.
+            </Text>
+            <View style={{ flexDirection: 'row', gap: t.spacing.sm }}>
+              <Button
+                label="Cancel"
+                variant="secondary"
+                onPress={onCancel}
+                style={{ flex: 1 }}
+                fullWidth
+              />
+              <Button
+                label="Reset"
+                variant="danger"
+                onPress={onConfirm}
+                style={{ flex: 1 }}
+                fullWidth
+              />
+            </View>
+          </GlassSurface>
+        </Pressable>
+      </Pressable>
+    </Modal>
   );
 }
 
@@ -185,6 +283,58 @@ interface RowProps {
   onPress: () => void;
   showDivider?: boolean;
   danger?: boolean;
+}
+
+interface ToggleRowProps {
+  icon: string;
+  title: string;
+  subtitle?: string;
+  value: boolean;
+  onValueChange: (value: boolean) => void;
+}
+
+function SettingsToggleRow({ icon, title, subtitle, value, onValueChange }: ToggleRowProps) {
+  const t = useAppTheme();
+  return (
+    <View
+      style={{
+        paddingHorizontal: t.spacing.lg,
+        paddingVertical: t.spacing.lg,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: t.spacing.md,
+      }}
+    >
+      <View
+        style={{
+          width: 38,
+          height: 38,
+          borderRadius: 19,
+          backgroundColor: t.palette.surfaceMuted,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Icon name={icon} size={18} color={t.palette.textSecondary} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text variant="bodyLg" weight="semibold">
+          {title}
+        </Text>
+        {subtitle ? (
+          <Text variant="caption" tone="secondary" style={{ marginTop: 2 }}>
+            {subtitle}
+          </Text>
+        ) : null}
+      </View>
+      <Switch
+        value={value}
+        onValueChange={onValueChange}
+        trackColor={{ false: t.palette.surfaceSunken, true: t.palette.primarySoft }}
+        thumbColor={value ? t.palette.primary : t.palette.surface}
+      />
+    </View>
+  );
 }
 
 function SettingsRow({ icon, title, subtitle, onPress, showDivider, danger }: RowProps) {

@@ -19,10 +19,12 @@ import {
   Screen,
   Header,
   Surface,
+  GlassSurface,
   Text,
   Button,
   Stat,
   SectionHeader,
+  CountUpText,
 } from '../components/ui';
 
 type TabNav = BottomTabNavigationProp<TabParamList>;
@@ -57,10 +59,10 @@ export function HomeScreen() {
   });
 
   return (
-    <Screen scroll>
+    <Screen scroll glass headerTitle="Kitchen">
       <Header eyebrow={today} title="Kitchen" subtitle="Plan smart, shop once, eat well." />
 
-      {/* Hero stats - bento style */}
+      {/* Hero stats - bento style (glass) */}
       <View style={{ flexDirection: 'row', gap: t.spacing.md, marginBottom: t.spacing.md }}>
         <Surface
           variant="flat"
@@ -76,13 +78,19 @@ export function HomeScreen() {
             Estimated cost
           </Text>
           <View>
-            <Text
-              variant="display"
-              tabularNums
-              style={{ color: t.palette.primaryContrast }}
-            >
-              {grocery.total > 0 ? `$${grocery.total.toFixed(0)}` : '—'}
-            </Text>
+            {grocery.total > 0 ? (
+              <CountUpText
+                value={grocery.total}
+                prefix="$"
+                decimals={0}
+                variant="display"
+                style={{ color: t.palette.primaryContrast }}
+              />
+            ) : (
+              <Text variant="display" tabularNums style={{ color: t.palette.primaryContrast }}>
+                —
+              </Text>
+            )}
             <Text
               variant="caption"
               style={{ color: t.palette.primaryContrast, opacity: 0.7, marginTop: 2 }}
@@ -92,22 +100,26 @@ export function HomeScreen() {
           </View>
         </Surface>
         <View style={{ flex: 1, gap: t.spacing.md }}>
-          <Surface variant="outlined" pad={t.spacing.md} style={{ flex: 1, justifyContent: 'space-between' }}>
+          <GlassSurface
+            variant="hero"
+            pad={t.spacing.md}
+            style={{ flex: 1, justifyContent: 'space-between' }}
+          >
             <Text variant="eyebrow" tone="tertiary">
               Recipes
             </Text>
-            <Text variant="display" tabularNums>
-              {plan.length}
-            </Text>
-          </Surface>
-          <Surface variant="outlined" pad={t.spacing.md} style={{ flex: 1, justifyContent: 'space-between' }}>
+            <CountUpText value={plan.length} variant="display" />
+          </GlassSurface>
+          <GlassSurface
+            variant="hero"
+            pad={t.spacing.md}
+            style={{ flex: 1, justifyContent: 'space-between' }}
+          >
             <Text variant="eyebrow" tone="tertiary">
               Servings
             </Text>
-            <Text variant="display" tabularNums>
-              {totalServings}
-            </Text>
-          </Surface>
+            <CountUpText value={totalServings} variant="display" />
+          </GlassSurface>
         </View>
       </View>
 
@@ -136,7 +148,7 @@ export function HomeScreen() {
         </Text>
       } />
 
-      <Surface variant="outlined" pad={t.spacing.lg}>
+      <GlassSurface variant="hero" pad={t.spacing.lg}>
         <NutritionBar
           label="Calories"
           actual={summary.daily.calories}
@@ -148,30 +160,31 @@ export function HomeScreen() {
           label="Protein"
           actual={summary.daily.proteinG}
           target={summary.target.dailyProteinG}
-          color="#C44A6E"
+          color={t.palette.textPrimary}
         />
         <NutritionBar
           label="Carbs"
           actual={summary.daily.carbsG}
           target={summary.target.dailyCarbsG}
-          color="#7C3AED"
+          color={t.palette.textSecondary}
         />
         <NutritionBar
           label="Fat"
           actual={summary.daily.fatG}
           target={summary.target.dailyFatG}
-          color="#D97706"
+          color={t.palette.textTertiary}
         />
         {summary.hasMissingData ? (
           <Text variant="caption" tone="tertiary" style={{ marginTop: t.spacing.sm }}>
             Some recipes are missing nutrition data — totals may be understated.
           </Text>
         ) : null}
-      </Surface>
+      </GlassSurface>
 
       <SectionHeader title="Quick add" />
-      <Surface
-        variant="tinted"
+      <GlassSurface
+        variant="content"
+        tint="primary"
         pad={t.spacing.lg}
         onPress={() => navigation.navigate('AddRecipe', undefined)}
       >
@@ -184,7 +197,7 @@ export function HomeScreen() {
           </View>
           <Stat label="" value="+" align="end" size="md" tone="primary" />
         </View>
-      </Surface>
+      </GlassSurface>
     </Screen>
   );
 }

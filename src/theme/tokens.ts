@@ -31,72 +31,100 @@ export interface Palette {
   overlay: string;
   shadow: string;
   scrim: string;
+  // Glass system
+  glassThin: string;
+  glassRegular: string;
+  glassThick: string;
+  rimLight: string;
+  rimGround: string;
+  ambienceA: string;
+  ambienceB: string;
+  ambienceC: string;
+  blurTint: 'light' | 'dark' | 'default';
 }
 
 const light: Palette = {
-  bg: '#F8F7F2',
-  bgElevated: '#FDFCF8',
+  bg: '#FFFFFF',
+  bgElevated: '#FFFFFF',
   surface: '#FFFFFF',
-  surfaceMuted: '#F1EFE8',
-  surfaceSunken: '#EAE7DE',
-  border: 'rgba(15,23,18,0.08)',
-  borderStrong: 'rgba(15,23,18,0.16)',
-  textPrimary: '#0F1A14',
-  textSecondary: '#5B6660',
-  textTertiary: '#94A099',
-  textInverse: '#FDFCF8',
-  primary: '#2A7F3E',
+  surfaceMuted: '#F5F5F5',
+  surfaceSunken: '#ECECEC',
+  border: 'rgba(0,0,0,0.08)',
+  borderStrong: 'rgba(0,0,0,0.14)',
+  textPrimary: '#0A0A0A',
+  textSecondary: '#525252',
+  textTertiary: '#A3A3A3',
+  textInverse: '#FFFFFF',
+  primary: '#0A0A0A',
   primaryContrast: '#FFFFFF',
-  primarySoft: '#DDEFD8',
-  primarySoftText: '#1B5C2C',
-  accent: '#C46A1F',
+  primarySoft: '#F0F0F0',
+  primarySoftText: '#0A0A0A',
+  accent: '#404040',
   accentContrast: '#FFFFFF',
-  accentSoft: '#FBE7CF',
-  accentSoftText: '#7E3F0A',
-  success: '#2A7F3E',
-  successSoft: '#DDEFD8',
-  warning: '#B7791F',
-  warningSoft: '#FAEBC4',
-  danger: '#B0362C',
-  dangerSoft: '#F5DAD6',
+  accentSoft: '#ECECEC',
+  accentSoftText: '#1A1A1A',
+  success: '#3F7A4D',
+  successSoft: '#E9EFEA',
+  warning: '#8A6A2C',
+  warningSoft: '#F2EBD9',
+  danger: '#A8362C',
+  dangerSoft: '#F1DBD8',
   dangerSoftText: '#7E2018',
-  info: '#1F5BB7',
-  overlay: 'rgba(15,23,18,0.04)',
-  shadow: 'rgba(15,23,18,0.08)',
-  scrim: 'rgba(15,23,18,0.45)',
+  info: '#404040',
+  overlay: 'rgba(0,0,0,0.04)',
+  shadow: 'rgba(0,0,0,0.08)',
+  scrim: 'rgba(0,0,0,0.45)',
+  glassThin: 'rgba(255,255,255,0.55)',
+  glassRegular: 'rgba(255,255,255,0.70)',
+  glassThick: 'rgba(255,255,255,0.85)',
+  rimLight: 'rgba(255,255,255,0.65)',
+  rimGround: 'rgba(0,0,0,0.06)',
+  ambienceA: '#FFFFFF',
+  ambienceB: '#F7F7F7',
+  ambienceC: '#EFEFEF',
+  blurTint: 'light',
 };
 
 const dark: Palette = {
-  bg: '#0A0F0C',
-  bgElevated: '#101714',
-  surface: '#141B17',
-  surfaceMuted: '#1B2420',
-  surfaceSunken: '#0E1411',
+  bg: '#0A0A0A',
+  bgElevated: '#141414',
+  surface: '#1A1A1A',
+  surfaceMuted: '#1F1F1F',
+  surfaceSunken: '#0F0F0F',
   border: 'rgba(255,255,255,0.08)',
   borderStrong: 'rgba(255,255,255,0.16)',
-  textPrimary: '#ECF0EC',
-  textSecondary: '#9BA8A1',
-  textTertiary: '#6E7E76',
-  textInverse: '#0F1A14',
-  primary: '#5EBE6F',
-  primaryContrast: '#0A1A0F',
-  primarySoft: 'rgba(94,190,111,0.18)',
-  primarySoftText: '#9CDDA8',
-  accent: '#E89A4B',
-  accentContrast: '#1A0F03',
-  accentSoft: 'rgba(232,154,75,0.18)',
-  accentSoftText: '#F2BD83',
-  success: '#5EBE6F',
-  successSoft: 'rgba(94,190,111,0.16)',
-  warning: '#E0A93D',
-  warningSoft: 'rgba(224,169,61,0.16)',
+  textPrimary: '#F5F5F5',
+  textSecondary: '#A3A3A3',
+  textTertiary: '#737373',
+  textInverse: '#0A0A0A',
+  primary: '#FAFAFA',
+  primaryContrast: '#0A0A0A',
+  primarySoft: 'rgba(255,255,255,0.10)',
+  primarySoftText: '#F5F5F5',
+  accent: '#BFBFBF',
+  accentContrast: '#0A0A0A',
+  accentSoft: 'rgba(255,255,255,0.10)',
+  accentSoftText: '#E5E5E5',
+  success: '#7BB28B',
+  successSoft: 'rgba(123,178,139,0.16)',
+  warning: '#C99A4A',
+  warningSoft: 'rgba(201,154,74,0.16)',
   danger: '#E16B5E',
   dangerSoft: 'rgba(225,107,94,0.16)',
   dangerSoftText: '#F2A399',
-  info: '#6FA1F0',
+  info: '#A3A3A3',
   overlay: 'rgba(255,255,255,0.04)',
   shadow: 'rgba(0,0,0,0.5)',
   scrim: 'rgba(0,0,0,0.6)',
+  glassThin: 'rgba(20,20,20,0.55)',
+  glassRegular: 'rgba(20,20,20,0.72)',
+  glassThick: 'rgba(10,10,10,0.85)',
+  rimLight: 'rgba(255,255,255,0.10)',
+  rimGround: 'rgba(0,0,0,0.40)',
+  ambienceA: '#141414',
+  ambienceB: '#0A0A0A',
+  ambienceC: '#050505',
+  blurTint: 'dark',
 };
 
 export const tokens = {
@@ -164,6 +192,11 @@ export const tokens = {
     stiffness: 220,
     mass: 0.9,
   },
+  blur: {
+    thin: 18,
+    regular: 30,
+    thick: 60,
+  },
   shadow: {
     none: {
       shadowColor: 'transparent',
@@ -210,6 +243,7 @@ export type ThemeContext = {
   letter: typeof tokens.letter;
   duration: typeof tokens.duration;
   spring: typeof tokens.spring;
+  blur: typeof tokens.blur;
   shadow: typeof tokens.shadow;
 };
 
@@ -228,6 +262,7 @@ export function useAppTheme(): ThemeContext {
     letter: tokens.letter,
     duration: tokens.duration,
     spring: tokens.spring,
+    blur: tokens.blur,
     shadow: tokens.shadow,
   };
 }

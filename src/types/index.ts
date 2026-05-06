@@ -41,6 +41,7 @@ export interface PantryItem {
 export interface UserSettings {
   dailyCalorieTarget: number;
   macroSplit: { proteinPct: number; carbsPct: number; fatPct: number };
+  reduceVisualEffects: boolean;
 }
 
 export interface PriceOverride {

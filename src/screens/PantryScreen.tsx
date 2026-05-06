@@ -6,11 +6,23 @@ import { usePantryStore } from '../store/usePantryStore';
 import { EmptyState } from '../components/EmptyState';
 import { formatEntry } from '../utils/formatters';
 import { useAppTheme } from '../theme/tokens';
-import { Button, IconButton, Input, Surface, Text, Header } from '../components/ui';
+import {
+  AmbientBackground,
+  Button,
+  GlassSurface,
+  Input,
+  Surface,
+  Text,
+  Header,
+  SwipeRow,
+  useToast,
+} from '../components/ui';
+import { haptics } from '../utils/haptics';
 
 export function PantryScreen() {
   const t = useAppTheme();
   const insets = useSafeAreaInsets();
+  const toast = useToast();
   const items = usePantryStore((s) => s.items);
   const addItem = usePantryStore((s) => s.addItem);
   const removeItem = usePantryStore((s) => s.removeItem);
@@ -31,10 +43,12 @@ export function PantryScreen() {
     setName('');
     setQty('');
     setUnit('');
+    haptics.success();
   };
 
   return (
     <View style={{ flex: 1, backgroundColor: t.palette.bg }}>
+      <AmbientBackground />
       <FlatList
         data={items}
         keyExtractor={(i) => i.id}
@@ -51,7 +65,7 @@ export function PantryScreen() {
               subtitle="Mark what you already have so it's left out of grocery lists."
             />
 
-            <Surface variant="outlined" pad={t.spacing.lg} style={{ marginBottom: t.spacing.lg }}>
+            <GlassSurface variant="hero" pad={t.spacing.lg} style={{ marginBottom: t.spacing.lg }}>
               <Text variant="title" style={{ marginBottom: t.spacing.md }}>
                 Add an item
               </Text>
@@ -81,7 +95,7 @@ export function PantryScreen() {
               <Text variant="caption" tone="tertiary" style={{ marginTop: t.spacing.sm }}>
                 Items without a quantity are treated as "always have" (fully excluded).
               </Text>
-            </Surface>
+            </GlassSurface>
 
             {items.length > 0 ? (
               <Text
@@ -95,37 +109,51 @@ export function PantryScreen() {
           </View>
         }
         renderItem={({ item }) => (
-          <Surface variant="outlined" pad={t.spacing.md} style={{ marginBottom: t.spacing.sm }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.md }}>
-              <View
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 18,
-                  backgroundColor: t.palette.surfaceMuted,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Icon name="basket-outline" size={18} color={t.palette.textSecondary} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text variant="bodyLg" weight="semibold" numberOfLines={1}>
-                  {item.name}
-                </Text>
-                <Text variant="caption" tone="secondary" tabularNums>
-                  {item.quantity && item.unit ? formatEntry(item.quantity, item.unit) : 'always have'}
-                </Text>
-              </View>
-              <IconButton
-                icon="close"
-                onPress={() => removeItem(item.id)}
-                variant="tonal"
-                size={16}
-                accessibilityLabel="Remove from pantry"
-              />
-            </View>
-          </Surface>
+          <View style={{ marginBottom: t.spacing.sm }}>
+            <SwipeRow
+              onDelete={() => {
+                removeItem(item.id);
+                toast.show({
+                  message: `Removed ${item.name}`,
+                  tone: 'neutral',
+                });
+              }}
+            >
+              <GlassSurface variant="content" pad={t.spacing.md}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.md }}>
+                  <View
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 18,
+                      backgroundColor: t.palette.surfaceMuted,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Icon
+                      name="basket-outline"
+                      size={18}
+                      color={t.palette.textSecondary}
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text variant="bodyLg" weight="semibold" numberOfLines={1}>
+                      {item.name}
+                    </Text>
+                    <Text variant="caption" tone="secondary" tabularNums>
+                      {item.quantity && item.unit
+                        ? formatEntry(item.quantity, item.unit)
+                        : 'always have'}
+                    </Text>
+                  </View>
+                  <Text variant="caption" tone="tertiary">
+                    swipe ◀
+                  </Text>
+                </View>
+              </GlassSurface>
+            </SwipeRow>
+          </View>
         )}
         ListEmptyComponent={
           <View style={{ marginTop: t.spacing.xl }}>

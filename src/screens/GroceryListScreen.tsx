@@ -1,6 +1,15 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { SectionList, Share, View } from 'react-native';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import Animated, {
+  FadeIn,
+  FadeInDown,
+  useAnimatedScrollHandler,
+  useSharedValue,
+} from 'react-native-reanimated';
+
+const AnimatedSectionList = Animated.createAnimatedComponent(
+  SectionList as new () => SectionList<GroceryItem, { title: string; data: GroceryItem[] }>
+);
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useRecipeStore } from '../store/useRecipeStore';
@@ -14,10 +23,16 @@ import { formatEntry } from '../utils/formatters';
 import { EmptyState } from '../components/EmptyState';
 import { GroceryItemRow } from '../components/GroceryItemRow';
 import { PriceOverrideSheet } from '../components/PriceOverrideSheet';
+import { CompletionBurst } from '../components/animations/CompletionBurst';
+import { useToast } from '../components/ui';
 import { GroceryItem } from '../types';
 import { useAppTheme } from '../theme/tokens';
 import {
+  AmbientBackground,
   Button,
+  CollapsingHeader,
+  CountUpText,
+  GlassSurface,
   Header,
   IconButton,
   ProgressBar,
@@ -56,6 +71,7 @@ const CATEGORY_ICON: Record<string, string> = {
 export function GroceryListScreen() {
   const t = useAppTheme();
   const insets = useSafeAreaInsets();
+  const toast = useToast();
   const recipes = useRecipeStore((s) => s.recipes);
   const plan = useMealPlanStore((s) => s.entries);
   const pantry = usePantryStore((s) => s.items);
@@ -65,6 +81,8 @@ export function GroceryListScreen() {
 
   const [checked, setChecked] = useState<Record<string, boolean>>({});
   const [priceTarget, setPriceTarget] = useState<GroceryItem | null>(null);
+  const [burstAt, setBurstAt] = useState(0);
+  const completedRef = React.useRef(false);
 
   const priced = useMemo(() => {
     const agg = aggregate(plan, recipes);
@@ -108,6 +126,23 @@ export function GroceryListScreen() {
     setChecked((c) => ({ ...c, [name]: !c[name] }));
   };
 
+  // Fire completion burst the moment all items become checked.
+  useEffect(() => {
+    if (priced.items.length === 0) {
+      completedRef.current = false;
+      return;
+    }
+    const allChecked = priced.items.every((item) => checked[item.name]);
+    if (allChecked && !completedRef.current) {
+      completedRef.current = true;
+      setBurstAt(Date.now());
+      haptics.success();
+      toast.show({ message: 'Trip complete — nice work.', tone: 'success' });
+    } else if (!allChecked && completedRef.current) {
+      completedRef.current = false;
+    }
+  }, [priced.items, checked, toast]);
+
   const handleShare = async () => {
     haptics.tap();
     const lines: string[] = [`Grocery list — est. $${priced.total.toFixed(2)}`, ''];
@@ -137,8 +172,16 @@ export function GroceryListScreen() {
   const itemCount = priced.items.length;
   const progress = itemCount === 0 ? 0 : checkedCount / itemCount;
 
+  const scrollY = useSharedValue(0);
+  const onScroll = useAnimatedScrollHandler({
+    onScroll: (e) => {
+      scrollY.value = e.contentOffset.y;
+    },
+  });
+
   return (
     <View style={{ flex: 1, backgroundColor: t.palette.bg }}>
+      <AmbientBackground />
       {empty ? (
         <View style={{ flex: 1, paddingTop: insets.top, paddingBottom: TAB_BAR_SPACE }}>
           {plan.length === 0 ? (
@@ -156,16 +199,18 @@ export function GroceryListScreen() {
           )}
         </View>
       ) : (
-        <SectionList
+        <AnimatedSectionList
           sections={sections}
-          keyExtractor={(item) => item.name}
+          keyExtractor={(item) => (item as GroceryItem).name}
           contentContainerStyle={{
             paddingTop: insets.top,
             paddingHorizontal: 16,
             paddingBottom: TAB_BAR_SPACE,
           }}
-          stickySectionHeadersEnabled={false}
+          stickySectionHeadersEnabled={true}
           showsVerticalScrollIndicator={false}
+          onScroll={onScroll}
+          scrollEventThrottle={16}
           ListHeaderComponent={
             <Hero
               total={priced.total}
@@ -177,10 +222,10 @@ export function GroceryListScreen() {
               onShare={handleShare}
             />
           }
-          renderSectionHeader={({ section }) => (
+          renderSectionHeader={({ section }: { section: { title: string; data: GroceryItem[] } }) => (
             <SectionHeader title={section.title} count={section.data.length} />
           )}
-          renderItem={({ item, index }) => (
+          renderItem={({ item, index }: { item: GroceryItem; index: number }) => (
             <GroceryItemRow
               item={item}
               index={index}
@@ -195,6 +240,23 @@ export function GroceryListScreen() {
           renderSectionFooter={() => <View style={{ height: 14 }} />}
         />
       )}
+
+      {burstAt > 0 ? (
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            top: insets.top + 80,
+            height: 200,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <CompletionBurst trigger={burstAt} />
+        </View>
+      ) : null}
 
       <PriceOverrideSheet
         item={priceTarget}
@@ -212,6 +274,7 @@ export function GroceryListScreen() {
         }}
         onClose={() => setPriceTarget(null)}
       />
+      {!empty ? <CollapsingHeader title="Grocery" scrollY={scrollY} /> : null}
     </View>
   );
 }
@@ -259,13 +322,13 @@ function Hero({
             >
               Estimated total
             </Text>
-            <Text
+            <CountUpText
+              value={total}
+              prefix="$"
+              decimals={2}
               variant="hero"
-              tabularNums
               style={{ color: t.palette.primaryContrast }}
-            >
-              ${total.toFixed(2)}
-            </Text>
+            />
             {showRemaining ? (
               <Animated.View entering={FadeInDown.duration(220)}>
                 <Text
@@ -306,14 +369,14 @@ function Hero({
       </Surface>
 
       {unestimated > 0 ? (
-        <Surface variant="outlined" pad={12} style={{ marginBottom: 12 }}>
+        <GlassSurface variant="content" pad={12} style={{ marginBottom: 12 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <Icon name="information-outline" size={16} color={t.palette.warning} />
             <Text variant="caption" tone="secondary" style={{ flex: 1 }}>
               {unestimated} {unestimated === 1 ? 'item is' : 'items are'} unpriced — tap a price chip to set one.
             </Text>
           </View>
-        </Surface>
+        </GlassSurface>
       ) : null}
     </Animated.View>
   );
@@ -326,29 +389,36 @@ function SectionHeader({ title, count }: { title: string; count: number }) {
     <Animated.View
       entering={FadeInDown.duration(280).springify().damping(20)}
       style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
         marginTop: 14,
         marginBottom: 8,
       }}
     >
-      <View
-        style={{
-          width: 28,
-          height: 28,
-          borderRadius: 14,
-          backgroundColor: t.palette.primarySoft,
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <Icon name={iconName} size={14} color={t.palette.primarySoftText} />
-      </View>
-      <Text variant="title">{title}</Text>
-      <Text variant="caption" tone="tertiary" tabularNums>
-        {count}
-      </Text>
+      <GlassSurface variant="hero" radius={t.radius.md} pad={t.spacing.sm}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 8,
+          }}
+        >
+          <View
+            style={{
+              width: 28,
+              height: 28,
+              borderRadius: 14,
+              backgroundColor: t.palette.primarySoft,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Icon name={iconName} size={14} color={t.palette.primarySoftText} />
+          </View>
+          <Text variant="title">{title}</Text>
+          <Text variant="caption" tone="tertiary" tabularNums>
+            {count}
+          </Text>
+        </View>
+      </GlassSurface>
     </Animated.View>
   );
 }

@@ -1,5 +1,11 @@
 export { Screen, TAB_BAR_SPACE } from './Screen';
 export { Surface } from './Surface';
+export { GlassSurface } from './GlassSurface';
+export { AmbientBackground } from './AmbientBackground';
+export { CollapsingHeader } from './CollapsingHeader';
+export { ToastHost, useToast } from './ToastHost';
+export { CountUpText } from './CountUpText';
+export { SwipeRow } from './SwipeRow';
 export { Text } from './Text';
 export { Button } from './Button';
 export { IconButton } from './IconButton';

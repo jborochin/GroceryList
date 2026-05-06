@@ -1,5 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, Linking, ScrollView, View } from 'react-native';
+import { Alert, Linking, View } from 'react-native';
+import Animated, {
+  useAnimatedScrollHandler,
+  useSharedValue,
+} from 'react-native-reanimated';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -13,7 +17,10 @@ import { formatEntry } from '../utils/formatters';
 import { RootStackParamList } from '../navigation/types';
 import { useAppTheme } from '../theme/tokens';
 import {
+  AmbientBackground,
   Button,
+  CollapsingHeader,
+  GlassSurface,
   IconButton,
   Input,
   SectionHeader,
@@ -104,6 +111,13 @@ export function RecipeDetailScreen() {
     setEditing(false);
   };
 
+  const scrollY = useSharedValue(0);
+  const onScroll = useAnimatedScrollHandler({
+    onScroll: (e) => {
+      scrollY.value = e.contentOffset.y;
+    },
+  });
+
   const setNutritionField = (key: keyof NutritionPerServing, value: string) => {
     if (!draft) return;
     const num = parseFloat(value) || 0;
@@ -121,16 +135,20 @@ export function RecipeDetailScreen() {
   };
 
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: t.palette.bg }}
-      contentContainerStyle={{
-        paddingTop: insets.top + t.spacing.sm,
-        paddingHorizontal: t.spacing.lg,
-        paddingBottom: insets.bottom + t.spacing.xxl,
-      }}
-      showsVerticalScrollIndicator={false}
-      keyboardShouldPersistTaps="handled"
-    >
+    <View style={{ flex: 1, backgroundColor: t.palette.bg }}>
+      <AmbientBackground />
+      <Animated.ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{
+          paddingTop: insets.top + t.spacing.sm,
+          paddingHorizontal: t.spacing.lg,
+          paddingBottom: insets.bottom + t.spacing.xxl,
+        }}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        onScroll={onScroll}
+        scrollEventThrottle={16}
+      >
       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: t.spacing.md }}>
         <IconButton
           icon="chevron-left"
@@ -159,22 +177,43 @@ export function RecipeDetailScreen() {
           containerStyle={{ marginBottom: t.spacing.md }}
         />
       ) : (
-        <Text variant="hero">{recipe.title}</Text>
+        <GlassSurface variant="hero" pad={t.spacing.lg} radius={t.radius.lg}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.md }}>
+            <View
+              style={{
+                width: 56,
+                height: 56,
+                borderRadius: 28,
+                backgroundColor: t.palette.primarySoft,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Text variant="display" weight="bold" style={{ color: t.palette.primarySoftText }}>
+                {recipe.title.charAt(0).toUpperCase()}
+              </Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text variant="hero" numberOfLines={2}>
+                {recipe.title}
+              </Text>
+              {recipe.sourceUrl ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                  <Icon name="link-variant" size={14} color={t.palette.textTertiary} />
+                  <Text
+                    variant="caption"
+                    tone="accent"
+                    onPress={() => openSourceUrl(recipe.sourceUrl!)}
+                    style={{ textDecorationLine: 'underline' }}
+                  >
+                    {formatSourceHost(recipe.sourceUrl)}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+          </View>
+        </GlassSurface>
       )}
-
-      {!editing && recipe.sourceUrl ? (
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 }}>
-          <Icon name="link-variant" size={14} color={t.palette.textTertiary} />
-          <Text
-            variant="caption"
-            tone="accent"
-            onPress={() => openSourceUrl(recipe.sourceUrl!)}
-            style={{ textDecorationLine: 'underline' }}
-          >
-            {formatSourceHost(recipe.sourceUrl)}
-          </Text>
-        </View>
-      ) : null}
 
       <Surface variant="outlined" pad={t.spacing.lg} style={{ marginTop: t.spacing.lg }}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -350,7 +389,9 @@ export function RecipeDetailScreen() {
           <Button label="Edit recipe" icon="pencil" onPress={startEdit} fullWidth style={{ flex: 1 }} variant="primary" />
         )}
       </View>
-    </ScrollView>
+      </Animated.ScrollView>
+      <CollapsingHeader title={recipe.title} scrollY={scrollY} threshold={64} />
+    </View>
   );
 }
 

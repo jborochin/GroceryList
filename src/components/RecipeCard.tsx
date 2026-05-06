@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useAppTheme } from '../theme/tokens';
 import { Recipe } from '../types';
-import { Surface } from './ui/Surface';
+import { GlassSurface } from './ui/GlassSurface';
 import { Text } from './ui/Text';
 import { Pill } from './ui/Pill';
 
@@ -21,12 +21,11 @@ export function RecipeCard({ recipe, onPress, trailing, subtitle, compact }: Pro
   const protein = recipe.nutritionPerServing?.proteinG;
   const subtitleText = subtitle ?? `${recipe.servings} servings`;
 
-  // Build a simple monogram from the title
   const initial = (recipe.title.trim().charAt(0) || '?').toUpperCase();
 
   return (
-    <Surface
-      variant="outlined"
+    <GlassSurface
+      variant="content"
       onPress={onPress}
       pad={t.spacing.md}
       style={{ marginBottom: t.spacing.sm }}
@@ -68,6 +67,6 @@ export function RecipeCard({ recipe, onPress, trailing, subtitle, compact }: Pro
           <Icon name="chevron-right" size={20} color={t.palette.textTertiary} />
         )}
       </View>
-    </Surface>
+    </GlassSurface>
   );
 }
