@@ -13,7 +13,9 @@ import { useRecipeStore } from '../store/useRecipeStore';
 import { useMealPlanStore } from '../store/useMealPlanStore';
 import { usePantryStore } from '../store/usePantryStore';
 import { usePriceOverrideStore } from '../store/usePriceOverrideStore';
+import { useAuthStore } from '../store/useAuthStore';
 import { RootStackParamList } from '../navigation/types';
+import { supabaseConfigured } from '../lib/supabase';
 import { useAppTheme } from '../theme/tokens';
 import {
   AmbientBackground,
@@ -40,6 +42,7 @@ export function SettingsScreen() {
   const settings = useSettingsStore((s) => s.settings);
   const setCalorieTarget = useSettingsStore((s) => s.setCalorieTarget);
   const setMacroSplit = useSettingsStore((s) => s.setMacroSplit);
+  const setMacroGrams = useSettingsStore((s) => s.setMacroGrams);
   const setReduceVisualEffects = useSettingsStore((s) => s.setReduceVisualEffects);
   const resetSettings = useSettingsStore((s) => s.resetSettings);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
@@ -49,10 +52,17 @@ export function SettingsScreen() {
   const resetPantry = usePantryStore((s) => s.replaceAll);
   const clearOverrides = usePriceOverrideStore((s) => s.clear);
 
+  const authUser = useAuthStore((s) => s.user);
+  const authLoading = useAuthStore((s) => s.loading);
+  const signOut = useAuthStore((s) => s.signOut);
+
   const [calories, setCalories] = useState(String(settings.dailyCalorieTarget));
   const [protein, setProtein] = useState(String(settings.macroSplit.proteinPct));
   const [carbs, setCarbs] = useState(String(settings.macroSplit.carbsPct));
   const [fat, setFat] = useState(String(settings.macroSplit.fatPct));
+  const [proteinG, setProteinG] = useState(String(settings.macroGrams.proteinG));
+  const [carbsG, setCarbsG] = useState(String(settings.macroGrams.carbsG));
+  const [fatG, setFatG] = useState(String(settings.macroGrams.fatG));
 
   const commitCalories = () => {
     const n = parseInt(calories, 10);
@@ -65,6 +75,13 @@ export function SettingsScreen() {
     const f = parseInt(fat, 10) || 0;
     if (p + c + f <= 0) return;
     setMacroSplit(p, c, f);
+  };
+
+  const commitMacroGrams = () => {
+    const p = parseInt(proteinG, 10) || 0;
+    const c = parseInt(carbsG, 10) || 0;
+    const f = parseInt(fatG, 10) || 0;
+    setMacroGrams(p, c, f);
   };
 
   const macroTotal =
@@ -167,6 +184,79 @@ export function SettingsScreen() {
         </Text>
       </Surface>
 
+      <SectionHeader title="Macro grams" />
+      <Surface variant="outlined" pad={t.spacing.lg}>
+        <Text variant="caption" tone="secondary" style={{ marginBottom: t.spacing.md }}>
+          Daily gram targets (used for absolute macro tracking)
+        </Text>
+        <View style={{ flexDirection: 'row', gap: t.spacing.sm }}>
+          <Input
+            label="Protein g"
+            keyboardType="numeric"
+            value={proteinG}
+            onChangeText={setProteinG}
+            onBlur={commitMacroGrams}
+            containerStyle={{ flex: 1 }}
+          />
+          <Input
+            label="Carbs g"
+            keyboardType="numeric"
+            value={carbsG}
+            onChangeText={setCarbsG}
+            onBlur={commitMacroGrams}
+            containerStyle={{ flex: 1 }}
+          />
+          <Input
+            label="Fat g"
+            keyboardType="numeric"
+            value={fatG}
+            onChangeText={setFatG}
+            onBlur={commitMacroGrams}
+            containerStyle={{ flex: 1 }}
+          />
+        </View>
+      </Surface>
+
+      <SectionHeader title="Account" />
+      <Surface variant="outlined" pad={t.spacing.lg}>
+        {authUser ? (
+          <View style={{ gap: t.spacing.md }}>
+            <View>
+              <Text variant="caption" tone="secondary">
+                Signed in as
+              </Text>
+              <Text variant="bodyLg" weight="semibold" style={{ marginTop: 2 }}>
+                {authUser.email ?? authUser.id}
+              </Text>
+            </View>
+            <Button
+              label="Sign out"
+              variant="secondary"
+              onPress={() => void signOut()}
+              loading={authLoading}
+              fullWidth
+            />
+          </View>
+        ) : (
+          <View style={{ gap: t.spacing.md }}>
+            <Text variant="body" tone="secondary">
+              Sign in to back up your recipes, plan, and pantry and sync them across devices.
+            </Text>
+            <Button
+              label="Sign in or create account"
+              onPress={() => navigation.navigate('Auth')}
+              fullWidth
+              disabled={!supabaseConfigured}
+            />
+            {!supabaseConfigured ? (
+              <Text variant="caption" tone="tertiary">
+                Supabase is not configured. See supabase/README.md.
+              </Text>
+            ) : null}
+          </View>
+        )}
+      </Surface>
+
       <SectionHeader title="Appearance" />
       <Surface variant="outlined" pad={0}>
         <SettingsToggleRow
@@ -204,7 +294,9 @@ export function SettingsScreen() {
           tone="tertiary"
           style={{ textAlign: 'center', marginTop: t.spacing.xxl }}
         >
-          MealPrep · Offline-first · All data lives on your device.
+          {authUser
+            ? 'MealPrep · Synced to your account · Edits work offline.'
+            : 'MealPrep · Offline-first · Sign in to sync across devices.'}
         </Text>
       </Animated.ScrollView>
       <CollapsingHeader title="You" scrollY={scrollY} />

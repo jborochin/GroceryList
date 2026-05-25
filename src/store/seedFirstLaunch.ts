@@ -4,12 +4,18 @@ import { v4 as uuid } from 'uuid';
 import { STORAGE_KEYS } from './storage';
 import { useRecipeStore } from './useRecipeStore';
 import { usePantryStore } from './usePantryStore';
+import { useAuthStore } from './useAuthStore';
 import { SEED_RECIPES, SEED_PANTRY } from '../data/seedRecipes';
 
 export async function seedIfFirstLaunch(): Promise<void> {
   try {
     const flag = await AsyncStorage.getItem(STORAGE_KEYS.seeded);
     if (flag) return;
+    // Skip seeding when a user is signed in — their account state arrives via pullAll.
+    if (useAuthStore.getState().session) {
+      await AsyncStorage.setItem(STORAGE_KEYS.seeded, '1');
+      return;
+    }
 
     const recipes = useRecipeStore.getState().recipes;
     if (recipes.length === 0) {

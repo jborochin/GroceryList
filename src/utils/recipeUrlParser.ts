@@ -1,5 +1,6 @@
 import { Ingredient, NutritionPerServing, Recipe } from '../types';
 import { parseIngredient } from './ingredientParser';
+import { computeMissingMacros } from './computeNutrition';
 
 function isWebRuntime(): boolean {
   return typeof document !== 'undefined' && typeof window !== 'undefined';
@@ -20,7 +21,9 @@ export class RecipeParseError extends Error {
   }
 }
 
-export type ParsedRecipe = Omit<Recipe, 'id' | 'createdAt' | 'updatedAt'>;
+export type ParsedRecipe = Omit<Recipe, 'id' | 'createdAt' | 'updatedAt'> & {
+  estimatedMacros?: Array<keyof NutritionPerServing>;
+};
 
 export interface JsonLdExtraction {
   blocks: unknown[];
@@ -37,7 +40,44 @@ export async function parseRecipeFromUrl(url: string): Promise<ParsedRecipe> {
     }
     throw new RecipeParseError('not-found', 'No recipe schema found on this page.');
   }
-  return mapRecipeNode(recipeNode, url);
+  const { parsed, ingredientStrings, missing } = mapRecipeNode(recipeNode, url);
+  if (missing.length === 0) return parsed;
+
+  // Tier 2: HTML scrape — authoritative since values come from the source page.
+  const scraped = scrapeNutritionFromHtml(html);
+  let mergedParsed: ParsedRecipe = parsed;
+  const filled: Array<keyof NutritionPerServing> = [];
+  for (const key of missing) {
+    if (typeof scraped[key] === 'number') filled.push(key);
+  }
+  if (filled.length > 0) {
+    const base: NutritionPerServing = parsed.nutritionPerServing ?? {
+      calories: 0,
+      proteinG: 0,
+      carbsG: 0,
+      fatG: 0,
+    };
+    const merged: NutritionPerServing = { ...base };
+    for (const key of filled) merged[key] = scraped[key]!;
+    mergedParsed = { ...parsed, nutritionPerServing: merged };
+  }
+  const stillMissing = missing.filter((k) => !filled.includes(k));
+  if (stillMissing.length === 0 || ingredientStrings.length === 0) return mergedParsed;
+
+  // Tier 3: CalorieNinjas — estimated values, flagged for the badge.
+  const computed = await computeMissingMacros(ingredientStrings, mergedParsed.servings, stillMissing);
+  if (!computed) return mergedParsed;
+  const finalBase: NutritionPerServing = mergedParsed.nutritionPerServing ?? {
+    calories: 0,
+    proteinG: 0,
+    carbsG: 0,
+    fatG: 0,
+  };
+  return {
+    ...mergedParsed,
+    nutritionPerServing: { ...finalBase, ...computed },
+    estimatedMacros: Object.keys(computed) as Array<keyof NutritionPerServing>,
+  };
 }
 
 async function fetchHtml(url: string): Promise<string> {
@@ -168,7 +208,15 @@ function isRecipeType(t: unknown): boolean {
   return typeof t === 'string' && t.includes('Recipe');
 }
 
-function mapRecipeNode(node: Record<string, unknown>, sourceUrl: string): ParsedRecipe {
+const ALL_MACRO_KEYS: Array<keyof NutritionPerServing> = ['calories', 'proteinG', 'carbsG', 'fatG'];
+
+interface MappedRecipe {
+  parsed: ParsedRecipe;
+  ingredientStrings: string[];
+  missing: Array<keyof NutritionPerServing>;
+}
+
+function mapRecipeNode(node: Record<string, unknown>, sourceUrl: string): MappedRecipe {
   const title = stringOrEmpty(node.name) || 'Untitled Recipe';
   const servings = parseServings(node.recipeYield);
   const ingredientStrings = coerceStringArray(node.recipeIngredient ?? node.ingredients);
@@ -176,9 +224,18 @@ function mapRecipeNode(node: Record<string, unknown>, sourceUrl: string): Parsed
   const instructions = parseInstructions(node.recipeInstructions);
 
   const nutritionNode = node.nutrition;
-  const nutritionPerServing = isRecord(nutritionNode) ? parseNutrition(nutritionNode) : undefined;
+  let nutritionPerServing: NutritionPerServing | undefined;
+  let missing: Array<keyof NutritionPerServing>;
+  if (isRecord(nutritionNode)) {
+    const parsedN = parseNutrition(nutritionNode);
+    nutritionPerServing = parsedN.values;
+    missing = parsedN.missing;
+  } else {
+    nutritionPerServing = undefined;
+    missing = [...ALL_MACRO_KEYS];
+  }
 
-  return {
+  const parsed: ParsedRecipe = {
     title,
     sourceUrl,
     servings,
@@ -186,6 +243,8 @@ function mapRecipeNode(node: Record<string, unknown>, sourceUrl: string): Parsed
     instructions: instructions.length > 0 ? instructions : undefined,
     nutritionPerServing,
   };
+
+  return { parsed, ingredientStrings, missing };
 }
 
 export function parseInstructions(raw: unknown): string[] {
@@ -247,19 +306,32 @@ function parseServings(raw: unknown): number {
   return 4;
 }
 
-function parseNutrition(n: Record<string, unknown>): NutritionPerServing | undefined {
+export interface ParsedNutrition {
+  values: NutritionPerServing | undefined;
+  missing: Array<keyof NutritionPerServing>;
+}
+
+export function parseNutrition(n: Record<string, unknown>): ParsedNutrition {
   const calories = parseNumberWithUnit(n.calories);
   const proteinG = parseNumberWithUnit(n.proteinContent);
   const carbsG = parseNumberWithUnit(n.carbohydrateContent);
   const fatG = parseNumberWithUnit(n.fatContent);
-  if (calories === undefined && proteinG === undefined && carbsG === undefined && fatG === undefined) {
-    return undefined;
+  const missing: Array<keyof NutritionPerServing> = [];
+  if (calories === undefined) missing.push('calories');
+  if (proteinG === undefined) missing.push('proteinG');
+  if (carbsG === undefined) missing.push('carbsG');
+  if (fatG === undefined) missing.push('fatG');
+  if (missing.length === 4) {
+    return { values: undefined, missing };
   }
   return {
-    calories: calories ?? 0,
-    proteinG: proteinG ?? 0,
-    carbsG: carbsG ?? 0,
-    fatG: fatG ?? 0,
+    values: {
+      calories: calories ?? 0,
+      proteinG: proteinG ?? 0,
+      carbsG: carbsG ?? 0,
+      fatG: fatG ?? 0,
+    },
+    missing,
   };
 }
 
@@ -271,6 +343,111 @@ function parseNumberWithUnit(v: unknown): number | undefined {
     if (m) return parseFloat(m[0]);
   }
   return undefined;
+}
+
+// Maps each NutritionPerServing key to the schema.org itemprop / JSON-LD property name.
+const MICRODATA_PROPS: Array<[keyof NutritionPerServing, string]> = [
+  ['calories', 'calories'],
+  ['proteinG', 'proteinContent'],
+  ['carbsG', 'carbohydrateContent'],
+  ['fatG', 'fatContent'],
+];
+
+function findMicrodataValue(html: string, prop: string): number | undefined {
+  const escaped = prop.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  // <meta itemprop="X" content="Y"> in either attribute order.
+  const metaA = new RegExp(`<meta\\b[^>]*itemprop=["']${escaped}["'][^>]*\\bcontent=["']([^"']+)["']`, 'i');
+  const metaB = new RegExp(`<meta\\b[^>]*\\bcontent=["']([^"']+)["'][^>]*itemprop=["']${escaped}["']`, 'i');
+  // <span itemprop="X">Y</span> — any non-meta tag, take inner text up to next '<'.
+  const inner = new RegExp(`<(?!meta\\b)[a-z][a-z0-9]*\\b[^>]*itemprop=["']${escaped}["'][^>]*>([^<]+)`, 'i');
+  for (const re of [metaA, metaB, inner]) {
+    const m = html.match(re);
+    if (m) {
+      const num = parseNumberWithUnit(m[1].trim());
+      if (typeof num === 'number' && Number.isFinite(num)) return num;
+    }
+  }
+  return undefined;
+}
+
+// Text-pattern regexes per macro. Each macro has a "number-then-label" form (e.g. "38 g pro")
+// and a "label-then-number" form (e.g. "Protein: 38g") since recipe sites differ.
+interface TextPattern {
+  numberFirst: RegExp;
+  labelFirst: RegExp;
+}
+
+const TEXT_PATTERNS: Record<keyof NutritionPerServing, TextPattern> = {
+  calories: {
+    numberFirst: /(\d+(?:\.\d+)?)\s*(?:kcal\b|cal\b|calories\b)/i,
+    labelFirst: /(?:kcal\b|calories\b|\bcal\b)[:\s]+(\d+(?:\.\d+)?)/i,
+  },
+  proteinG: {
+    numberFirst: /(\d+(?:\.\d+)?)\s*g\s+(?:pro\b|protein\b|proteins\b)/i,
+    labelFirst: /(?:^|[^a-z])(?:protein|proteins)\b[:\s]+(\d+(?:\.\d+)?)\s*g\b/i,
+  },
+  carbsG: {
+    numberFirst: /(\d+(?:\.\d+)?)\s*g\s+(?:carb\b|carbs\b|carbohydrates?\b)/i,
+    labelFirst: /(?:^|[^a-z])(?:carb|carbs|carbohydrates?)\b[:\s]+(\d+(?:\.\d+)?)\s*g\b/i,
+  },
+  fatG: {
+    numberFirst: /(\d+(?:\.\d+)?)\s*g\s+(?:total\s+)?fat\b/i,
+    labelFirst: /(?:^|[^a-z])(?:total\s+)?fat\b[:\s]+(\d+(?:\.\d+)?)\s*g\b/i,
+  },
+};
+
+const ANCHOR_RE = /nutrition|per serving/gi;
+const WINDOW_SIZE = 600;
+const MAX_ANCHORS = 40;
+
+function extractMacrosFromWindow(text: string): Partial<NutritionPerServing> {
+  // Mask "sat fat" / "saturated fat" first so the total-fat regex doesn't latch onto it.
+  const masked = text.replace(/\d+(?:\.\d+)?\s*g\s+sat(?:urated)?\s+fat/gi, '');
+  const found: Partial<NutritionPerServing> = {};
+  for (const key of ALL_MACRO_KEYS) {
+    const pattern = TEXT_PATTERNS[key];
+    const m = masked.match(pattern.numberFirst) ?? masked.match(pattern.labelFirst);
+    if (m) {
+      const num = parseFloat(m[1]);
+      if (Number.isFinite(num)) found[key] = num;
+    }
+  }
+  return found;
+}
+
+export function scrapeNutritionFromHtml(html: string): Partial<NutritionPerServing> {
+  const out: Partial<NutritionPerServing> = {};
+
+  // Tier 2a: schema.org microdata (most structured signal short of JSON-LD).
+  for (const [key, prop] of MICRODATA_PROPS) {
+    const v = findMicrodataValue(html, prop);
+    if (typeof v === 'number') out[key] = v;
+  }
+  if (ALL_MACRO_KEYS.every((k) => typeof out[k] === 'number')) return out;
+
+  // Tier 2b: text-pattern scrape in a localized window. We can't trust the FIRST
+  // occurrence of "nutrition" — on real pages it's usually the URL ("/food-nutrition/")
+  // or a nav link. Strip script/style blocks (JSON-LD lives in <script>) and then
+  // scan every candidate anchor, picking the first window that actually yields macros.
+  const stripped = html
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, ' ');
+  ANCHOR_RE.lastIndex = 0;
+  let match: RegExpExecArray | null;
+  let seen = 0;
+  while ((match = ANCHOR_RE.exec(stripped)) !== null && seen < MAX_ANCHORS) {
+    seen += 1;
+    const text = stripHtml(stripped.slice(match.index, match.index + WINDOW_SIZE));
+    const found = extractMacrosFromWindow(text);
+    if (Object.keys(found).length === 0) continue;
+    for (const key of ALL_MACRO_KEYS) {
+      if (typeof out[key] === 'number') continue;
+      if (typeof found[key] === 'number') out[key] = found[key];
+    }
+    break;
+  }
+
+  return out;
 }
 
 function stringOrEmpty(v: unknown): string {

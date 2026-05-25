@@ -10,4 +10,7 @@ export const STORAGE_KEYS = {
   settings: 'mealprep/settings/v1',
   priceOverrides: 'mealprep/priceOverrides/v1',
   seeded: 'mealprep/seeded/v1',
+  lastSyncedAt: 'mealprep/sync/lastSyncedAt/v1',
+  outbox: 'mealprep/sync/outbox/v1',
+  migratedAccountId: 'mealprep/sync/migratedAccountId/v1',
 } as const;

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { Provider as PaperProvider, ActivityIndicator } from 'react-native-paper';
 import { NavigationContainer } from '@react-navigation/native';
-import { View, useColorScheme } from 'react-native';
+import { AppState, View, useColorScheme } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import {
@@ -16,12 +16,16 @@ import { RootNavigator } from './src/navigation/RootNavigator';
 import { lightTheme, darkTheme } from './src/theme/theme';
 import { useHydration } from './src/store/hydration';
 import { seedIfFirstLaunch } from './src/store/seedFirstLaunch';
+import { useAuthStore } from './src/store/useAuthStore';
 import { ToastHost } from './src/components/ui/ToastHost';
+import { drainOutbox, migrateLocalToAccount, pullAll, subscribeStores, unsubscribeStores } from './src/lib/sync';
+import { supabaseConfigured } from './src/lib/supabase';
 
 export default function App() {
   const scheme = useColorScheme();
   const theme = scheme === 'dark' ? darkTheme : lightTheme;
   const hydrated = useHydration();
+  const userId = useAuthStore((s) => s.user?.id ?? null);
   const [seeded, setSeeded] = useState(false);
   const [fontsLoaded] = useFonts({
     Geist_400Regular,
@@ -35,6 +39,40 @@ export default function App() {
       seedIfFirstLaunch().finally(() => setSeeded(true));
     }
   }, [hydrated, seeded]);
+
+  // Drive sync lifecycle from auth state.
+  useEffect(() => {
+    if (!hydrated || !seeded || !supabaseConfigured) return;
+    if (!userId) {
+      unsubscribeStores();
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      await migrateLocalToAccount(userId);
+      if (cancelled) return;
+      await pullAll(userId);
+      if (cancelled) return;
+      subscribeStores(userId);
+      void drainOutbox();
+    })();
+    return () => {
+      cancelled = true;
+      unsubscribeStores();
+    };
+  }, [hydrated, seeded, userId]);
+
+  // Pull + drain on app foreground.
+  useEffect(() => {
+    if (!userId || !supabaseConfigured) return;
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        void drainOutbox();
+        void pullAll(userId);
+      }
+    });
+    return () => sub.remove();
+  }, [userId]);
 
   if (!hydrated || !seeded || !fontsLoaded) {
     return (

@@ -154,6 +154,7 @@ export function AddRecipeScreen() {
   const [ingredients, setIngredients] = useState<Ingredient[]>([{ name: '', quantity: 1, unit: 'each' }]);
   const [instructionsText, setInstructionsText] = useState('');
   const [nutrition, setNutrition] = useState<NutritionPerServing | undefined>(undefined);
+  const [estimatedFields, setEstimatedFields] = useState<Set<keyof NutritionPerServing>>(new Set());
 
   const applyParsed = (parsed: ParsedRecipe) => {
     setTitle(parsed.title);
@@ -164,6 +165,7 @@ export function AddRecipeScreen() {
     );
     setInstructionsText((parsed.instructions ?? []).join('\n'));
     setNutrition(parsed.nutritionPerServing);
+    setEstimatedFields(new Set(parsed.estimatedMacros ?? []));
   };
 
   const handleImport = async () => {
@@ -231,6 +233,11 @@ export function AddRecipeScreen() {
       ...(nutrition ?? {}),
       [key]: num,
     });
+    if (estimatedFields.has(key)) {
+      const next = new Set(estimatedFields);
+      next.delete(key);
+      setEstimatedFields(next);
+    }
   };
 
   return (
@@ -400,34 +407,50 @@ export function AddRecipeScreen() {
 
           <SectionHeader title="Nutrition" trailing={<Text variant="caption" tone="tertiary">per serving · optional</Text>} />
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.spacing.sm }}>
-            <Input
-              label="Calories"
-              keyboardType="numeric"
-              value={String(nutrition?.calories ?? '')}
-              onChangeText={(v) => setNutritionField('calories', v)}
-              containerStyle={{ width: '48%' }}
-            />
-            <Input
-              label="Protein (g)"
-              keyboardType="numeric"
-              value={String(nutrition?.proteinG ?? '')}
-              onChangeText={(v) => setNutritionField('proteinG', v)}
-              containerStyle={{ width: '48%' }}
-            />
-            <Input
-              label="Carbs (g)"
-              keyboardType="numeric"
-              value={String(nutrition?.carbsG ?? '')}
-              onChangeText={(v) => setNutritionField('carbsG', v)}
-              containerStyle={{ width: '48%' }}
-            />
-            <Input
-              label="Fat (g)"
-              keyboardType="numeric"
-              value={String(nutrition?.fatG ?? '')}
-              onChangeText={(v) => setNutritionField('fatG', v)}
-              containerStyle={{ width: '48%' }}
-            />
+            <View style={{ width: '48%' }}>
+              <Input
+                label="Calories"
+                keyboardType="numeric"
+                value={String(nutrition?.calories ?? '')}
+                onChangeText={(v) => setNutritionField('calories', v)}
+              />
+              {estimatedFields.has('calories') ? (
+                <Text variant="caption" tone="tertiary" style={{ marginTop: 4 }}>estimated</Text>
+              ) : null}
+            </View>
+            <View style={{ width: '48%' }}>
+              <Input
+                label="Protein (g)"
+                keyboardType="numeric"
+                value={String(nutrition?.proteinG ?? '')}
+                onChangeText={(v) => setNutritionField('proteinG', v)}
+              />
+              {estimatedFields.has('proteinG') ? (
+                <Text variant="caption" tone="tertiary" style={{ marginTop: 4 }}>estimated</Text>
+              ) : null}
+            </View>
+            <View style={{ width: '48%' }}>
+              <Input
+                label="Carbs (g)"
+                keyboardType="numeric"
+                value={String(nutrition?.carbsG ?? '')}
+                onChangeText={(v) => setNutritionField('carbsG', v)}
+              />
+              {estimatedFields.has('carbsG') ? (
+                <Text variant="caption" tone="tertiary" style={{ marginTop: 4 }}>estimated</Text>
+              ) : null}
+            </View>
+            <View style={{ width: '48%' }}>
+              <Input
+                label="Fat (g)"
+                keyboardType="numeric"
+                value={String(nutrition?.fatG ?? '')}
+                onChangeText={(v) => setNutritionField('fatG', v)}
+              />
+              {estimatedFields.has('fatG') ? (
+                <Text variant="caption" tone="tertiary" style={{ marginTop: 4 }}>estimated</Text>
+              ) : null}
+            </View>
           </View>
 
           <Button

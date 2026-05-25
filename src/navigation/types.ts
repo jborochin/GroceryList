@@ -5,6 +5,7 @@ export type RootStackParamList = {
   RecipeDetail: { recipeId: string };
   AddRecipe: { prefilledUrl?: string } | undefined;
   Pantry: undefined;
+  Auth: undefined;
 };
 
 export type TabParamList = {

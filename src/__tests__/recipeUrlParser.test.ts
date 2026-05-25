@@ -9,8 +9,10 @@ import {
   extractJsonLdBlocks,
   findRecipeNode,
   parseInstructions,
+  parseNutrition,
   parseRecipeFromUrl,
   RecipeParseError,
+  scrapeNutritionFromHtml,
 } from '../utils/recipeUrlParser';
 
 describe('recipeUrlParser (pure helpers)', () => {
@@ -207,5 +209,156 @@ describe('parseRecipeFromUrl (integration with mocked fetch)', () => {
     mockFetchHtml('', false, 500);
     const err = await parseRecipeFromUrl('https://example.com/fail').catch((e) => e);
     expect(err).toBeInstanceOf(RecipeParseError);
+  });
+
+  it('flags all four macros missing when JSON-LD lacks a nutrition node', async () => {
+    mockFetchHtml(`
+      <html><script type="application/ld+json">
+        {"@type":"Recipe","name":"Plain","recipeIngredient":["1 cup flour"],"recipeYield":"2"}
+      </script></html>
+    `);
+    const recipe = await parseRecipeFromUrl('https://example.com/plain');
+    // Without supabase configured, the fallback is skipped, so nutrition stays undefined.
+    expect(recipe.nutritionPerServing).toBeUndefined();
+    // estimatedMacros should not be set when the fallback didn't run.
+    expect(recipe.estimatedMacros).toBeUndefined();
+  });
+
+  it('fills macros from HTML when JSON-LD has only calories (prevention.com shape)', async () => {
+    mockFetchHtml(`
+      <html>
+        <script type="application/ld+json">
+          {"@type":"Recipe","name":"Roasted Chicken","recipeIngredient":["4 chicken thighs"],"recipeYield":"4",
+           "nutrition":{"@type":"NutritionInformation","calories":"526 calories"}}
+        </script>
+        <p>Nutrition per serving: 526 cal, 38 g pro, 29 g carb, 3 g fiber, 1.5 g sugars (0 g added sugars), 29 g fat (6.5 g sat fat), 187 mg chol, 778 mg sodium</p>
+      </html>
+    `);
+    const recipe = await parseRecipeFromUrl('https://example.com/chicken');
+    expect(recipe.nutritionPerServing).toEqual({
+      calories: 526,
+      proteinG: 38,
+      carbsG: 29,
+      fatG: 29,
+    });
+    // HTML-scraped values are authoritative — no estimated badge.
+    expect(recipe.estimatedMacros).toBeUndefined();
+  });
+});
+
+describe('scrapeNutritionFromHtml', () => {
+  it('extracts all four macros from prevention.com-style text', () => {
+    const html =
+      '<p>Nutrition per serving: 526 cal, 38 g pro, 29 g carb, 3 g fiber, 1.5 g sugars (0 g added sugars), 29 g fat (6.5 g sat fat), 187 mg chol, 778 mg sodium</p>';
+    expect(scrapeNutritionFromHtml(html)).toEqual({
+      calories: 526,
+      proteinG: 38,
+      carbsG: 29,
+      fatG: 29,
+    });
+  });
+
+  it('excludes "sat fat" from the total-fat match', () => {
+    const html = '<div>Nutrition: 29 g fat (6.5 g sat fat)</div>';
+    expect(scrapeNutritionFromHtml(html).fatG).toBe(29);
+  });
+
+  it('excludes "saturated fat" from the total-fat match', () => {
+    const html = '<div>Nutrition: 22 g fat (5 g saturated fat)</div>';
+    expect(scrapeNutritionFromHtml(html).fatG).toBe(22);
+  });
+
+  it('reads schema.org microdata from <meta itemprop content>', () => {
+    const html = '<meta itemprop="proteinContent" content="22 g">';
+    expect(scrapeNutritionFromHtml(html).proteinG).toBe(22);
+  });
+
+  it('reads schema.org microdata from inner text', () => {
+    const html =
+      '<div itemprop="nutrition"><span itemprop="proteinContent">22g</span><span itemprop="fatContent">10 g</span></div>';
+    const result = scrapeNutritionFromHtml(html);
+    expect(result.proteinG).toBe(22);
+    expect(result.fatG).toBe(10);
+  });
+
+  it('handles meta with content before itemprop', () => {
+    const html = '<meta content="300" itemprop="calories">';
+    expect(scrapeNutritionFromHtml(html).calories).toBe(300);
+  });
+
+  it('returns empty object when no nutrition context is present', () => {
+    const html = '<p>An article about losing 38 g of weight after 526 calories.</p>';
+    expect(scrapeNutritionFromHtml(html)).toEqual({});
+  });
+
+  it('combines microdata (when present) with text scrape for the rest', () => {
+    const html = `
+      <meta itemprop="calories" content="300">
+      <p>Nutrition per serving: 30 g pro, 40 g carb, 10 g fat</p>
+    `;
+    expect(scrapeNutritionFromHtml(html)).toEqual({
+      calories: 300,
+      proteinG: 30,
+      carbsG: 40,
+      fatG: 10,
+    });
+  });
+
+  it('parses label-first form (Protein: 22g)', () => {
+    const html = '<div>Nutrition Facts: Protein: 22g, Carbs: 40g, Fat: 10g, Calories: 320</div>';
+    expect(scrapeNutritionFromHtml(html)).toEqual({
+      calories: 320,
+      proteinG: 22,
+      carbsG: 40,
+      fatG: 10,
+    });
+  });
+
+  it('skips decoy "nutrition" occurrences (URL paths, nav links, JSON-LD) and finds the real block', () => {
+    // Mirrors prevention.com: the word "nutrition" appears 30+ times in head/nav/JSON-LD
+    // before the actual macro line, which lives deep in the body.
+    const html = `
+      <link rel="canonical" href="https://example.com/food-nutrition/recipes/roasted-chicken/">
+      <meta name="sailthru.tags" content="food-nutrition,Food &amp; Nutrition,recipes">
+      <script type="application/ld+json">{"keywords":["NUTRITION: healthy","NUTRITION: low-calorie"]}</script>
+      <nav><a href="/food-nutrition/">Food &amp; Nutrition</a></nav>
+      <section><p><em><strong>Nutrition per serving</strong>: 526 cal, 38 g pro, 29 g carb, 3 g fiber, 1.5 g sugars (0 g added sugars), 29 g fat (6.5 g sat fat), 187 mg chol, 778 mg sodium</em></p></section>
+    `;
+    expect(scrapeNutritionFromHtml(html)).toEqual({
+      calories: 526,
+      proteinG: 38,
+      carbsG: 29,
+      fatG: 29,
+    });
+  });
+});
+
+describe('parseNutrition', () => {
+  it('reports all four fields missing when none present', () => {
+    expect(parseNutrition({})).toEqual({ values: undefined, missing: ['calories', 'proteinG', 'carbsG', 'fatG'] });
+  });
+
+  it('reports only the missing fields when calories is present', () => {
+    const result = parseNutrition({ calories: '320 kcal' });
+    expect(result.missing).toEqual(['proteinG', 'carbsG', 'fatG']);
+    expect(result.values).toEqual({ calories: 320, proteinG: 0, carbsG: 0, fatG: 0 });
+  });
+
+  it('reports nothing missing when all four are present', () => {
+    const result = parseNutrition({
+      calories: 400,
+      proteinG: undefined,
+      proteinContent: '30 g',
+      carbohydrateContent: '40 g',
+      fatContent: '15 g',
+    });
+    expect(result.missing).toEqual([]);
+    expect(result.values).toEqual({ calories: 400, proteinG: 30, carbsG: 40, fatG: 15 });
+  });
+
+  it('parses numeric strings with stray units', () => {
+    const result = parseNutrition({ proteinContent: '12.5g' });
+    expect(result.values?.proteinG).toBe(12.5);
+    expect(result.missing).toEqual(['calories', 'carbsG', 'fatG']);
   });
 });

@@ -4,11 +4,17 @@ import { useMealPlanStore } from './useMealPlanStore';
 import { usePantryStore } from './usePantryStore';
 import { useSettingsStore } from './useSettingsStore';
 import { usePriceOverrideStore } from './usePriceOverrideStore';
+import { useAuthStore } from './useAuthStore';
 
 const stores = [useRecipeStore, useMealPlanStore, usePantryStore, useSettingsStore, usePriceOverrideStore];
 
 export function useHydration(): boolean {
   const [hydrated, setHydrated] = useState(false);
+  const authInitialized = useAuthStore((s) => s.initialized);
+
+  useEffect(() => {
+    void useAuthStore.getState().initialize();
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -24,5 +30,5 @@ export function useHydration(): boolean {
     };
   }, []);
 
-  return hydrated;
+  return hydrated && authInitialized;
 }

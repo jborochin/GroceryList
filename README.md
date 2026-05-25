@@ -109,4 +109,3 @@ To reset: Settings → Reset all data.
 ## Tech
 
 Expo SDK 51 · React Native 0.74 · TypeScript · Zustand · React Navigation 6 · React Native Paper (MD3) · Fuse.js · AsyncStorage
-# GroveryList

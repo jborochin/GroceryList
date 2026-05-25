@@ -1,0 +1,60 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { STORAGE_KEYS } from '../store/storage';
+
+export type OutboxOp = 'upsert' | 'delete';
+export type OutboxTable =
+  | 'recipes'
+  | 'meal_plan_entries'
+  | 'pantry_items'
+  | 'price_overrides'
+  | 'user_settings';
+
+export interface OutboxEntry {
+  id: string;            // outbox row id (uuid-ish)
+  table: OutboxTable;
+  op: OutboxOp;
+  payload: Record<string, unknown>;
+  enqueuedAt: number;
+}
+
+let inMemory: OutboxEntry[] | null = null;
+let writeChain: Promise<void> = Promise.resolve();
+
+async function read(): Promise<OutboxEntry[]> {
+  if (inMemory) return inMemory;
+  const raw = await AsyncStorage.getItem(STORAGE_KEYS.outbox);
+  inMemory = raw ? (JSON.parse(raw) as OutboxEntry[]) : [];
+  return inMemory;
+}
+
+function persist(entries: OutboxEntry[]): Promise<void> {
+  inMemory = entries;
+  // Serialize writes so we don't race AsyncStorage.
+  writeChain = writeChain.then(() => AsyncStorage.setItem(STORAGE_KEYS.outbox, JSON.stringify(entries)));
+  return writeChain;
+}
+
+export async function enqueue(entry: Omit<OutboxEntry, 'id' | 'enqueuedAt'>): Promise<void> {
+  const list = await read();
+  const next: OutboxEntry = {
+    ...entry,
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    enqueuedAt: Date.now(),
+  };
+  await persist([...list, next]);
+}
+
+export async function peekAll(): Promise<OutboxEntry[]> {
+  return [...(await read())];
+}
+
+export async function removeMany(ids: string[]): Promise<void> {
+  if (ids.length === 0) return;
+  const set = new Set(ids);
+  const list = await read();
+  await persist(list.filter((e) => !set.has(e.id)));
+}
+
+export async function clearOutbox(): Promise<void> {
+  await persist([]);
+}

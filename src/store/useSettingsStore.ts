@@ -7,15 +7,20 @@ interface SettingsState {
   settings: UserSettings;
   setCalorieTarget: (target: number) => void;
   setMacroSplit: (proteinPct: number, carbsPct: number, fatPct: number) => void;
+  setMacroGrams: (proteinG: number, carbsG: number, fatG: number) => void;
   setReduceVisualEffects: (value: boolean) => void;
   resetSettings: () => void;
+  hydrateFromServer: (settings: UserSettings) => void;
 }
 
 const DEFAULT_SETTINGS: UserSettings = {
   dailyCalorieTarget: 2000,
   macroSplit: { proteinPct: 30, carbsPct: 40, fatPct: 30 },
+  macroGrams: { proteinG: 150, carbsG: 200, fatG: 67 },
   reduceVisualEffects: false,
 };
+
+const clampGram = (v: number) => Math.max(0, Math.min(1000, Math.round(v)));
 
 export const useSettingsStore = create<SettingsState>()(
   persist(
@@ -36,23 +41,35 @@ export const useSettingsStore = create<SettingsState>()(
           },
         }));
       },
+      setMacroGrams: (proteinG, carbsG, fatG) => {
+        set((s) => ({
+          settings: {
+            ...s.settings,
+            macroGrams: { proteinG: clampGram(proteinG), carbsG: clampGram(carbsG), fatG: clampGram(fatG) },
+          },
+        }));
+      },
       setReduceVisualEffects: (value) =>
         set((s) => ({ settings: { ...s.settings, reduceVisualEffects: value } })),
       resetSettings: () => set({ settings: DEFAULT_SETTINGS }),
+      hydrateFromServer: (settings) => set({ settings }),
     }),
     {
       name: STORAGE_KEYS.settings,
       storage: zustandStorage,
-      // Hydrate older persisted blobs that predate `reduceVisualEffects`.
+      // Hydrate older persisted blobs that predate `reduceVisualEffects` and `macroGrams`.
       merge: (persisted, current) => {
         const p = persisted as Partial<SettingsState> | undefined;
+        const persistedSettings = p?.settings as Partial<UserSettings> | undefined;
         return {
           ...current,
           ...p,
           settings: {
             ...current.settings,
-            ...(p?.settings ?? {}),
-            reduceVisualEffects: p?.settings?.reduceVisualEffects ?? false,
+            ...(persistedSettings ?? {}),
+            macroSplit: { ...current.settings.macroSplit, ...(persistedSettings?.macroSplit ?? {}) },
+            macroGrams: { ...current.settings.macroGrams, ...(persistedSettings?.macroGrams ?? {}) },
+            reduceVisualEffects: persistedSettings?.reduceVisualEffects ?? false,
           },
         };
       },
