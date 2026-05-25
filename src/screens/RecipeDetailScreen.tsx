@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Alert, Linking, View } from 'react-native';
+import { confirm } from '../utils/confirm';
 import Animated, {
   useAnimatedScrollHandler,
   useSharedValue,
@@ -87,18 +88,16 @@ export function RecipeDetailScreen() {
     setPreviewServings(draft.servings);
   };
 
-  const handleDelete = () => {
-    Alert.alert('Delete recipe?', 'This cannot be undone.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: () => {
-          deleteRecipe(recipe.id);
-          navigation.goBack();
-        },
-      },
-    ]);
+  const handleDelete = async () => {
+    const ok = await confirm({
+      title: 'Delete recipe?',
+      message: 'This cannot be undone.',
+      confirmLabel: 'Delete',
+      destructive: true,
+    });
+    if (!ok) return;
+    deleteRecipe(recipe.id);
+    navigation.goBack();
   };
 
   const startEdit = () => {

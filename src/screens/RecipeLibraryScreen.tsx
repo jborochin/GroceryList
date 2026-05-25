@@ -12,10 +12,12 @@ import { RecipeCard } from '../components/RecipeCard';
 import { EmptyState } from '../components/EmptyState';
 import { RootStackParamList } from '../navigation/types';
 import { useAppTheme } from '../theme/tokens';
+import { confirm } from '../utils/confirm';
 import {
   AmbientBackground,
   CollapsingHeader,
   Header,
+  IconButton,
   Input,
   Button,
   Text,
@@ -29,7 +31,18 @@ export function RecipeLibraryScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<Nav>();
   const recipes = useRecipeStore((s) => s.recipes);
+  const deleteRecipe = useRecipeStore((s) => s.deleteRecipe);
   const [query, setQuery] = useState('');
+
+  const handleDelete = async (id: string, title: string) => {
+    const ok = await confirm({
+      title: `Delete ${title}?`,
+      message: 'This cannot be undone.',
+      confirmLabel: 'Delete',
+      destructive: true,
+    });
+    if (ok) deleteRecipe(id);
+  };
 
   const filtered = useMemo(() => {
     if (!query.trim()) return recipes;
@@ -97,6 +110,15 @@ export function RecipeLibraryScreen() {
           <RecipeCard
             recipe={item}
             onPress={() => navigation.navigate('RecipeDetail', { recipeId: item.id })}
+            trailing={
+              <IconButton
+                icon="delete-outline"
+                variant="danger"
+                size={18}
+                onPress={() => handleDelete(item.id, item.title)}
+                accessibilityLabel={`Delete ${item.title}`}
+              />
+            }
           />
         )}
         ListEmptyComponent={
