@@ -9,6 +9,20 @@ function isWebRuntime(): boolean {
 const DESKTOP_UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
+// Mirror a real Chrome request — sites like allrecipes.com 403 anything that
+// looks like a bare bot request. Kept in sync with supabase/functions/fetch-recipe.
+const BROWSER_HEADERS: Record<string, string> = {
+  'User-Agent': DESKTOP_UA,
+  Accept:
+    'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+  'Accept-Language': 'en-US,en;q=0.9',
+  'Upgrade-Insecure-Requests': '1',
+  'Sec-Fetch-Dest': 'document',
+  'Sec-Fetch-Mode': 'navigate',
+  'Sec-Fetch-Site': 'none',
+  'Sec-Fetch-User': '?1',
+};
+
 const FETCH_TIMEOUT_MS = 15000;
 
 export type RecipeParseErrorKind = 'network' | 'cors' | 'not-found' | 'malformed';
@@ -125,13 +139,20 @@ async function fetchHtmlDirect(url: string): Promise<string> {
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
     const res = await fetch(url, {
-      headers: { 'User-Agent': DESKTOP_UA, Accept: 'text/html,application/xhtml+xml' },
+      headers: BROWSER_HEADERS,
       signal: controller.signal,
     });
-    if (!res.ok) {
-      throw new RecipeParseError('network', `HTTP ${res.status}`);
+    if (res.ok) {
+      return await res.text();
     }
-    return await res.text();
+    // Bot-protected sites (Cloudflare/Akamai) typically return 403/429/503 even
+    // with a real-browser header set. Wayback Machine usually has a recent
+    // snapshot with the original JSON-LD intact.
+    if (isBlockedStatus(res.status)) {
+      const archived = await fetchHtmlFromWayback(url, controller.signal);
+      if (archived) return archived;
+    }
+    throw new RecipeParseError('network', `HTTP ${res.status}`);
   } catch (err: unknown) {
     if (err instanceof RecipeParseError) throw err;
     const message = err instanceof Error ? err.message : 'Fetch failed';
@@ -145,6 +166,40 @@ async function fetchHtmlDirect(url: string): Promise<string> {
   } finally {
     clearTimeout(timer);
   }
+}
+
+function isBlockedStatus(status: number): boolean {
+  return status === 401 || status === 403 || status === 429 || status === 503;
+}
+
+async function fetchHtmlFromWayback(originalUrl: string, signal: AbortSignal): Promise<string | null> {
+  const availUrl = `https://archive.org/wayback/available?url=${encodeURIComponent(originalUrl)}`;
+  let availRes: Response;
+  try {
+    availRes = await fetch(availUrl, { signal });
+  } catch {
+    return null;
+  }
+  if (!availRes.ok) return null;
+  let avail: { archived_snapshots?: { closest?: { available?: boolean; timestamp?: string } } };
+  try {
+    avail = await availRes.json();
+  } catch {
+    return null;
+  }
+  const closest = avail.archived_snapshots?.closest;
+  if (!closest?.available || !closest.timestamp) return null;
+  // The `id_` modifier returns the raw archived HTML without the Wayback toolbar
+  // wrapper, keeping JSON-LD blocks byte-identical to the original page.
+  const rawUrl = `https://web.archive.org/web/${closest.timestamp}id_/${originalUrl}`;
+  let rawRes: Response;
+  try {
+    rawRes = await fetch(rawUrl, { signal });
+  } catch {
+    return null;
+  }
+  if (!rawRes.ok) return null;
+  return await rawRes.text();
 }
 
 export function extractJsonLdBlocks(html: string): JsonLdExtraction {
