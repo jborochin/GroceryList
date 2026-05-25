@@ -1,3 +1,10 @@
+jest.mock('../lib/supabase', () => ({
+  supabaseConfigured: false,
+  getSupabase: () => {
+    throw new Error('supabase not configured in tests');
+  },
+}));
+
 import {
   extractJsonLdBlocks,
   findRecipeNode,

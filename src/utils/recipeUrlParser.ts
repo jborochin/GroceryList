@@ -41,6 +41,46 @@ export async function parseRecipeFromUrl(url: string): Promise<ParsedRecipe> {
 }
 
 async function fetchHtml(url: string): Promise<string> {
+  if (isWebRuntime()) {
+    return fetchHtmlViaProxy(url);
+  }
+  return fetchHtmlDirect(url);
+}
+
+interface ProxyResponse {
+  ok: boolean;
+  html?: string;
+  kind?: string;
+  message?: string;
+  status?: number;
+}
+
+async function fetchHtmlViaProxy(url: string): Promise<string> {
+  // Lazy import: supabase pulls in native-only polyfills, so importing it at
+  // module top would break Jest (which never hits this code path because
+  // isWebRuntime() is false under jsdom-free node).
+  const { getSupabase, supabaseConfigured } = await import('../lib/supabase');
+  if (!supabaseConfigured) {
+    return fetchHtmlDirect(url);
+  }
+  const supabase = getSupabase();
+  const { data, error } = await supabase.functions.invoke<ProxyResponse>('fetch-recipe', {
+    body: { url },
+  });
+  if (error || !data) {
+    throw new RecipeParseError('network', error?.message || 'Proxy request failed');
+  }
+  if (!data.ok) {
+    const message = data.message || `Proxy error: ${data.kind ?? 'unknown'}`;
+    throw new RecipeParseError('network', message);
+  }
+  if (typeof data.html !== 'string') {
+    throw new RecipeParseError('network', 'Proxy returned no html');
+  }
+  return data.html;
+}
+
+async function fetchHtmlDirect(url: string): Promise<string> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
