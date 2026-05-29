@@ -4,8 +4,6 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
-  withTiming,
-  interpolate,
 } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -13,8 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { tokens, useAppTheme } from '../../theme/tokens';
-import { useSettingsStore } from '../../store/useSettingsStore';
-import { Text } from './Text';
+import { useReduceTransparency } from '../../hooks/useReduceEffects';
 import { haptics } from '../../utils/haptics';
 
 const HORIZONTAL_PADDING = 16;
@@ -37,6 +34,7 @@ const ICON_FOCUSED: Record<string, string> = {
   Settings: 'tune-variant',
 };
 
+// Labels are not drawn (icon-only bar) but are still announced to screen readers.
 const LABEL_BY_ROUTE: Record<string, string> = {
   Home: 'Home',
   Library: 'Recipes',
@@ -45,13 +43,11 @@ const LABEL_BY_ROUTE: Record<string, string> = {
   Settings: 'You',
 };
 
-const AnimatedIcon = Animated.createAnimatedComponent(Icon);
-
 export function AppTabBar({ state, navigation }: BottomTabBarProps) {
   const t = useAppTheme();
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
-  const reduceEffects = useSettingsStore((s) => s.settings.reduceVisualEffects);
+  const reduceTransparency = useReduceTransparency();
 
   const tabCount = state.routes.length;
   const innerWidth = windowWidth - HORIZONTAL_PADDING * 2 - INNER_PAD * 2;
@@ -68,7 +64,9 @@ export function AppTabBar({ state, navigation }: BottomTabBarProps) {
     width: tabWidth,
   }));
 
-  const allowBlur = !reduceEffects && Platform.OS !== 'web';
+  const allowBlur = !reduceTransparency && Platform.OS !== 'web';
+  const blurTint =
+    Platform.OS === 'ios' ? 'systemUltraThinMaterialDark' : t.palette.blurTint;
 
   return (
     <View
@@ -95,7 +93,7 @@ export function AppTabBar({ state, navigation }: BottomTabBarProps) {
         {allowBlur ? (
           <BlurView
             intensity={t.blur.thick}
-            tint={t.palette.blurTint}
+            tint={blurTint}
             experimentalBlurMethod="dimezisBlurView"
             style={StyleSheet.absoluteFill}
           />
@@ -167,72 +165,27 @@ export function AppTabBar({ state, navigation }: BottomTabBarProps) {
               navigation.emit({ type: 'tabLongPress', target: route.key });
             };
             return (
-              <TabItem
+              <Pressable
                 key={route.key}
-                iconName={iconName}
-                label={label}
-                focused={focused}
                 onPress={onPress}
                 onLongPress={onLongPress}
-                width={tabWidth}
-              />
+                hitSlop={4}
+                style={[styles.tab, { width: tabWidth, height: BAR_HEIGHT - INNER_PAD * 2 }]}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: focused }}
+                accessibilityLabel={label}
+              >
+                <Icon
+                  name={iconName}
+                  size={22}
+                  color={focused ? t.palette.primaryContrast : t.palette.textSecondary}
+                />
+              </Pressable>
             );
           })}
         </View>
       </View>
     </View>
-  );
-}
-
-interface TabItemProps {
-  iconName: string;
-  label: string;
-  focused: boolean;
-  onPress: () => void;
-  onLongPress: () => void;
-  width: number;
-}
-
-function TabItem({ iconName, label, focused, onPress, onLongPress, width }: TabItemProps) {
-  const t = useAppTheme();
-  const focus = useSharedValue(focused ? 1 : 0);
-
-  useEffect(() => {
-    focus.value = withTiming(focused ? 1 : 0, { duration: t.duration.base });
-  }, [focused, focus, t.duration.base]);
-
-  const labelStyle = useAnimatedStyle(() => ({
-    opacity: focus.value,
-    maxWidth: interpolate(focus.value, [0, 1], [0, 80]),
-    marginLeft: interpolate(focus.value, [0, 1], [0, 6]),
-  }));
-
-  return (
-    <Pressable
-      onPress={onPress}
-      onLongPress={onLongPress}
-      hitSlop={4}
-      style={[styles.tab, { width, height: BAR_HEIGHT - INNER_PAD * 2 }]}
-      accessibilityRole="tab"
-      accessibilityState={{ selected: focused }}
-      accessibilityLabel={label}
-    >
-      <AnimatedIcon
-        name={iconName}
-        size={20}
-        color={focused ? t.palette.primaryContrast : t.palette.textSecondary}
-      />
-      <Animated.View style={[{ overflow: 'hidden' }, labelStyle]}>
-        <Text
-          variant="small"
-          weight="semibold"
-          numberOfLines={1}
-          style={{ color: t.palette.primaryContrast }}
-        >
-          {label}
-        </Text>
-      </Animated.View>
-    </Pressable>
   );
 }
 
@@ -254,9 +207,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
   },
   tab: {
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 6,
   },
 });
