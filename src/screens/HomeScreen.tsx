@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -155,6 +155,14 @@ export function HomeScreen() {
           target={summary.target.dailyCalories}
           unit=""
           color={t.palette.primary}
+        />
+        {/* Hairline sets Calories apart as the primary stat within one material. */}
+        <View
+          style={{
+            height: StyleSheet.hairlineWidth,
+            backgroundColor: t.palette.rimLight,
+            marginVertical: t.spacing.sm,
+          }}
         />
         <NutritionBar
           label="Protein"

@@ -7,8 +7,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppTheme } from '../../theme/tokens';
-import { AmbientBackground } from './AmbientBackground';
 import { CollapsingHeader } from './CollapsingHeader';
+import { useParallax } from './ParallaxContext';
 
 export const TAB_BAR_SPACE = 92;
 
@@ -46,41 +46,39 @@ export function Screen({
 }: Props) {
   const t = useAppTheme();
   const insets = useSafeAreaInsets();
-  const bgColor =
-    bg === 'sunken' ? t.palette.surfaceSunken : bg === 'elevated' ? t.palette.bgElevated : t.palette.bg;
+  const parallax = useParallax();
 
   const padding = {
     paddingTop: edges.top ? insets.top : 0,
     paddingBottom: (edges.bottom ? insets.bottom : 0) + (bottomBarSpace ? TAB_BAR_SPACE : 0),
   };
 
-  // Internal scroll tracking when the screen owns its ScrollView.
+  // Internal scroll tracking drives both the collapsing header and the root
+  // gradient parallax (AmbientBackground reads `parallax`).
   const internalScrollY = useSharedValue(0);
-  const trackInternal = scroll && headerTitle && !scrollY;
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (e) => {
       internalScrollY.value = e.contentOffset.y;
+      if (parallax) parallax.value = e.contentOffset.y;
     },
   });
 
-  const containerBg = glass ? 'transparent' : bgColor;
   const headerScrollY = scrollY ?? internalScrollY;
 
   if (scroll) {
     return (
-      <View style={[{ flex: 1, backgroundColor: bgColor }, style]} {...rest}>
-        {glass ? <AmbientBackground /> : null}
+      <View style={[{ flex: 1 }, style]} {...rest}>
         <Animated.ScrollView
           {...scrollProps}
           contentContainerStyle={[
             { paddingHorizontal: pad ? t.spacing.lg : 0, ...padding },
             contentContainerStyle,
           ]}
-          style={[{ backgroundColor: containerBg }, scrollProps?.style]}
+          style={[{ backgroundColor: 'transparent' }, scrollProps?.style]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           scrollEventThrottle={16}
-          onScroll={trackInternal ? scrollHandler : undefined}
+          onScroll={scrollHandler}
         >
           {children}
         </Animated.ScrollView>
@@ -92,17 +90,7 @@ export function Screen({
   }
 
   return (
-    <View
-      style={[
-        {
-          flex: 1,
-          backgroundColor: bgColor,
-        },
-        style,
-      ]}
-      {...rest}
-    >
-      {glass ? <AmbientBackground /> : null}
+    <View style={[{ flex: 1 }, style]} {...rest}>
       <View
         style={{
           flex: 1,

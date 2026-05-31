@@ -1,8 +1,8 @@
 import { MealPlanEntry, NutritionSummary, Recipe, UserSettings } from '../types';
 
-const KCAL_PER_G_PROTEIN = 4;
-const KCAL_PER_G_CARBS = 4;
-const KCAL_PER_G_FAT = 9;
+export const KCAL_PER_G_PROTEIN = 4;
+export const KCAL_PER_G_CARBS = 4;
+export const KCAL_PER_G_FAT = 9;
 
 export function computeNutritionSummary(
   plan: MealPlanEntry[],

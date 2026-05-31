@@ -107,6 +107,10 @@ export function Text({
           fontSize,
           lineHeight,
           letterSpacing,
+          // Subtle shadow keeps white text legible over the radial gradient.
+          textShadowColor: 'rgba(0,0,0,0.25)',
+          textShadowOffset: { width: 0, height: 1 },
+          textShadowRadius: 2,
           ...(variant === 'eyebrow' ? { textTransform: 'uppercase' } : null),
           ...(tabularNums ? { fontVariant: ['tabular-nums'] } : null),
         },

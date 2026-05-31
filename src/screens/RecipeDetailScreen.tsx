@@ -18,7 +18,6 @@ import { formatEntry } from '../utils/formatters';
 import { RootStackParamList } from '../navigation/types';
 import { useAppTheme } from '../theme/tokens';
 import {
-  AmbientBackground,
   Button,
   CollapsingHeader,
   GlassSurface,
@@ -28,6 +27,7 @@ import {
   Surface,
   Text,
 } from '../components/ui';
+import { useParallax } from '../components/ui/ParallaxContext';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Rt = RouteProp<RootStackParamList, 'RecipeDetail'>;
@@ -35,6 +35,7 @@ type Rt = RouteProp<RootStackParamList, 'RecipeDetail'>;
 export function RecipeDetailScreen() {
   const t = useAppTheme();
   const insets = useSafeAreaInsets();
+  const parallax = useParallax();
   const navigation = useNavigation<Nav>();
   const route = useRoute<Rt>();
   const { recipeId } = route.params;
@@ -114,6 +115,7 @@ export function RecipeDetailScreen() {
   const onScroll = useAnimatedScrollHandler({
     onScroll: (e) => {
       scrollY.value = e.contentOffset.y;
+      if (parallax) parallax.value = e.contentOffset.y;
     },
   });
 
@@ -134,8 +136,7 @@ export function RecipeDetailScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: t.palette.bg }}>
-      <AmbientBackground />
+    <View style={{ flex: 1 }}>
       <Animated.ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{

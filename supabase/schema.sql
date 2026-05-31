@@ -220,3 +220,15 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
+
+-- =====================================================================
+-- Onboarding columns on user_settings
+-- Idempotent: safe on first run, no-op on subsequent runs. All defaults
+-- are constants → Postgres 11+ treats this as a metadata-only update,
+-- no table rewrite, no write lock.
+-- =====================================================================
+alter table public.user_settings
+  add column if not exists onboarding_completed boolean not null default false,
+  add column if not exists cuisine_preferences  jsonb   not null default '[]'::jsonb,
+  add column if not exists dietary_restrictions jsonb   not null default '[]'::jsonb,
+  add column if not exists tdee_inputs          jsonb;

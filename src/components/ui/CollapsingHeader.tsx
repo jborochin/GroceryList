@@ -10,7 +10,7 @@ import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppTheme } from '../../theme/tokens';
-import { useSettingsStore } from '../../store/useSettingsStore';
+import { useReduceTransparency } from '../../hooks/useReduceEffects';
 import { Text } from './Text';
 
 interface Props {
@@ -24,8 +24,10 @@ interface Props {
 export function CollapsingHeader({ title, scrollY, threshold = 24 }: Props) {
   const t = useAppTheme();
   const insets = useSafeAreaInsets();
-  const reduceEffects = useSettingsStore((s) => s.settings.reduceVisualEffects);
-  const allowBlur = !reduceEffects && Platform.OS !== 'web';
+  const reduceTransparency = useReduceTransparency();
+  const allowBlur = !reduceTransparency && Platform.OS !== 'web';
+  const blurTint =
+    Platform.OS === 'ios' ? 'systemUltraThinMaterialDark' : t.palette.blurTint;
 
   const containerStyle = useAnimatedStyle(() => {
     const o = interpolate(
@@ -64,7 +66,7 @@ export function CollapsingHeader({ title, scrollY, threshold = 24 }: Props) {
         {allowBlur ? (
           <BlurView
             intensity={t.blur.thick}
-            tint={t.palette.blurTint}
+            tint={blurTint}
             experimentalBlurMethod="dimezisBlurView"
             style={StyleSheet.absoluteFill}
           />

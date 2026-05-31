@@ -11,10 +11,12 @@ import {
   PantryItem,
   PriceOverride,
   Recipe,
+  TdeeInputs,
   UserSettings,
 } from '../types';
 import { getSupabase, supabaseConfigured } from './supabase';
 import { enqueue, peekAll, removeMany, OutboxEntry } from './syncQueue';
+import { useSyncStateStore } from '../store/useSyncStateStore';
 
 // Suppress push subscriptions while applying remote data to local stores.
 let isApplyingRemote = false;
@@ -111,7 +113,15 @@ function settingsToRow(s: UserSettings, userId: string) {
     carbs_g: s.macroGrams.carbsG,
     fat_g: s.macroGrams.fatG,
     reduce_visual_effects: s.reduceVisualEffects,
+    onboarding_completed: s.onboardingCompleted,
+    cuisine_preferences: s.cuisinePreferences,
+    dietary_restrictions: s.dietaryRestrictions,
+    tdee_inputs: s.tdeeInputs,
   };
+}
+
+function asStringArray(v: unknown): string[] {
+  return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
 }
 
 function rowToSettings(row: Record<string, unknown>): UserSettings {
@@ -128,6 +138,10 @@ function rowToSettings(row: Record<string, unknown>): UserSettings {
       fatG: Number(row.fat_g),
     },
     reduceVisualEffects: Boolean(row.reduce_visual_effects),
+    onboardingCompleted: Boolean(row.onboarding_completed),
+    cuisinePreferences: asStringArray(row.cuisine_preferences),
+    dietaryRestrictions: asStringArray(row.dietary_restrictions),
+    tdeeInputs: (row.tdee_inputs as TdeeInputs | null) ?? null,
   };
 }
 
@@ -266,6 +280,9 @@ export async function pullAll(userId: string): Promise<void> {
     await AsyncStorage.setItem(STORAGE_KEYS.lastSyncedAt, String(Date.now()));
   } finally {
     isApplyingRemote = false;
+    // Flip the gate even on a partial/failed pull so the UI never hangs in
+    // an indeterminate state waiting for a pull that won't come.
+    useSyncStateStore.getState().setFirstPullCompleted(true);
   }
 }
 
@@ -394,6 +411,9 @@ export function subscribeStores(userId: string): () => void {
 export function unsubscribeStores(): void {
   for (const u of unsubscribers) u();
   unsubscribers = [];
+  // Reset the first-pull gate so a subsequent sign-in re-waits for a fresh pull
+  // before deciding whether to show onboarding (avoids stale "done" from prior user).
+  useSyncStateStore.getState().setFirstPullCompleted(false);
 }
 
 // ---------- First-sign-in migration ----------

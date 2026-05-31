@@ -14,6 +14,7 @@ export function TabNavigator() {
   return (
     <Tab.Navigator
       tabBar={(props) => <AppTabBar {...props} />}
+      sceneContainerStyle={{ backgroundColor: 'transparent' }}
       screenOptions={{
         headerShown: false,
         tabBarStyle: {

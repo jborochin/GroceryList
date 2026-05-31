@@ -38,11 +38,38 @@ export interface PantryItem {
   unit?: string;
 }
 
+export interface ManualItem {
+  id: string;
+  name: string;
+  quantity: number;
+  unit: string;
+}
+
+export type Sex = 'male' | 'female';
+export type ActivityLevel = 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active';
+export type Goal = 'lose' | 'maintain' | 'gain';
+export type UnitSystem = 'imperial' | 'metric';
+
+export interface TdeeInputs {
+  v: 1;
+  sex: Sex;
+  age: number;
+  heightCm: number;
+  weightKg: number;
+  activity: ActivityLevel;
+  goal: Goal;
+  unitSystem: UnitSystem;
+}
+
 export interface UserSettings {
   dailyCalorieTarget: number;
   macroSplit: { proteinPct: number; carbsPct: number; fatPct: number };
   macroGrams: { proteinG: number; carbsG: number; fatG: number };
   reduceVisualEffects: boolean;
+  onboardingCompleted: boolean;
+  tdeeInputs: TdeeInputs | null;
+  cuisinePreferences: string[];
+  dietaryRestrictions: string[];
 }
 
 export interface PriceOverride {

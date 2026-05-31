@@ -15,20 +15,24 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useRecipeStore } from '../store/useRecipeStore';
 import { useMealPlanStore } from '../store/useMealPlanStore';
 import { usePantryStore } from '../store/usePantryStore';
+import { useManualItemStore } from '../store/useManualItemStore';
+import { useDismissedItemStore } from '../store/useDismissedItemStore';
 import { usePriceOverrideStore } from '../store/usePriceOverrideStore';
 import { aggregate } from '../utils/ingredientAggregator';
 import { applyPantry } from '../utils/pantryDeduction';
+import { mergeManualItems } from '../utils/mergeManualItems';
 import { estimatePrices } from '../utils/priceEstimator';
+import { normalizeName } from '../utils/normalizeName';
 import { formatEntry } from '../utils/formatters';
 import { EmptyState } from '../components/EmptyState';
 import { GroceryItemRow } from '../components/GroceryItemRow';
+import { AddItemSheet } from '../components/AddItemSheet';
 import { PriceOverrideSheet } from '../components/PriceOverrideSheet';
 import { CompletionBurst } from '../components/animations/CompletionBurst';
 import { useToast } from '../components/ui';
 import { GroceryItem } from '../types';
 import { useAppTheme } from '../theme/tokens';
 import {
-  AmbientBackground,
   Button,
   CollapsingHeader,
   CountUpText,
@@ -37,9 +41,11 @@ import {
   IconButton,
   ProgressBar,
   Surface,
+  SwipeRow,
   TAB_BAR_SPACE,
   Text,
 } from '../components/ui';
+import { useParallax } from '../components/ui/ParallaxContext';
 import { haptics } from '../utils/haptics';
 
 const CATEGORY_ORDER = [
@@ -71,28 +77,62 @@ const CATEGORY_ICON: Record<string, string> = {
 export function GroceryListScreen() {
   const t = useAppTheme();
   const insets = useSafeAreaInsets();
+  const parallax = useParallax();
   const toast = useToast();
   const recipes = useRecipeStore((s) => s.recipes);
   const plan = useMealPlanStore((s) => s.entries);
   const pantry = usePantryStore((s) => s.items);
+  const manualItems = useManualItemStore((s) => s.items);
+  const addManualItem = useManualItemStore((s) => s.addItem);
+  const removeManualItem = useManualItemStore((s) => s.removeItem);
+  const dismissedNames = useDismissedItemStore((s) => s.names);
+  const dismiss = useDismissedItemStore((s) => s.dismiss);
+  const prune = useDismissedItemStore((s) => s.prune);
   const overrides = usePriceOverrideStore((s) => s.overrides);
   const setOverride = usePriceOverrideStore((s) => s.setOverride);
   const removeOverride = usePriceOverrideStore((s) => s.removeOverride);
 
   const [checked, setChecked] = useState<Record<string, boolean>>({});
   const [priceTarget, setPriceTarget] = useState<GroceryItem | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
   const [burstAt, setBurstAt] = useState(0);
   const completedRef = React.useRef(false);
 
   const priced = useMemo(() => {
     const agg = aggregate(plan, recipes);
     const withPantry = applyPantry(agg, pantry);
-    return estimatePrices(withPantry, overrides);
-  }, [plan, recipes, pantry, overrides]);
+    const withManual = mergeManualItems(withPantry, manualItems);
+    return estimatePrices(withManual, overrides);
+  }, [plan, recipes, pantry, manualItems, overrides]);
+
+  // Items the user has swiped away are filtered out of the computed list, and the
+  // displayed totals are re-derived from what remains.
+  const dismissed = useMemo(() => new Set(dismissedNames), [dismissedNames]);
+  const visible = useMemo(() => {
+    const items = priced.items.filter((i) => !dismissed.has(i.name));
+    const total = items.reduce((s, i) => s + (i.estimatedPrice ?? 0), 0);
+    const unestimated = items.filter((i) => i.hasPriceGap && i.estimatedPrice === undefined).length;
+    return { items, total, unestimated };
+  }, [priced.items, dismissed]);
+
+  // Self-clean: drop dismissals whose item is no longer in the computed list (e.g. its
+  // recipe was removed), so the same item reappears if it comes back later.
+  useEffect(() => {
+    prune(priced.items.map((i) => i.name));
+  }, [priced.items, prune]);
+
+  const handleDelete = (item: GroceryItem) => {
+    // Remove any manual contribution outright; hide any recipe-derived remainder.
+    for (const m of manualItems) {
+      if (normalizeName(m.name) === item.name) removeManualItem(m.id);
+    }
+    dismiss(item.name);
+    toast.show({ message: `Removed ${item.displayName}`, tone: 'neutral' });
+  };
 
   const sections = useMemo(() => {
     const byCat = new Map<string, GroceryItem[]>();
-    for (const item of priced.items) {
+    for (const item of visible.items) {
       const arr = byCat.get(item.category) ?? [];
       arr.push(item);
       byCat.set(item.category, arr);
@@ -104,22 +144,22 @@ export function GroceryListScreen() {
         return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
       })
       .map(([title, data]) => ({ title, data }));
-  }, [priced.items]);
+  }, [visible.items]);
 
   const checkedCount = useMemo(
-    () => priced.items.reduce((acc, item) => acc + (checked[item.name] ? 1 : 0), 0),
-    [priced.items, checked]
+    () => visible.items.reduce((acc, item) => acc + (checked[item.name] ? 1 : 0), 0),
+    [visible.items, checked]
   );
 
   const remainingTotal = useMemo(() => {
     let sum = 0;
-    for (const item of priced.items) {
+    for (const item of visible.items) {
       if (!checked[item.name] && item.estimatedPrice !== undefined) {
         sum += item.estimatedPrice;
       }
     }
     return sum;
-  }, [priced.items, checked]);
+  }, [visible.items, checked]);
 
   const toggle = (name: string) => {
     haptics.selection();
@@ -128,11 +168,11 @@ export function GroceryListScreen() {
 
   // Fire completion burst the moment all items become checked.
   useEffect(() => {
-    if (priced.items.length === 0) {
+    if (visible.items.length === 0) {
       completedRef.current = false;
       return;
     }
-    const allChecked = priced.items.every((item) => checked[item.name]);
+    const allChecked = visible.items.every((item) => checked[item.name]);
     if (allChecked && !completedRef.current) {
       completedRef.current = true;
       setBurstAt(Date.now());
@@ -141,11 +181,11 @@ export function GroceryListScreen() {
     } else if (!allChecked && completedRef.current) {
       completedRef.current = false;
     }
-  }, [priced.items, checked, toast]);
+  }, [visible.items, checked, toast]);
 
   const handleShare = async () => {
     haptics.tap();
-    const lines: string[] = [`Grocery list — est. $${priced.total.toFixed(2)}`, ''];
+    const lines: string[] = [`Grocery list — est. $${visible.total.toFixed(2)}`, ''];
     for (const section of sections) {
       lines.push(section.title.toUpperCase());
       for (const item of section.data) {
@@ -168,35 +208,41 @@ export function GroceryListScreen() {
     ? overrideForTarget.unit
     : priceTarget?.entries[0]?.unit ?? 'each';
 
-  const empty = plan.length === 0 || priced.items.length === 0;
-  const itemCount = priced.items.length;
+  const empty = visible.items.length === 0;
+  const itemCount = visible.items.length;
   const progress = itemCount === 0 ? 0 : checkedCount / itemCount;
 
   const scrollY = useSharedValue(0);
   const onScroll = useAnimatedScrollHandler({
     onScroll: (e) => {
       scrollY.value = e.contentOffset.y;
+      if (parallax) parallax.value = e.contentOffset.y;
     },
   });
 
   return (
-    <View style={{ flex: 1, backgroundColor: t.palette.bg }}>
-      <AmbientBackground />
+    <View style={{ flex: 1 }}>
       {empty ? (
         <View style={{ flex: 1, paddingTop: insets.top, paddingBottom: TAB_BAR_SPACE }}>
-          {plan.length === 0 ? (
-            <EmptyState
-              icon="cart-outline"
-              title="Nothing to buy yet"
-              subtitle="Add recipes to this week in the Week tab to generate a grocery list."
+          <EmptyState
+            icon={plan.length === 0 ? 'cart-outline' : 'cart-check'}
+            title={plan.length === 0 ? 'Nothing to buy yet' : "You're all set"}
+            subtitle={
+              plan.length === 0
+                ? 'Add recipes to this week in the Week tab, or add a grocery item manually.'
+                : "Your pantry already covers everything in this week's plan. Need something else? Add it manually."
+            }
+          >
+            <Button
+              label="Add item"
+              icon="plus"
+              variant="primary"
+              onPress={() => {
+                haptics.tap();
+                setAddOpen(true);
+              }}
             />
-          ) : (
-            <EmptyState
-              icon="cart-check"
-              title="You're all set"
-              subtitle="Your pantry already covers everything in this week's plan."
-            />
-          )}
+          </EmptyState>
         </View>
       ) : (
         <AnimatedSectionList
@@ -213,29 +259,35 @@ export function GroceryListScreen() {
           scrollEventThrottle={16}
           ListHeaderComponent={
             <Hero
-              total={priced.total}
+              total={visible.total}
               remaining={remainingTotal}
               itemCount={itemCount}
               checkedCount={checkedCount}
-              unestimated={priced.unestimatedCount}
+              unestimated={visible.unestimated}
               progress={progress}
               onShare={handleShare}
+              onAdd={() => {
+                haptics.tap();
+                setAddOpen(true);
+              }}
             />
           }
           renderSectionHeader={({ section }: { section: { title: string; data: GroceryItem[] } }) => (
             <SectionHeader title={section.title} count={section.data.length} />
           )}
           renderItem={({ item, index }: { item: GroceryItem; index: number }) => (
-            <GroceryItemRow
-              item={item}
-              index={index}
-              checked={!!checked[item.name]}
-              onToggle={() => toggle(item.name)}
-              onEditPrice={() => {
-                haptics.tap();
-                setPriceTarget(item);
-              }}
-            />
+            <SwipeRow icon="close" onDelete={() => handleDelete(item)}>
+              <GroceryItemRow
+                item={item}
+                index={index}
+                checked={!!checked[item.name]}
+                onToggle={() => toggle(item.name)}
+                onEditPrice={() => {
+                  haptics.tap();
+                  setPriceTarget(item);
+                }}
+              />
+            </SwipeRow>
           )}
           renderSectionFooter={() => <View style={{ height: 14 }} />}
         />
@@ -274,6 +326,15 @@ export function GroceryListScreen() {
         }}
         onClose={() => setPriceTarget(null)}
       />
+
+      <AddItemSheet
+        visible={addOpen}
+        onAdd={(name, quantity, unit) => {
+          addManualItem({ name, quantity, unit });
+          setAddOpen(false);
+        }}
+        onClose={() => setAddOpen(false)}
+      />
       {!empty ? <CollapsingHeader title="Grocery" scrollY={scrollY} /> : null}
     </View>
   );
@@ -287,6 +348,7 @@ interface HeroProps {
   unestimated: number;
   progress: number;
   onShare: () => void;
+  onAdd: () => void;
 }
 
 function Hero({
@@ -297,6 +359,7 @@ function Hero({
   unestimated,
   progress,
   onShare,
+  onAdd,
 }: HeroProps) {
   const t = useAppTheme();
   const showRemaining = checkedCount > 0 && remaining !== total;
@@ -306,7 +369,12 @@ function Hero({
       <Header
         eyebrow="This week's list"
         title="Grocery"
-        trailing={<IconButton icon="export-variant" onPress={onShare} variant="tonal" />}
+        trailing={
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <IconButton icon="plus" onPress={onAdd} variant="tonal" accessibilityLabel="Add item" />
+            <IconButton icon="export-variant" onPress={onShare} variant="tonal" />
+          </View>
+        }
       />
 
       <Surface

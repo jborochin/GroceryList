@@ -31,6 +31,17 @@ const SYNONYM_LOOKUP: Record<string, string> = (() => {
 
 const STOP_WORDS = new Set(['of', 'the', 'a', 'an']);
 
+/**
+ * Map a free-typed unit to its canonical form (e.g. "lbs" → "lb", "cups" → "cup").
+ * Unknown units are returned lowercased/trimmed so they survive as display-only labels.
+ * An empty unit defaults to "each".
+ */
+export function canonicalizeUnit(unit: string): string {
+  const u = unit.trim().toLowerCase().replace(/\.$/, '');
+  if (!u) return 'each';
+  return SYNONYM_LOOKUP[u] ?? u;
+}
+
 export function parseIngredient(raw: string): Ingredient {
   const original = raw.trim();
   if (!original) return { name: '', quantity: 0, unit: 'each', raw: original };

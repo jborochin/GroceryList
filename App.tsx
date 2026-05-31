@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { Provider as PaperProvider, ActivityIndicator } from 'react-native-paper';
 import { NavigationContainer } from '@react-navigation/native';
-import { AppState, View, useColorScheme } from 'react-native';
+import { AppState, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import {
@@ -13,7 +13,9 @@ import {
   Geist_700Bold,
 } from '@expo-google-fonts/geist';
 import { RootNavigator } from './src/navigation/RootNavigator';
-import { lightTheme, darkTheme } from './src/theme/theme';
+import { darkTheme } from './src/theme/theme';
+import { AmbientBackground } from './src/components/ui/AmbientBackground';
+import { ParallaxProvider } from './src/components/ui/ParallaxContext';
 import { useHydration } from './src/store/hydration';
 import { seedIfFirstLaunch } from './src/store/seedFirstLaunch';
 import { useAuthStore } from './src/store/useAuthStore';
@@ -22,8 +24,8 @@ import { drainOutbox, migrateLocalToAccount, pullAll, subscribeStores, unsubscri
 import { supabaseConfigured } from './src/lib/supabase';
 
 export default function App() {
-  const scheme = useColorScheme();
-  const theme = scheme === 'dark' ? darkTheme : lightTheme;
+  // Single Liquid Glass aesthetic: always the dark theme + light status bar.
+  const theme = darkTheme;
   const hydrated = useHydration();
   const userId = useAuthStore((s) => s.user?.id ?? null);
   const [seeded, setSeeded] = useState(false);
@@ -86,22 +88,28 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <PaperProvider theme={theme}>
-          <NavigationContainer theme={{
-            dark: scheme === 'dark',
-            colors: {
-              primary: theme.colors.primary,
-              background: theme.colors.background,
-              card: theme.colors.surface,
-              text: theme.colors.onSurface,
-              border: theme.colors.outline,
-              notification: theme.colors.secondary,
-            },
-          }}>
-            <ToastHost>
-              <RootNavigator />
-            </ToastHost>
-            <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} translucent />
-          </NavigationContainer>
+          <ParallaxProvider>
+            <View style={{ flex: 1, backgroundColor: '#000000' }}>
+              {/* Radial backdrop rendered once, behind the whole navigator. */}
+              <AmbientBackground />
+              <NavigationContainer theme={{
+                dark: true,
+                colors: {
+                  primary: theme.colors.primary,
+                  background: 'transparent',
+                  card: theme.colors.surface,
+                  text: theme.colors.onSurface,
+                  border: theme.colors.outline,
+                  notification: theme.colors.secondary,
+                },
+              }}>
+                <ToastHost>
+                  <RootNavigator />
+                </ToastHost>
+                <StatusBar style="light" translucent />
+              </NavigationContainer>
+            </View>
+          </ParallaxProvider>
         </PaperProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

@@ -1,0 +1,27 @@
+{
+  "cuisines": [
+    { "key": "mediterranean", "label": "Mediterranean" },
+    { "key": "italian", "label": "Italian / pasta" },
+    { "key": "mexican", "label": "Mexican / Latin" },
+    { "key": "asian", "label": "Asian (general)" },
+    { "key": "indian", "label": "Indian / South Asian" },
+    { "key": "thai", "label": "Thai / SE Asian" },
+    { "key": "middle_eastern", "label": "Middle Eastern" },
+    { "key": "american", "label": "American comfort" },
+    { "key": "bbq", "label": "BBQ / grilling" },
+    { "key": "seafood", "label": "Seafood-forward" },
+    { "key": "spicy", "label": "Spicy" }
+  ],
+  "dietary": [
+    { "key": "vegetarian", "label": "Vegetarian" },
+    { "key": "vegan", "label": "Vegan" },
+    { "key": "pescatarian", "label": "Pescatarian" },
+    { "key": "gluten_free", "label": "Gluten-free" },
+    { "key": "dairy_free", "label": "Dairy-free" },
+    { "key": "nut_free", "label": "Nut-free" },
+    { "key": "halal", "label": "Halal" },
+    { "key": "kosher", "label": "Kosher" },
+    { "key": "low_carb", "label": "Low-carb / keto" },
+    { "key": "high_protein", "label": "High-protein" }
+  ]
+}

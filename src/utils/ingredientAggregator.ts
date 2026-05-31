@@ -39,7 +39,7 @@ export function aggregate(plan: MealPlanEntry[], recipes: Recipe[]): GroceryItem
   return items;
 }
 
-function mergeGroup(name: string, display: string, ings: Ingredient[]): GroceryItem {
+export function mergeGroup(name: string, display: string, ings: Ingredient[]): GroceryItem {
   // Partition by unit family
   const byFamily = new Map<string, Ingredient[]>();
   const unknownUnitEntries: Ingredient[] = [];

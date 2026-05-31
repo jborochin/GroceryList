@@ -44,6 +44,7 @@ export function SettingsScreen() {
   const setMacroSplit = useSettingsStore((s) => s.setMacroSplit);
   const setMacroGrams = useSettingsStore((s) => s.setMacroGrams);
   const setReduceVisualEffects = useSettingsStore((s) => s.setReduceVisualEffects);
+  const setOnboardingCompleted = useSettingsStore((s) => s.setOnboardingCompleted);
   const resetSettings = useSettingsStore((s) => s.resetSettings);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
 
@@ -255,6 +256,19 @@ export function SettingsScreen() {
             ) : null}
           </View>
         )}
+      </Surface>
+
+      <SectionHeader title="Personalize" />
+      <Surface variant="outlined" pad={t.spacing.lg}>
+        <Text variant="body" tone="secondary" style={{ marginBottom: t.spacing.md }}>
+          Redo the macro and food-preferences survey. Your existing targets stay until you finish.
+        </Text>
+        <Button
+          label="Redo onboarding"
+          variant="secondary"
+          onPress={() => setOnboardingCompleted(false)}
+          fullWidth
+        />
       </Surface>
 
       <SectionHeader title="Appearance" />
