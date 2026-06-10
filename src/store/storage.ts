@@ -15,4 +15,5 @@ export const STORAGE_KEYS = {
   lastSyncedAt: 'mealprep/sync/lastSyncedAt/v1',
   outbox: 'mealprep/sync/outbox/v1',
   migratedAccountId: 'mealprep/sync/migratedAccountId/v1',
+  mealCatalogCache: 'mealprep/mealCatalog/v1',
 } as const;

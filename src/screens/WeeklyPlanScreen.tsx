@@ -5,7 +5,9 @@ import Animated, {
   useSharedValue,
 } from 'react-native-reanimated';
 import { useNavigation } from '@react-navigation/native';
+import type { CompositeNavigationProp } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRecipeStore } from '../store/useRecipeStore';
 import { useMealPlanStore } from '../store/useMealPlanStore';
@@ -14,7 +16,7 @@ import { ServingStepper } from '../components/ServingStepper';
 import { EmptyState } from '../components/EmptyState';
 import { computeNutritionSummary } from '../utils/nutritionSummary';
 import { NutritionBar } from '../components/NutritionBar';
-import { TabParamList } from '../navigation/types';
+import { RootStackParamList, TabParamList } from '../navigation/types';
 import { useAppTheme } from '../theme/tokens';
 import {
   AmbientBackground,
@@ -29,7 +31,10 @@ import {
   TAB_BAR_SPACE,
 } from '../components/ui';
 
-type Nav = BottomTabNavigationProp<TabParamList>;
+type Nav = CompositeNavigationProp<
+  BottomTabNavigationProp<TabParamList>,
+  NativeStackNavigationProp<RootStackParamList>
+>;
 
 export function WeeklyPlanScreen() {
   const t = useAppTheme();
@@ -73,8 +78,15 @@ export function WeeklyPlanScreen() {
         <EmptyState
           icon="calendar-blank-outline"
           title="No recipes yet"
-          subtitle="Add a recipe to your library, then plan your week from here."
-        />
+          subtitle="Add a recipe to your library, or let us auto-build a week that fits your macros."
+        >
+          <Button
+            label="Auto meal prep"
+            icon="auto-fix"
+            onPress={() => navigation.navigate('AutoMealPrep')}
+            size="lg"
+          />
+        </EmptyState>
       </View>
     );
   }
@@ -96,9 +108,11 @@ export function WeeklyPlanScreen() {
           title="This week"
           subtitle={
             planned.length === 0
-              ? 'Tap a recipe below to plan it.'
+              ? 'Tap a recipe below to plan it, or auto-build a week.'
               : `${planned.length} ${planned.length === 1 ? 'recipe' : 'recipes'} · ${totalServings} servings`
           }
+          rightIcon="auto-fix"
+          onRightPress={() => navigation.navigate('AutoMealPrep')}
         />
 
         {planned.length > 0 ? (

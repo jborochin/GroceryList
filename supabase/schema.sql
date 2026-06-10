@@ -232,3 +232,34 @@ alter table public.user_settings
   add column if not exists cuisine_preferences  jsonb   not null default '[]'::jsonb,
   add column if not exists dietary_restrictions jsonb   not null default '[]'::jsonb,
   add column if not exists tdee_inputs          jsonb;
+
+-- =====================================================================
+-- Global curated meal catalog (public read, NO user_id, NOT per-user synced)
+-- The bundled src/data/mealCatalog.json is the offline source of truth; this
+-- table is the updatable server mirror that refreshMealCatalogCache() pulls.
+-- `id` is a stable slug (text), not a uuid. Writes go through the SQL editor /
+-- service role only — there is intentionally no client write policy.
+-- =====================================================================
+create table if not exists public.meals (
+  id text primary key,
+  title text not null,
+  cuisine text not null,
+  slots text[] not null default '{}',
+  dietary_tags text[] not null default '{}',
+  servings numeric not null default 1,
+  ingredients jsonb not null default '[]'::jsonb,
+  nutrition_per_serving jsonb not null,
+  prep_time_minutes int,
+  image_url text,
+  instructions text[],
+  updated_at timestamptz not null default now()
+);
+
+drop trigger if exists meals_touch on public.meals;
+create trigger meals_touch before update on public.meals
+  for each row execute function public.touch_updated_at();
+
+alter table public.meals enable row level security;
+
+drop policy if exists "meals_public_read" on public.meals;
+create policy "meals_public_read" on public.meals for select using (true);

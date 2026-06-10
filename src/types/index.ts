@@ -31,6 +31,26 @@ export interface MealPlanEntry {
   desiredServings: number;
 }
 
+export type MealSlot = 'breakfast' | 'lunch' | 'dinner' | 'snack';
+
+// A curated catalog meal. Unlike Recipe, nutritionPerServing is required
+// (the catalog is hand-authored) and it carries cuisine/slot/dietary metadata
+// so the auto-planner can filter and score it. `id` is a stable slug — never
+// change one, it seeds the deterministic recipe id on commit (see commitMealPlan).
+export interface Meal {
+  id: string;
+  title: string;
+  cuisine: string; // key from foodPreferences.json -> cuisines[].key
+  slots: MealSlot[];
+  dietaryTags: string[]; // restrictions this meal SATISFIES (foodPreferences.json -> dietary[].key)
+  servings: number; // base servings the ingredient quantities describe (catalog meals use 1)
+  ingredients: Ingredient[];
+  nutritionPerServing: NutritionPerServing;
+  prepTimeMinutes?: number;
+  imageUrl?: string;
+  instructions?: string[];
+}
+
 export interface PantryItem {
   id: string;
   name: string;
