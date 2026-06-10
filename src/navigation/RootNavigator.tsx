@@ -4,6 +4,7 @@ import { TabNavigator } from './TabNavigator';
 import { RecipeDetailScreen } from '../screens/RecipeDetailScreen';
 import { AddRecipeScreen } from '../screens/AddRecipeScreen';
 import { PantryScreen } from '../screens/PantryScreen';
+import { AutoMealPrepScreen } from '../screens/AutoMealPrepScreen';
 import { AuthScreen } from '../screens/AuthScreen';
 import { OnboardingScreen } from '../screens/OnboardingScreen';
 import { RootStackParamList } from './types';
@@ -55,6 +56,11 @@ export function RootNavigator() {
             options={{ animation: 'slide_from_bottom', presentation: 'modal' }}
           />
           <Stack.Screen name="Pantry" component={PantryScreen} />
+          <Stack.Screen
+            name="AutoMealPrep"
+            component={AutoMealPrepScreen}
+            options={{ animation: 'slide_from_bottom', presentation: 'modal' }}
+          />
         </Stack.Group>
       )}
       <Stack.Screen

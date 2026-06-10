@@ -1,0 +1,501 @@
+[
+  {
+    "id": "overnight-oats-berries",
+    "title": "Overnight Oats with Berries",
+    "cuisine": "american",
+    "slots": ["breakfast"],
+    "dietaryTags": ["vegetarian"],
+    "servings": 1,
+    "prepTimeMinutes": 5,
+    "ingredients": [
+      { "name": "rolled oats", "quantity": 0.5, "unit": "cup" },
+      { "name": "milk", "quantity": 0.75, "unit": "cup" },
+      { "name": "blueberries", "quantity": 0.5, "unit": "cup" },
+      { "name": "chia seeds", "quantity": 1, "unit": "tbsp" },
+      { "name": "honey", "quantity": 1, "unit": "tsp" }
+    ],
+    "nutritionPerServing": { "calories": 350, "proteinG": 12, "carbsG": 55, "fatG": 9 }
+  },
+  {
+    "id": "greek-yogurt-bowl",
+    "title": "Greek Yogurt & Granola Bowl",
+    "cuisine": "mediterranean",
+    "slots": ["breakfast"],
+    "dietaryTags": ["vegetarian", "gluten_free", "high_protein"],
+    "servings": 1,
+    "prepTimeMinutes": 5,
+    "ingredients": [
+      { "name": "greek yogurt", "quantity": 1, "unit": "cup" },
+      { "name": "granola", "quantity": 0.33, "unit": "cup" },
+      { "name": "strawberries", "quantity": 0.5, "unit": "cup" },
+      { "name": "honey", "quantity": 1, "unit": "tsp" }
+    ],
+    "nutritionPerServing": { "calories": 320, "proteinG": 24, "carbsG": 38, "fatG": 8 }
+  },
+  {
+    "id": "veggie-scramble",
+    "title": "Veggie Egg Scramble",
+    "cuisine": "american",
+    "slots": ["breakfast"],
+    "dietaryTags": ["vegetarian", "gluten_free", "low_carb", "high_protein"],
+    "servings": 1,
+    "prepTimeMinutes": 10,
+    "ingredients": [
+      { "name": "egg", "quantity": 3, "unit": "each" },
+      { "name": "spinach", "quantity": 1, "unit": "cup" },
+      { "name": "bell pepper", "quantity": 0.5, "unit": "each" },
+      { "name": "cheddar cheese", "quantity": 1, "unit": "oz" },
+      { "name": "olive oil", "quantity": 1, "unit": "tsp" }
+    ],
+    "nutritionPerServing": { "calories": 300, "proteinG": 22, "carbsG": 8, "fatG": 20 }
+  },
+  {
+    "id": "avocado-toast-eggs",
+    "title": "Avocado Toast with Eggs",
+    "cuisine": "american",
+    "slots": ["breakfast"],
+    "dietaryTags": ["vegetarian"],
+    "servings": 1,
+    "prepTimeMinutes": 10,
+    "ingredients": [
+      { "name": "whole wheat bread", "quantity": 2, "unit": "slice" },
+      { "name": "avocado", "quantity": 0.5, "unit": "each" },
+      { "name": "egg", "quantity": 2, "unit": "each" },
+      { "name": "lemon", "quantity": 0.25, "unit": "each" }
+    ],
+    "nutritionPerServing": { "calories": 380, "proteinG": 18, "carbsG": 30, "fatG": 22 }
+  },
+  {
+    "id": "tofu-scramble",
+    "title": "Tofu Scramble",
+    "cuisine": "american",
+    "slots": ["breakfast"],
+    "dietaryTags": ["vegan", "vegetarian", "gluten_free", "dairy_free", "high_protein"],
+    "servings": 1,
+    "prepTimeMinutes": 12,
+    "ingredients": [
+      { "name": "firm tofu", "quantity": 6, "unit": "oz" },
+      { "name": "spinach", "quantity": 1, "unit": "cup" },
+      { "name": "onion", "quantity": 0.25, "unit": "each" },
+      { "name": "turmeric", "quantity": 0.25, "unit": "tsp" },
+      { "name": "olive oil", "quantity": 1, "unit": "tbsp" }
+    ],
+    "nutritionPerServing": { "calories": 290, "proteinG": 18, "carbsG": 14, "fatG": 18 }
+  },
+  {
+    "id": "protein-smoothie",
+    "title": "Berry Protein Smoothie",
+    "cuisine": "american",
+    "slots": ["breakfast", "snack"],
+    "dietaryTags": ["vegetarian", "gluten_free", "high_protein"],
+    "servings": 1,
+    "prepTimeMinutes": 5,
+    "ingredients": [
+      { "name": "protein powder", "quantity": 1, "unit": "scoop" },
+      { "name": "banana", "quantity": 1, "unit": "each" },
+      { "name": "frozen mixed berries", "quantity": 0.5, "unit": "cup" },
+      { "name": "milk", "quantity": 1, "unit": "cup" }
+    ],
+    "nutritionPerServing": { "calories": 330, "proteinG": 30, "carbsG": 40, "fatG": 6 }
+  },
+  {
+    "id": "shakshuka",
+    "title": "Shakshuka",
+    "cuisine": "middle_eastern",
+    "slots": ["breakfast", "dinner"],
+    "dietaryTags": ["vegetarian", "gluten_free"],
+    "servings": 1,
+    "prepTimeMinutes": 25,
+    "ingredients": [
+      { "name": "egg", "quantity": 2, "unit": "each" },
+      { "name": "crushed tomatoes", "quantity": 1, "unit": "cup" },
+      { "name": "onion", "quantity": 0.5, "unit": "each" },
+      { "name": "bell pepper", "quantity": 0.5, "unit": "each" },
+      { "name": "cumin", "quantity": 0.5, "unit": "tsp" },
+      { "name": "olive oil", "quantity": 1, "unit": "tbsp" }
+    ],
+    "nutritionPerServing": { "calories": 340, "proteinG": 18, "carbsG": 22, "fatG": 20 }
+  },
+  {
+    "id": "greek-chicken-bowl",
+    "title": "Greek Chicken Bowl",
+    "cuisine": "mediterranean",
+    "slots": ["lunch", "dinner"],
+    "dietaryTags": ["gluten_free", "high_protein", "dairy_free"],
+    "servings": 1,
+    "prepTimeMinutes": 25,
+    "ingredients": [
+      { "name": "chicken breast", "quantity": 6, "unit": "oz" },
+      { "name": "cucumber", "quantity": 0.5, "unit": "each" },
+      { "name": "cherry tomatoes", "quantity": 0.5, "unit": "cup" },
+      { "name": "cooked rice", "quantity": 0.75, "unit": "cup" },
+      { "name": "olive oil", "quantity": 1, "unit": "tbsp" },
+      { "name": "lemon", "quantity": 0.5, "unit": "each" }
+    ],
+    "nutritionPerServing": { "calories": 520, "proteinG": 45, "carbsG": 38, "fatG": 18 }
+  },
+  {
+    "id": "chicken-burrito-bowl",
+    "title": "Chicken Burrito Bowl",
+    "cuisine": "mexican",
+    "slots": ["lunch", "dinner"],
+    "dietaryTags": ["gluten_free", "high_protein"],
+    "servings": 1,
+    "prepTimeMinutes": 25,
+    "ingredients": [
+      { "name": "chicken breast", "quantity": 6, "unit": "oz" },
+      { "name": "cooked rice", "quantity": 0.75, "unit": "cup" },
+      { "name": "black beans", "quantity": 0.5, "unit": "cup" },
+      { "name": "corn", "quantity": 0.5, "unit": "cup" },
+      { "name": "salsa", "quantity": 0.25, "unit": "cup" },
+      { "name": "cheddar cheese", "quantity": 1, "unit": "oz" }
+    ],
+    "nutritionPerServing": { "calories": 600, "proteinG": 42, "carbsG": 60, "fatG": 20 }
+  },
+  {
+    "id": "beef-tacos",
+    "title": "Ground Beef Tacos",
+    "cuisine": "mexican",
+    "slots": ["lunch", "dinner"],
+    "dietaryTags": ["high_protein"],
+    "servings": 1,
+    "prepTimeMinutes": 20,
+    "ingredients": [
+      { "name": "ground beef", "quantity": 5, "unit": "oz" },
+      { "name": "corn tortilla", "quantity": 3, "unit": "each" },
+      { "name": "lettuce", "quantity": 1, "unit": "cup" },
+      { "name": "cheddar cheese", "quantity": 1, "unit": "oz" },
+      { "name": "salsa", "quantity": 0.25, "unit": "cup" }
+    ],
+    "nutritionPerServing": { "calories": 540, "proteinG": 34, "carbsG": 45, "fatG": 24 }
+  },
+  {
+    "id": "margherita-pasta",
+    "title": "Tomato Basil Pasta",
+    "cuisine": "italian",
+    "slots": ["lunch", "dinner"],
+    "dietaryTags": ["vegetarian"],
+    "servings": 1,
+    "prepTimeMinutes": 20,
+    "ingredients": [
+      { "name": "pasta", "quantity": 3, "unit": "oz" },
+      { "name": "marinara sauce", "quantity": 0.75, "unit": "cup" },
+      { "name": "fresh basil", "quantity": 0.25, "unit": "cup" },
+      { "name": "parmesan cheese", "quantity": 1, "unit": "oz" },
+      { "name": "olive oil", "quantity": 1, "unit": "tbsp" }
+    ],
+    "nutritionPerServing": { "calories": 560, "proteinG": 20, "carbsG": 80, "fatG": 16 }
+  },
+  {
+    "id": "chicken-alfredo-pasta",
+    "title": "Chicken Alfredo Pasta",
+    "cuisine": "italian",
+    "slots": ["dinner"],
+    "dietaryTags": ["high_protein"],
+    "servings": 1,
+    "prepTimeMinutes": 30,
+    "ingredients": [
+      { "name": "chicken breast", "quantity": 5, "unit": "oz" },
+      { "name": "fettuccine", "quantity": 3, "unit": "oz" },
+      { "name": "heavy cream", "quantity": 0.33, "unit": "cup" },
+      { "name": "parmesan cheese", "quantity": 1.5, "unit": "oz" },
+      { "name": "garlic", "quantity": 2, "unit": "clove" }
+    ],
+    "nutritionPerServing": { "calories": 680, "proteinG": 45, "carbsG": 65, "fatG": 25 }
+  },
+  {
+    "id": "teriyaki-salmon-rice",
+    "title": "Teriyaki Salmon with Rice",
+    "cuisine": "asian",
+    "slots": ["lunch", "dinner"],
+    "dietaryTags": ["pescatarian", "high_protein", "dairy_free"],
+    "servings": 1,
+    "prepTimeMinutes": 25,
+    "ingredients": [
+      { "name": "salmon fillet", "quantity": 6, "unit": "oz" },
+      { "name": "cooked rice", "quantity": 0.75, "unit": "cup" },
+      { "name": "broccoli", "quantity": 1, "unit": "cup" },
+      { "name": "teriyaki sauce", "quantity": 2, "unit": "tbsp" },
+      { "name": "sesame seeds", "quantity": 1, "unit": "tsp" }
+    ],
+    "nutritionPerServing": { "calories": 580, "proteinG": 40, "carbsG": 55, "fatG": 20 }
+  },
+  {
+    "id": "chicken-tikka-masala",
+    "title": "Chicken Tikka Masala",
+    "cuisine": "indian",
+    "slots": ["lunch", "dinner"],
+    "dietaryTags": ["gluten_free", "high_protein"],
+    "servings": 1,
+    "prepTimeMinutes": 35,
+    "ingredients": [
+      { "name": "chicken thigh", "quantity": 6, "unit": "oz" },
+      { "name": "crushed tomatoes", "quantity": 0.75, "unit": "cup" },
+      { "name": "heavy cream", "quantity": 0.25, "unit": "cup" },
+      { "name": "cooked rice", "quantity": 0.75, "unit": "cup" },
+      { "name": "garam masala", "quantity": 1, "unit": "tsp" },
+      { "name": "garlic", "quantity": 2, "unit": "clove" }
+    ],
+    "nutritionPerServing": { "calories": 620, "proteinG": 40, "carbsG": 45, "fatG": 28 }
+  },
+  {
+    "id": "chickpea-curry",
+    "title": "Chickpea Coconut Curry",
+    "cuisine": "indian",
+    "slots": ["lunch", "dinner"],
+    "dietaryTags": ["vegan", "vegetarian", "gluten_free", "dairy_free"],
+    "servings": 1,
+    "prepTimeMinutes": 25,
+    "ingredients": [
+      { "name": "chickpeas", "quantity": 1, "unit": "cup" },
+      { "name": "coconut milk", "quantity": 0.5, "unit": "cup" },
+      { "name": "crushed tomatoes", "quantity": 0.5, "unit": "cup" },
+      { "name": "cooked rice", "quantity": 0.75, "unit": "cup" },
+      { "name": "curry powder", "quantity": 1, "unit": "tbsp" },
+      { "name": "onion", "quantity": 0.5, "unit": "each" }
+    ],
+    "nutritionPerServing": { "calories": 480, "proteinG": 18, "carbsG": 65, "fatG": 16 }
+  },
+  {
+    "id": "pad-thai-shrimp",
+    "title": "Shrimp Pad Thai",
+    "cuisine": "thai",
+    "slots": ["lunch", "dinner"],
+    "dietaryTags": ["pescatarian", "dairy_free"],
+    "servings": 1,
+    "prepTimeMinutes": 25,
+    "ingredients": [
+      { "name": "shrimp", "quantity": 5, "unit": "oz" },
+      { "name": "rice noodles", "quantity": 3, "unit": "oz" },
+      { "name": "egg", "quantity": 1, "unit": "each" },
+      { "name": "bean sprouts", "quantity": 0.5, "unit": "cup" },
+      { "name": "peanuts", "quantity": 1, "unit": "tbsp" },
+      { "name": "pad thai sauce", "quantity": 2, "unit": "tbsp" }
+    ],
+    "nutritionPerServing": { "calories": 600, "proteinG": 32, "carbsG": 70, "fatG": 20 }
+  },
+  {
+    "id": "thai-green-curry-chicken",
+    "title": "Thai Green Curry Chicken",
+    "cuisine": "thai",
+    "slots": ["lunch", "dinner"],
+    "dietaryTags": ["gluten_free", "high_protein", "dairy_free"],
+    "servings": 1,
+    "prepTimeMinutes": 30,
+    "ingredients": [
+      { "name": "chicken thigh", "quantity": 6, "unit": "oz" },
+      { "name": "coconut milk", "quantity": 0.5, "unit": "cup" },
+      { "name": "green curry paste", "quantity": 1.5, "unit": "tbsp" },
+      { "name": "bell pepper", "quantity": 0.5, "unit": "each" },
+      { "name": "cooked rice", "quantity": 0.5, "unit": "cup" }
+    ],
+    "nutritionPerServing": { "calories": 560, "proteinG": 38, "carbsG": 40, "fatG": 26 }
+  },
+  {
+    "id": "falafel-wrap",
+    "title": "Falafel Wrap",
+    "cuisine": "middle_eastern",
+    "slots": ["lunch", "dinner"],
+    "dietaryTags": ["vegetarian", "vegan", "dairy_free"],
+    "servings": 1,
+    "prepTimeMinutes": 20,
+    "ingredients": [
+      { "name": "falafel", "quantity": 4, "unit": "each" },
+      { "name": "pita bread", "quantity": 1, "unit": "each" },
+      { "name": "hummus", "quantity": 3, "unit": "tbsp" },
+      { "name": "cucumber", "quantity": 0.5, "unit": "each" },
+      { "name": "lettuce", "quantity": 1, "unit": "cup" }
+    ],
+    "nutritionPerServing": { "calories": 520, "proteinG": 18, "carbsG": 68, "fatG": 20 }
+  },
+  {
+    "id": "bbq-pulled-pork-bowl",
+    "title": "BBQ Pulled Pork Bowl",
+    "cuisine": "bbq",
+    "slots": ["lunch", "dinner"],
+    "dietaryTags": ["high_protein", "gluten_free", "dairy_free"],
+    "servings": 1,
+    "prepTimeMinutes": 20,
+    "ingredients": [
+      { "name": "pulled pork", "quantity": 5, "unit": "oz" },
+      { "name": "bbq sauce", "quantity": 3, "unit": "tbsp" },
+      { "name": "coleslaw mix", "quantity": 1, "unit": "cup" },
+      { "name": "cooked rice", "quantity": 0.75, "unit": "cup" }
+    ],
+    "nutritionPerServing": { "calories": 620, "proteinG": 40, "carbsG": 50, "fatG": 28 }
+  },
+  {
+    "id": "grilled-steak-veg",
+    "title": "Grilled Steak & Vegetables",
+    "cuisine": "bbq",
+    "slots": ["dinner"],
+    "dietaryTags": ["gluten_free", "high_protein", "dairy_free", "low_carb"],
+    "servings": 1,
+    "prepTimeMinutes": 25,
+    "ingredients": [
+      { "name": "sirloin steak", "quantity": 6, "unit": "oz" },
+      { "name": "asparagus", "quantity": 1, "unit": "cup" },
+      { "name": "zucchini", "quantity": 1, "unit": "each" },
+      { "name": "olive oil", "quantity": 1, "unit": "tbsp" },
+      { "name": "garlic", "quantity": 2, "unit": "clove" }
+    ],
+    "nutritionPerServing": { "calories": 560, "proteinG": 46, "carbsG": 18, "fatG": 32 }
+  },
+  {
+    "id": "lemon-herb-cod",
+    "title": "Lemon Herb Baked Cod",
+    "cuisine": "seafood",
+    "slots": ["lunch", "dinner"],
+    "dietaryTags": ["pescatarian", "gluten_free", "high_protein", "dairy_free", "low_carb"],
+    "servings": 1,
+    "prepTimeMinutes": 25,
+    "ingredients": [
+      { "name": "cod fillet", "quantity": 7, "unit": "oz" },
+      { "name": "asparagus", "quantity": 1, "unit": "cup" },
+      { "name": "lemon", "quantity": 0.5, "unit": "each" },
+      { "name": "olive oil", "quantity": 1, "unit": "tbsp" },
+      { "name": "parsley", "quantity": 2, "unit": "tbsp" }
+    ],
+    "nutritionPerServing": { "calories": 380, "proteinG": 40, "carbsG": 8, "fatG": 20 }
+  },
+  {
+    "id": "shrimp-stir-fry",
+    "title": "Shrimp Vegetable Stir-Fry",
+    "cuisine": "seafood",
+    "slots": ["lunch", "dinner"],
+    "dietaryTags": ["pescatarian", "dairy_free"],
+    "servings": 1,
+    "prepTimeMinutes": 20,
+    "ingredients": [
+      { "name": "shrimp", "quantity": 6, "unit": "oz" },
+      { "name": "mixed stir-fry vegetables", "quantity": 1.5, "unit": "cup" },
+      { "name": "cooked rice", "quantity": 0.5, "unit": "cup" },
+      { "name": "soy sauce", "quantity": 2, "unit": "tbsp" },
+      { "name": "ginger", "quantity": 1, "unit": "tsp" }
+    ],
+    "nutritionPerServing": { "calories": 460, "proteinG": 34, "carbsG": 45, "fatG": 14 }
+  },
+  {
+    "id": "turkey-chili",
+    "title": "Turkey Chili",
+    "cuisine": "american",
+    "slots": ["lunch", "dinner"],
+    "dietaryTags": ["gluten_free", "high_protein", "dairy_free"],
+    "servings": 1,
+    "prepTimeMinutes": 35,
+    "ingredients": [
+      { "name": "ground turkey", "quantity": 5, "unit": "oz" },
+      { "name": "kidney beans", "quantity": 0.5, "unit": "cup" },
+      { "name": "crushed tomatoes", "quantity": 0.75, "unit": "cup" },
+      { "name": "onion", "quantity": 0.5, "unit": "each" },
+      { "name": "chili powder", "quantity": 1, "unit": "tbsp" }
+    ],
+    "nutritionPerServing": { "calories": 480, "proteinG": 38, "carbsG": 40, "fatG": 18 }
+  },
+  {
+    "id": "spicy-tofu-bowl",
+    "title": "Spicy Tofu Rice Bowl",
+    "cuisine": "spicy",
+    "slots": ["lunch", "dinner"],
+    "dietaryTags": ["vegan", "vegetarian", "gluten_free", "dairy_free", "high_protein"],
+    "servings": 1,
+    "prepTimeMinutes": 25,
+    "ingredients": [
+      { "name": "firm tofu", "quantity": 7, "unit": "oz" },
+      { "name": "cooked rice", "quantity": 0.75, "unit": "cup" },
+      { "name": "sriracha", "quantity": 1, "unit": "tbsp" },
+      { "name": "broccoli", "quantity": 1, "unit": "cup" },
+      { "name": "soy sauce", "quantity": 1, "unit": "tbsp" }
+    ],
+    "nutritionPerServing": { "calories": 500, "proteinG": 24, "carbsG": 55, "fatG": 20 }
+  },
+  {
+    "id": "buffalo-chicken-wrap",
+    "title": "Buffalo Chicken Wrap",
+    "cuisine": "spicy",
+    "slots": ["lunch", "dinner"],
+    "dietaryTags": ["high_protein"],
+    "servings": 1,
+    "prepTimeMinutes": 15,
+    "ingredients": [
+      { "name": "chicken breast", "quantity": 5, "unit": "oz" },
+      { "name": "flour tortilla", "quantity": 1, "unit": "each" },
+      { "name": "buffalo sauce", "quantity": 2, "unit": "tbsp" },
+      { "name": "lettuce", "quantity": 1, "unit": "cup" },
+      { "name": "ranch dressing", "quantity": 1, "unit": "tbsp" }
+    ],
+    "nutritionPerServing": { "calories": 560, "proteinG": 40, "carbsG": 42, "fatG": 24 }
+  },
+  {
+    "id": "greek-yogurt-almonds",
+    "title": "Greek Yogurt with Almonds",
+    "cuisine": "mediterranean",
+    "slots": ["snack"],
+    "dietaryTags": ["vegetarian", "gluten_free", "high_protein"],
+    "servings": 1,
+    "prepTimeMinutes": 2,
+    "ingredients": [
+      { "name": "greek yogurt", "quantity": 0.75, "unit": "cup" },
+      { "name": "almonds", "quantity": 0.25, "unit": "oz" },
+      { "name": "honey", "quantity": 1, "unit": "tsp" }
+    ],
+    "nutritionPerServing": { "calories": 220, "proteinG": 18, "carbsG": 14, "fatG": 10 }
+  },
+  {
+    "id": "hummus-veggies",
+    "title": "Hummus & Veggie Sticks",
+    "cuisine": "middle_eastern",
+    "slots": ["snack"],
+    "dietaryTags": ["vegan", "vegetarian", "gluten_free", "dairy_free"],
+    "servings": 1,
+    "prepTimeMinutes": 5,
+    "ingredients": [
+      { "name": "hummus", "quantity": 4, "unit": "tbsp" },
+      { "name": "carrot", "quantity": 1, "unit": "each" },
+      { "name": "cucumber", "quantity": 0.5, "unit": "each" }
+    ],
+    "nutritionPerServing": { "calories": 180, "proteinG": 7, "carbsG": 20, "fatG": 9 }
+  },
+  {
+    "id": "apple-peanut-butter",
+    "title": "Apple with Peanut Butter",
+    "cuisine": "american",
+    "slots": ["snack"],
+    "dietaryTags": ["vegan", "vegetarian", "gluten_free", "dairy_free"],
+    "servings": 1,
+    "prepTimeMinutes": 2,
+    "ingredients": [
+      { "name": "apple", "quantity": 1, "unit": "each" },
+      { "name": "peanut butter", "quantity": 1.5, "unit": "tbsp" }
+    ],
+    "nutritionPerServing": { "calories": 250, "proteinG": 7, "carbsG": 30, "fatG": 13 }
+  },
+  {
+    "id": "cottage-cheese-fruit",
+    "title": "Cottage Cheese & Fruit",
+    "cuisine": "american",
+    "slots": ["snack"],
+    "dietaryTags": ["vegetarian", "gluten_free", "high_protein"],
+    "servings": 1,
+    "prepTimeMinutes": 2,
+    "ingredients": [
+      { "name": "cottage cheese", "quantity": 0.75, "unit": "cup" },
+      { "name": "pineapple", "quantity": 0.5, "unit": "cup" }
+    ],
+    "nutritionPerServing": { "calories": 200, "proteinG": 22, "carbsG": 18, "fatG": 4 }
+  },
+  {
+    "id": "edamame",
+    "title": "Steamed Edamame",
+    "cuisine": "asian",
+    "slots": ["snack"],
+    "dietaryTags": ["vegan", "vegetarian", "gluten_free", "dairy_free", "high_protein"],
+    "servings": 1,
+    "prepTimeMinutes": 8,
+    "ingredients": [
+      { "name": "edamame", "quantity": 1, "unit": "cup" },
+      { "name": "sea salt", "quantity": 0.25, "unit": "tsp" }
+    ],
+    "nutritionPerServing": { "calories": 190, "proteinG": 17, "carbsG": 15, "fatG": 8 }
+  }
+]
