@@ -42,6 +42,7 @@ export function WeeklyPlanScreen() {
   const navigation = useNavigation<Nav>();
   const recipes = useRecipeStore((s) => s.recipes);
   const plan = useMealPlanStore((s) => s.entries);
+  const planDays = useMealPlanStore((s) => s.planDays);
   const addEntry = useMealPlanStore((s) => s.addEntry);
   const updateServings = useMealPlanStore((s) => s.updateServings);
   const removeEntry = useMealPlanStore((s) => s.removeEntry);
@@ -59,8 +60,8 @@ export function WeeklyPlanScreen() {
   );
 
   const nutrition = useMemo(
-    () => computeNutritionSummary(plan, recipes, settings),
-    [plan, recipes, settings]
+    () => computeNutritionSummary(plan, recipes, settings, planDays),
+    [plan, recipes, settings, planDays]
   );
 
   const totalServings = plan.reduce((acc, p) => acc + p.desiredServings, 0);
@@ -145,7 +146,14 @@ export function WeeklyPlanScreen() {
               ))}
             </View>
 
-            <SectionHeader title="Nutrition preview" />
+            <SectionHeader
+              title="Nutrition preview"
+              trailing={
+                planDays !== 7 ? (
+                  <Pill label={`${planDays}-day plan`} tone="neutral" size="sm" />
+                ) : undefined
+              }
+            />
             <Surface variant="outlined" pad={t.spacing.lg}>
               <NutritionBar
                 label="Daily calories"

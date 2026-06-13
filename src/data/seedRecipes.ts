@@ -1,9 +1,14 @@
 import { Recipe, PantryItem } from '../types';
+import { deterministicRecipeId } from '../utils/deterministicId';
 
 const now = 0;
 
-function mkRecipe(id: string, r: Omit<Recipe, 'id' | 'createdAt' | 'updatedAt'>): Recipe {
-  return { ...r, id, createdAt: now, updatedAt: now };
+// Seed ids are UUIDv5s derived from stable slugs: Supabase's recipes.id is a
+// uuid column, so slug ids would fail every sync push. Existing installs with
+// legacy slug ids are converted by remapLegacyRecipeIds() at startup, and both
+// paths converge on the same derived uuid.
+function mkRecipe(slug: string, r: Omit<Recipe, 'id' | 'createdAt' | 'updatedAt'>): Recipe {
+  return { ...r, id: deterministicRecipeId(slug), createdAt: now, updatedAt: now };
 }
 
 export const SEED_RECIPES: Recipe[] = [

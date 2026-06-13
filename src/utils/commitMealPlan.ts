@@ -1,18 +1,11 @@
-import 'react-native-get-random-values';
-import { v5 as uuidv5 } from 'uuid';
 import { Meal, Recipe } from '../types';
 import { PlannerResult } from './mealPlanner';
+import { deterministicRecipeId } from './deterministicId';
 import { useRecipeStore } from '../store/useRecipeStore';
 import { useMealPlanStore } from '../store/useMealPlanStore';
 
-// Fixed namespace so a meal slug always maps to the same recipe UUID. recipes.id
-// is a `uuid` column in Supabase — a raw "meal:<slug>" id would pass offline but
-// fail the server upsert and rot in the outbox, so we derive a valid UUIDv5.
-// NEVER change this namespace or a catalog slug; doing so orphans committed plans.
-const MEAL_NAMESPACE = '1b671a64-40d5-491e-99b0-da01ff1f3341';
-
 export function recipeIdForMeal(mealId: string): string {
-  return uuidv5(mealId, MEAL_NAMESPACE);
+  return deterministicRecipeId(mealId);
 }
 
 function mealToRecipe(meal: Meal): Recipe {
@@ -65,6 +58,10 @@ export function commitPlannedMeals(result: PlannerResult, catalog: Meal[]): Comm
     planStore.addEntry(recipe.id, servings);
     totalServings += servings;
   }
+
+  // Record the plan length so the daily nutrition view divides by the right
+  // number of days instead of assuming a 7-day week.
+  planStore.setPlanDays(result.dailyTotals.length);
 
   return { recipeCount: servingsByMeal.size, totalServings };
 }

@@ -18,6 +18,7 @@ import { AmbientBackground } from './src/components/ui/AmbientBackground';
 import { ParallaxProvider } from './src/components/ui/ParallaxContext';
 import { useHydration } from './src/store/hydration';
 import { seedIfFirstLaunch } from './src/store/seedFirstLaunch';
+import { remapLegacyRecipeIds } from './src/store/remapLegacyRecipeIds';
 import { useAuthStore } from './src/store/useAuthStore';
 import { ToastHost } from './src/components/ui/ToastHost';
 import { drainOutbox, migrateLocalToAccount, pullAll, subscribeStores, unsubscribeStores } from './src/lib/sync';
@@ -38,11 +39,16 @@ export default function App() {
 
   useEffect(() => {
     if (hydrated && !seeded) {
-      seedIfFirstLaunch().finally(() => setSeeded(true));
+      seedIfFirstLaunch()
+        .then(() => remapLegacyRecipeIds())
+        .finally(() => setSeeded(true));
     }
   }, [hydrated, seeded]);
 
-  // Drive sync lifecycle from auth state.
+  // Drive sync lifecycle from auth state. Subscribe BEFORE the first pull so
+  // any edit made while the pull is in flight is pushed (or outboxed) — the
+  // merge in pullAll then knows not to clobber it. Drain before pull so queued
+  // offline deletes reach the server before we fetch.
   useEffect(() => {
     if (!hydrated || !seeded || !supabaseConfigured) return;
     if (!userId) {
@@ -50,13 +56,13 @@ export default function App() {
       return;
     }
     let cancelled = false;
+    subscribeStores(userId);
     (async () => {
       await migrateLocalToAccount(userId);
       if (cancelled) return;
-      await pullAll(userId);
+      await drainOutbox(userId);
       if (cancelled) return;
-      subscribeStores(userId);
-      void drainOutbox();
+      await pullAll(userId);
     })();
     return () => {
       cancelled = true;
@@ -64,13 +70,15 @@ export default function App() {
     };
   }, [hydrated, seeded, userId]);
 
-  // Pull + drain on app foreground.
+  // Drain then pull on app foreground (sequential: deletes must land first).
   useEffect(() => {
     if (!userId || !supabaseConfigured) return;
     const sub = AppState.addEventListener('change', (state) => {
       if (state === 'active') {
-        void drainOutbox();
-        void pullAll(userId);
+        void (async () => {
+          await drainOutbox(userId);
+          await pullAll(userId);
+        })();
       }
     });
     return () => sub.remove();

@@ -23,5 +23,6 @@
   "bunch": ["bunch", "bunches"],
   "head": ["head", "heads"],
   "dash": ["dash", "dashes"],
-  "pinch": ["pinch", "pinches"]
+  "pinch": ["pinch", "pinches"],
+  "scoop": ["scoop", "scoops"]
 }

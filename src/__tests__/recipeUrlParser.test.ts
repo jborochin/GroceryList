@@ -162,6 +162,26 @@ describe('parseRecipeFromUrl (integration with mocked fetch)', () => {
     expect(recipe.ingredients).toHaveLength(1);
   });
 
+  it('averages a recipeYield range', async () => {
+    mockFetchHtml(`
+      <html><script type="application/ld+json">
+        {"@type":"Recipe","name":"Stew","recipeIngredient":["1 cup flour"],"recipeYield":"4-6 servings"}
+      </script></html>
+    `);
+    const recipe = await parseRecipeFromUrl('https://example.com/stew');
+    expect(recipe.servings).toBe(5);
+  });
+
+  it('averages a "to" recipeYield range', async () => {
+    mockFetchHtml(`
+      <html><script type="application/ld+json">
+        {"@type":"Recipe","name":"Soup","recipeIngredient":["1 cup flour"],"recipeYield":"6 to 8"}
+      </script></html>
+    `);
+    const recipe = await parseRecipeFromUrl('https://example.com/soup');
+    expect(recipe.servings).toBe(7);
+  });
+
   it('throws network on HTTP 404', async () => {
     mockFetchHtml('', false, 404);
     await expect(parseRecipeFromUrl('https://example.com/missing')).rejects.toMatchObject({

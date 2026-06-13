@@ -33,6 +33,7 @@ const UNIT_TABLE: Record<string, UnitDef> = {
   head: { family: 'count', toBase: 1 },
   dash: { family: 'count', toBase: 1 },
   pinch: { family: 'count', toBase: 1 },
+  scoop: { family: 'count', toBase: 1 },
 };
 
 export function getFamily(unit: string): UnitFamily | null {

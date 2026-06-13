@@ -15,13 +15,20 @@ import {
   UserSettings,
 } from '../types';
 import { getSupabase, supabaseConfigured } from './supabase';
-import { enqueue, peekAll, removeMany, OutboxEntry } from './syncQueue';
+import { enqueue, naturalKey, peekAll, removeMany, OutboxEntry, OutboxTable } from './syncQueue';
 import { useSyncStateStore } from '../store/useSyncStateStore';
+import { useAuthStore } from '../store/useAuthStore';
+import { mergeKeyed, diffKeys } from '../utils/syncMerge';
 
 // Suppress push subscriptions while applying remote data to local stores.
-let isApplyingRemote = false;
+// A counter (not a boolean) so overlapping appliers can't clear each other's
+// suppression early.
+let applyingRemoteCount = 0;
 let unsubscribers: Array<() => void> = [];
 let drainInFlight = false;
+// Single-flight pulls per user: concurrent callers (sign-in effect + app
+// foreground) share one in-flight pull instead of racing each other.
+const pullsInFlight = new Map<string, Promise<void>>();
 
 // ---------- Row mappers ----------
 
@@ -239,47 +246,166 @@ async function pushSettings(s: UserSettings, userId: string) {
 
 // ---------- Pull ----------
 
-export async function pullAll(userId: string): Promise<void> {
-  if (!supabaseConfigured) return;
+type Row = Record<string, unknown>;
+
+// Splits fetched rows (which include soft-deleted tombstones) and runs the
+// pure merge against current local state. See src/utils/syncMerge.ts for the
+// precedence rules and why this is deliberately timestamp-free.
+function mergeStore<T>(
+  rows: Row[],
+  rowKey: (row: Row) => string,
+  rowToLocal: (row: Row) => T,
+  snapshot: Map<string, T>,
+  current: Map<string, T>,
+  pending: OutboxEntry[],
+  table: OutboxTable
+): { next: Array<[string, T]>; toPush: Array<[string, T]> } {
+  const serverLive = new Map<string, T>();
+  const serverDeadKeys = new Set<string>();
+  for (const row of rows) {
+    if (row.deleted_at != null) serverDeadKeys.add(rowKey(row));
+    else serverLive.set(rowKey(row), rowToLocal(row));
+  }
+  const pendingKeys = (op: OutboxEntry['op']) =>
+    new Set(
+      pending
+        .filter((e) => e.table === table && e.op === op)
+        .map((e) => String(naturalKey(e.table, e.payload)))
+    );
+  return mergeKeyed({
+    local: current,
+    serverLive,
+    serverDeadKeys,
+    editedKeys: diffKeys(snapshot, current),
+    pendingUpsertKeys: pendingKeys('upsert'),
+    pendingDeleteKeys: pendingKeys('delete'),
+  });
+}
+
+export function pullAll(userId: string): Promise<void> {
+  if (!supabaseConfigured) return Promise.resolve();
+  const existing = pullsInFlight.get(userId);
+  if (existing) return existing;
+  const p = doPullAll(userId).finally(() => {
+    pullsInFlight.delete(userId);
+  });
+  pullsInFlight.set(userId, p);
+  return p;
+}
+
+async function doPullAll(userId: string): Promise<void> {
   const supabase = getSupabase();
-  isApplyingRemote = true;
   try {
+    // Per-key reference snapshots BEFORE the fetch: anything whose reference
+    // differs at apply time was touched while the pull was in flight, and the
+    // merge keeps the local version (zustand updates are immutable per item).
+    const snapRecipes = new Map(useRecipeStore.getState().recipes.map((r) => [r.id, r]));
+    const snapMeals = new Map(useMealPlanStore.getState().entries.map((e) => [e.recipeId, e]));
+    const snapPantry = new Map(usePantryStore.getState().items.map((i) => [i.id, i]));
+    const snapOverrides = new Map(Object.entries(usePriceOverrideStore.getState().overrides));
+    const snapSettings = useSettingsStore.getState().settings;
+
+    // Fetch INCLUDING soft-deleted rows: without tombstones, a remotely
+    // deleted item is indistinguishable from a never-pushed local creation,
+    // and the merge would push it back to life.
     const [recipes, meals, pantry, overrides, settings] = await Promise.all([
-      supabase.from('recipes').select('*').eq('user_id', userId).is('deleted_at', null),
-      supabase.from('meal_plan_entries').select('*').eq('user_id', userId).is('deleted_at', null),
-      supabase.from('pantry_items').select('*').eq('user_id', userId).is('deleted_at', null),
-      supabase.from('price_overrides').select('*').eq('user_id', userId).is('deleted_at', null),
+      supabase.from('recipes').select('*').eq('user_id', userId),
+      supabase.from('meal_plan_entries').select('*').eq('user_id', userId),
+      supabase.from('pantry_items').select('*').eq('user_id', userId),
+      supabase.from('price_overrides').select('*').eq('user_id', userId),
       supabase.from('user_settings').select('*').eq('user_id', userId).maybeSingle(),
     ]);
 
-    if (!recipes.error && recipes.data) {
-      useRecipeStore.getState().replaceAll(recipes.data.map(rowToRecipe));
-    }
-    if (!meals.error && meals.data) {
-      useMealPlanStore.setState({ entries: meals.data.map(rowToMealEntry) });
-    }
-    if (!pantry.error && pantry.data) {
-      usePantryStore.getState().replaceAll(pantry.data.map(rowToPantry));
-    }
-    if (!overrides.error && overrides.data) {
-      const next: Record<string, PriceOverride> = {};
-      for (const row of overrides.data as Array<Record<string, unknown>>) {
-        const key = row.normalized_name as string;
-        next[key] = {
-          name: (row.display_name as string) ?? key,
-          pricePerUnit: Number(row.price_per_unit),
-          unit: row.unit as string,
-        };
+    // The user may have signed out (or switched accounts) during the fetch —
+    // never apply one account's rows to another's session.
+    if (useAuthStore.getState().user?.id !== userId) return;
+
+    const pending = (await peekAll()).filter((e) => e.payload.user_id === userId);
+    const pushQueue: Array<() => void> = [];
+
+    applyingRemoteCount++;
+    try {
+      if (!recipes.error && recipes.data) {
+        const current = new Map(useRecipeStore.getState().recipes.map((r) => [r.id, r]));
+        const { next, toPush } = mergeStore(
+          recipes.data as Row[],
+          (row) => row.id as string,
+          rowToRecipe,
+          snapRecipes,
+          current,
+          pending,
+          'recipes'
+        );
+        useRecipeStore.getState().replaceAll(next.map(([, r]) => r));
+        for (const [, r] of toPush) pushQueue.push(() => void pushRecipe(r, userId));
       }
-      usePriceOverrideStore.setState({ overrides: next });
-    }
-    if (!settings.error && settings.data) {
-      useSettingsStore.getState().hydrateFromServer(rowToSettings(settings.data));
+      if (!meals.error && meals.data) {
+        const current = new Map(useMealPlanStore.getState().entries.map((e) => [e.recipeId, e]));
+        const { next, toPush } = mergeStore(
+          meals.data as Row[],
+          (row) => row.recipe_id as string,
+          rowToMealEntry,
+          snapMeals,
+          current,
+          pending,
+          'meal_plan_entries'
+        );
+        useMealPlanStore.setState({ entries: next.map(([, e]) => e) });
+        for (const [, e] of toPush) pushQueue.push(() => void pushMealEntry(e, userId));
+      }
+      if (!pantry.error && pantry.data) {
+        const current = new Map(usePantryStore.getState().items.map((i) => [i.id, i]));
+        const { next, toPush } = mergeStore(
+          pantry.data as Row[],
+          (row) => row.id as string,
+          rowToPantry,
+          snapPantry,
+          current,
+          pending,
+          'pantry_items'
+        );
+        usePantryStore.getState().replaceAll(next.map(([, i]) => i));
+        for (const [, i] of toPush) pushQueue.push(() => void pushPantry(i, userId));
+      }
+      if (!overrides.error && overrides.data) {
+        const current = new Map(Object.entries(usePriceOverrideStore.getState().overrides));
+        const { next, toPush } = mergeStore(
+          overrides.data as Row[],
+          (row) => row.normalized_name as string,
+          (row): PriceOverride => ({
+            name: (row.display_name as string) ?? (row.normalized_name as string),
+            pricePerUnit: Number(row.price_per_unit),
+            unit: row.unit as string,
+          }),
+          snapOverrides,
+          current,
+          pending,
+          'price_overrides'
+        );
+        usePriceOverrideStore.setState({ overrides: Object.fromEntries(next) });
+        for (const [key, o] of toPush) pushQueue.push(() => void pushOverride(key, o, userId));
+      }
+      if (!settings.error && settings.data) {
+        // Settings are a single atomic object: apply the server copy only if
+        // the user didn't change anything while the pull was in flight.
+        if (useSettingsStore.getState().settings === snapSettings) {
+          useSettingsStore.getState().hydrateFromServer(rowToSettings(settings.data));
+        }
+      }
+    } finally {
+      applyingRemoteCount--;
     }
 
-    await AsyncStorage.setItem(STORAGE_KEYS.lastSyncedAt, String(Date.now()));
+    // Push rows the server has never seen (created before sign-in, or rescued
+    // from a failed migrate). Pushes go store→server only — no subscriber echo.
+    for (const push of pushQueue) push();
+
+    const allOk =
+      !recipes.error && !meals.error && !pantry.error && !overrides.error && !settings.error;
+    if (allOk) {
+      await AsyncStorage.setItem(STORAGE_KEYS.lastSyncedAt, String(Date.now()));
+    }
   } finally {
-    isApplyingRemote = false;
     // Flip the gate even on a partial/failed pull so the UI never hangs in
     // an indeterminate state waiting for a pull that won't come.
     useSyncStateStore.getState().setFirstPullCompleted(true);
@@ -288,11 +414,17 @@ export async function pullAll(userId: string): Promise<void> {
 
 // ---------- Outbox drain ----------
 
-export async function drainOutbox(): Promise<void> {
+export async function drainOutbox(userId: string): Promise<void> {
   if (!supabaseConfigured || drainInFlight) return;
   drainInFlight = true;
   try {
-    const entries = await peekAll();
+    const all = await peekAll();
+    if (all.length === 0) return;
+    // Entries queued under a different account can never succeed (RLS rejects
+    // them) — drop them instead of replaying user A's edits in user B's session.
+    const stale = all.filter((e) => e.payload.user_id !== userId).map((e) => e.id);
+    await removeMany(stale);
+    const entries = all.filter((e) => e.payload.user_id === userId);
     if (entries.length === 0) return;
     const supabase = getSupabase();
     const succeeded: string[] = [];
@@ -334,7 +466,7 @@ export function subscribeStores(userId: string): () => void {
 
   unsubscribers.push(
     useRecipeStore.subscribe((state, prev) => {
-      if (isApplyingRemote) return;
+      if (applyingRemoteCount > 0) return;
       const prevMap = new Map(prev.recipes.map((r) => [r.id, r]));
       const nextMap = new Map(state.recipes.map((r) => [r.id, r]));
       for (const r of state.recipes) {
@@ -349,7 +481,7 @@ export function subscribeStores(userId: string): () => void {
 
   unsubscribers.push(
     useMealPlanStore.subscribe((state, prev) => {
-      if (isApplyingRemote) return;
+      if (applyingRemoteCount > 0) return;
       const prevMap = new Map(prev.entries.map((e) => [e.recipeId, e]));
       const nextMap = new Map(state.entries.map((e) => [e.recipeId, e]));
       for (const e of state.entries) {
@@ -364,7 +496,7 @@ export function subscribeStores(userId: string): () => void {
 
   unsubscribers.push(
     usePantryStore.subscribe((state, prev) => {
-      if (isApplyingRemote) return;
+      if (applyingRemoteCount > 0) return;
       const prevMap = new Map(prev.items.map((i) => [i.id, i]));
       const nextMap = new Map(state.items.map((i) => [i.id, i]));
       for (const i of state.items) {
@@ -381,7 +513,7 @@ export function subscribeStores(userId: string): () => void {
 
   unsubscribers.push(
     usePriceOverrideStore.subscribe((state, prev) => {
-      if (isApplyingRemote) return;
+      if (applyingRemoteCount > 0) return;
       const prevKeys = new Set(Object.keys(prev.overrides));
       const nextKeys = new Set(Object.keys(state.overrides));
       for (const key of nextKeys) {
@@ -399,7 +531,7 @@ export function subscribeStores(userId: string): () => void {
 
   unsubscribers.push(
     useSettingsStore.subscribe((state, prev) => {
-      if (isApplyingRemote) return;
+      if (applyingRemoteCount > 0) return;
       if (state.settings === prev.settings) return;
       void pushSettings(state.settings, userId);
     })
@@ -435,26 +567,49 @@ export async function migrateLocalToAccount(userId: string): Promise<void> {
 
   const supabase = getSupabase();
 
+  // ignoreDuplicates: a second device signing into an existing account must
+  // never overwrite (or resurrect tombstoned) rows the account already has —
+  // only contribute rows the server has never seen. The merge-on-pull's
+  // local-only push acts as the retry net if any of these batches fail.
   if (recipes.length > 0) {
-    await supabase.from('recipes').upsert(recipes.map((r) => recipeToRow(r, userId)));
+    await supabase
+      .from('recipes')
+      .upsert(recipes.map((r) => recipeToRow(r, userId)), { ignoreDuplicates: true });
   }
   if (entries.length > 0) {
     await supabase
       .from('meal_plan_entries')
-      .upsert(entries.map((e) => mealEntryToRow(e, userId)), { onConflict: 'user_id,recipe_id' });
+      .upsert(entries.map((e) => mealEntryToRow(e, userId)), {
+        onConflict: 'user_id,recipe_id',
+        ignoreDuplicates: true,
+      });
   }
   if (pantry.length > 0) {
-    await supabase.from('pantry_items').upsert(pantry.map((p) => pantryToRow(p, userId)));
+    await supabase
+      .from('pantry_items')
+      .upsert(pantry.map((p) => pantryToRow(p, userId)), { ignoreDuplicates: true });
   }
   const overrideRows = Object.entries(overrides).map(([key, o]) => overrideToRow(o, key, userId));
   if (overrideRows.length > 0) {
     await supabase
       .from('price_overrides')
-      .upsert(overrideRows, { onConflict: 'user_id,normalized_name' });
+      .upsert(overrideRows, { onConflict: 'user_id,normalized_name', ignoreDuplicates: true });
   }
-  await supabase
+  // Settings can't use ignoreDuplicates: the handle_new_user trigger creates a
+  // default row at signup, so the row always exists. Migrate local settings
+  // only while the account is still on untouched defaults (not yet onboarded)
+  // — a second device joining an onboarded account must not overwrite it.
+  const serverSettings = await supabase
     .from('user_settings')
-    .upsert(settingsToRow(settings, userId), { onConflict: 'user_id' });
+    .select('onboarding_completed')
+    .eq('user_id', userId)
+    .maybeSingle();
+  const accountOnboarded = Boolean(serverSettings.data?.onboarding_completed);
+  if (!serverSettings.error && !accountOnboarded) {
+    await supabase
+      .from('user_settings')
+      .upsert(settingsToRow(settings, userId), { onConflict: 'user_id' });
+  }
 
   await AsyncStorage.setItem(STORAGE_KEYS.migratedAccountId, userId);
 }
