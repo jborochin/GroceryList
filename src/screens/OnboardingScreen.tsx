@@ -22,6 +22,7 @@ import { useAuthStore } from '../store/useAuthStore';
 import { RootStackParamList } from '../navigation/types';
 import {
   ActivityLevel,
+  CookingFrequency,
   Goal,
   Sex,
   TdeeInputs,
@@ -55,6 +56,16 @@ const GOAL_OPTIONS: Array<{ value: Goal; label: string; helper: string }> = [
   { value: 'gain', label: 'Gain', helper: '~1 lb / week' },
 ];
 
+const COOKING_FREQUENCY_OPTIONS: Array<{
+  value: CookingFrequency;
+  label: string;
+  helper: string;
+}> = [
+  { value: 'batch', label: 'Batch cook', helper: 'Cook a few dishes, eat them all week' },
+  { value: 'few_days', label: 'Every few days', helper: 'Cook a couple times a week' },
+  { value: 'daily', label: 'Cook daily', helper: 'A fresh meal each day' },
+];
+
 export function OnboardingScreen() {
   const t = useAppTheme();
   const insets = useSafeAreaInsets();
@@ -79,6 +90,7 @@ export function OnboardingScreen() {
   // Step 2 inputs.
   const [cuisines, setCuisines] = useState<string[]>([]);
   const [dietary, setDietary] = useState<string[]>([]);
+  const [cookingFrequency, setCookingFrequency] = useState<CookingFrequency>('few_days');
 
   const parsed = useMemo<TdeeInputs | null>(() => {
     const ageN = parseInt(age, 10);
@@ -156,12 +168,14 @@ export function OnboardingScreen() {
         macroGrams: macroGramsFromSplit(targetCalories, DEFAULT_SPLIT),
         cuisinePreferences: opts.includePrefs ? cuisines : [],
         dietaryRestrictions: opts.includePrefs ? dietary : [],
+        cookingFrequency: opts.includePrefs ? cookingFrequency : 'few_days',
       });
     } else {
       applyOnboarding({
         onboardingCompleted: true,
         cuisinePreferences: opts.includePrefs ? cuisines : [],
         dietaryRestrictions: opts.includePrefs ? dietary : [],
+        cookingFrequency: opts.includePrefs ? cookingFrequency : 'few_days',
       });
     }
     toast.show({ message: 'Welcome — your plan is set up.', tone: 'success' });
@@ -218,6 +232,8 @@ export function OnboardingScreen() {
             setCuisines={setCuisines}
             dietary={dietary}
             setDietary={setDietary}
+            cookingFrequency={cookingFrequency}
+            setCookingFrequency={setCookingFrequency}
             onSubmit={submitPreferences}
             onSkip={skipPreferences}
           />
@@ -607,6 +623,8 @@ interface PreferencesStepProps {
   setCuisines: (xs: string[]) => void;
   dietary: string[];
   setDietary: (xs: string[]) => void;
+  cookingFrequency: CookingFrequency;
+  setCookingFrequency: (f: CookingFrequency) => void;
   onSubmit: () => void;
   onSkip: () => void;
 }
@@ -640,6 +658,20 @@ function PreferencesStep(p: PreferencesStepProps) {
       <Text variant="caption" tone="tertiary" style={{ marginTop: t.spacing.md }}>
         Tap to add or remove. Pick as many or as few as you like.
       </Text>
+
+      <SectionHeader title="How often do you cook?" />
+      <Surface variant="outlined" pad={t.spacing.sm}>
+        {COOKING_FREQUENCY_OPTIONS.map((opt, idx) => (
+          <ChoiceRow
+            key={opt.value}
+            label={opt.label}
+            helper={opt.helper}
+            selected={p.cookingFrequency === opt.value}
+            onPress={() => p.setCookingFrequency(opt.value)}
+            showDivider={idx < COOKING_FREQUENCY_OPTIONS.length - 1}
+          />
+        ))}
+      </Surface>
 
       <View style={{ marginTop: t.spacing.xl, gap: t.spacing.md }}>
         <Button

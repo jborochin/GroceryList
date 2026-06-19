@@ -10,6 +10,7 @@ const settings: UserSettings = {
   tdeeInputs: null,
   cuisinePreferences: [],
   dietaryRestrictions: [],
+  cookingFrequency: 'few_days',
 };
 
 function recipe(id: string, calories: number, proteinG: number): Recipe {

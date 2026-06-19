@@ -1,4 +1,4 @@
-import { Meal, MealSlot, NutritionPerServing } from '../types';
+import { CookingFrequency, Meal, MealSlot, NutritionPerServing } from '../types';
 
 export interface SlotConfig {
   slot: MealSlot;
@@ -17,6 +17,7 @@ export interface PlannerInput {
   meals: Meal[];
   days: number;
   slots: SlotConfig[];
+  cookingFrequency?: CookingFrequency;
 }
 
 export interface PlannedItem {
@@ -49,7 +50,15 @@ const W_PROTEIN = 3;
 const W_CARBS = 1;
 const W_FAT = 1;
 const CUISINE_BONUS = 0.5;
-const VARIETY_PENALTY = 0.4;
+
+// Per-prior-use score penalty, scaled by the user's cooking cadence:
+// batch cook tolerates (even prefers) repeats; daily pushes for distinct meals.
+// `few_days` is the long-standing default and keeps prior behavior unchanged.
+const VARIETY_PENALTY_BY_FREQ: Record<CookingFrequency, number> = {
+  batch: 0,
+  few_days: 0.4,
+  daily: 1.5,
+};
 
 const EMPTY_NUTRITION: NutritionPerServing = { calories: 0, proteinG: 0, carbsG: 0, fatG: 0 };
 
@@ -66,7 +75,8 @@ function score(
   servings: number,
   target: NutritionPerServing,
   cuisinePreferences: string[],
-  priorUses: number
+  priorUses: number,
+  varietyPenalty: number
 ): number {
   const n = meal.nutritionPerServing;
   const macroFit = -(
@@ -76,7 +86,7 @@ function score(
     W_FAT * relErrSq(n.fatG * servings, target.fatG)
   );
   const cuisineBonus = cuisinePreferences.includes(meal.cuisine) ? CUISINE_BONUS : 0;
-  return macroFit + cuisineBonus - VARIETY_PENALTY * priorUses;
+  return macroFit + cuisineBonus - varietyPenalty * priorUses;
 }
 
 // Pick 1 or 2 servings — 2 only when a single serving badly under-shoots the
@@ -103,6 +113,7 @@ function passesDietary(meal: Meal, restrictions: string[]): boolean {
  */
 export function planMeals(input: PlannerInput): PlannerResult {
   const { targets, cuisinePreferences, dietaryRestrictions, meals, days, slots } = input;
+  const varietyPenalty = VARIETY_PENALTY_BY_FREQ[input.cookingFrequency ?? 'few_days'];
 
   const eligible = meals
     .filter((m) => passesDietary(m, dietaryRestrictions))
@@ -162,7 +173,14 @@ export function planMeals(input: PlannerInput): PlannerResult {
       let bestScore = -Infinity;
       for (const meal of candidates) {
         const servings = chooseServings(meal, instanceTarget);
-        const s = score(meal, servings, instanceTarget, cuisinePreferences, uses.get(meal.id) ?? 0);
+        const s = score(
+          meal,
+          servings,
+          instanceTarget,
+          cuisinePreferences,
+          uses.get(meal.id) ?? 0,
+          varietyPenalty
+        );
         if (s > bestScore) {
           bestScore = s;
           best = meal;

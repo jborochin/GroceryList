@@ -7,6 +7,7 @@ import { useSettingsStore } from '../store/useSettingsStore';
 import { usePriceOverrideStore } from '../store/usePriceOverrideStore';
 import { STORAGE_KEYS } from '../store/storage';
 import {
+  CookingFrequency,
   MealPlanEntry,
   PantryItem,
   PriceOverride,
@@ -123,8 +124,13 @@ function settingsToRow(s: UserSettings, userId: string) {
     onboarding_completed: s.onboardingCompleted,
     cuisine_preferences: s.cuisinePreferences,
     dietary_restrictions: s.dietaryRestrictions,
+    cooking_frequency: s.cookingFrequency,
     tdee_inputs: s.tdeeInputs,
   };
+}
+
+function asCookingFrequency(v: unknown): CookingFrequency {
+  return v === 'batch' || v === 'few_days' || v === 'daily' ? v : 'few_days';
 }
 
 function asStringArray(v: unknown): string[] {
@@ -148,6 +154,7 @@ function rowToSettings(row: Record<string, unknown>): UserSettings {
     onboardingCompleted: Boolean(row.onboarding_completed),
     cuisinePreferences: asStringArray(row.cuisine_preferences),
     dietaryRestrictions: asStringArray(row.dietary_restrictions),
+    cookingFrequency: asCookingFrequency(row.cooking_frequency),
     tdeeInputs: (row.tdee_inputs as TdeeInputs | null) ?? null,
   };
 }

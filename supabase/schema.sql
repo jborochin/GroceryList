@@ -231,6 +231,7 @@ alter table public.user_settings
   add column if not exists onboarding_completed boolean not null default false,
   add column if not exists cuisine_preferences  jsonb   not null default '[]'::jsonb,
   add column if not exists dietary_restrictions jsonb   not null default '[]'::jsonb,
+  add column if not exists cooking_frequency    text    not null default 'few_days',
   add column if not exists tdee_inputs          jsonb;
 
 -- =====================================================================
