@@ -25,7 +25,7 @@ import { drainOutbox, migrateLocalToAccount, pullAll, subscribeStores, unsubscri
 import { supabaseConfigured } from './src/lib/supabase';
 
 export default function App() {
-  // Single Liquid Glass aesthetic: always the dark theme + light status bar.
+  // Single Liquid Glass aesthetic: cream field + dark status bar.
   const theme = darkTheme;
   const hydrated = useHydration();
   const userId = useAuthStore((s) => s.user?.id ?? null);
@@ -97,11 +97,11 @@ export default function App() {
       <SafeAreaProvider>
         <PaperProvider theme={theme}>
           <ParallaxProvider>
-            <View style={{ flex: 1, backgroundColor: '#000000' }}>
+            <View style={{ flex: 1, backgroundColor: '#F2EBD9' }}>
               {/* Radial backdrop rendered once, behind the whole navigator. */}
               <AmbientBackground />
               <NavigationContainer theme={{
-                dark: true,
+                dark: false,
                 colors: {
                   primary: theme.colors.primary,
                   background: 'transparent',
@@ -114,7 +114,7 @@ export default function App() {
                 <ToastHost>
                   <RootNavigator />
                 </ToastHost>
-                <StatusBar style="light" translucent />
+                <StatusBar style="dark" translucent />
               </NavigationContainer>
             </View>
           </ParallaxProvider>

@@ -83,49 +83,50 @@ const light: Palette = {
   blurTint: 'light',
 };
 
-// Single Liquid Glass field: glass surfaces are translucent white frosting over
-// the charcoal→black radial backdrop, with high-contrast white text. This is the
-// app's only rendered palette (see useAppTheme) regardless of OS color scheme.
+// Single Liquid Glass field: glass surfaces are translucent warm-white frosting
+// over a cream (#F2EBD9) radial backdrop, with high-contrast deep-green text and
+// forest-green (#3A5C42) accents. This is the app's only rendered palette (see
+// useAppTheme) regardless of OS color scheme.
 const dark: Palette = {
-  bg: '#000000',
-  bgElevated: 'rgba(255,255,255,0.04)',
-  surface: 'rgba(255,255,255,0.06)',
-  surfaceMuted: 'rgba(255,255,255,0.10)',
-  surfaceSunken: 'rgba(0,0,0,0.28)',
-  border: 'rgba(255,255,255,0.12)',
-  borderStrong: 'rgba(255,255,255,0.22)',
-  textPrimary: '#FFFFFF',
-  textSecondary: 'rgba(255,255,255,0.72)',
-  textTertiary: 'rgba(255,255,255,0.48)',
-  textInverse: '#0A0A0A',
-  primary: '#FAFAFA',
-  primaryContrast: '#0A0A0A',
-  primarySoft: 'rgba(255,255,255,0.12)',
-  primarySoftText: '#FFFFFF',
-  accent: '#E5E5E5',
-  accentContrast: '#0A0A0A',
-  accentSoft: 'rgba(255,255,255,0.12)',
-  accentSoftText: '#F5F5F5',
-  success: '#7BB28B',
-  successSoft: 'rgba(123,178,139,0.18)',
-  warning: '#C99A4A',
-  warningSoft: 'rgba(201,154,74,0.18)',
-  danger: '#E16B5E',
-  dangerSoft: 'rgba(225,107,94,0.18)',
-  dangerSoftText: '#F2A399',
-  info: '#E5E5E5',
-  overlay: 'rgba(255,255,255,0.06)',
-  shadow: 'rgba(0,0,0,0.6)',
-  scrim: 'rgba(0,0,0,0.6)',
-  glassThin: 'rgba(255,255,255,0.10)',
-  glassRegular: 'rgba(255,255,255,0.14)',
-  glassThick: 'rgba(255,255,255,0.18)',
-  rimLight: 'rgba(255,255,255,0.25)',
-  rimGround: 'rgba(0,0,0,0.15)',
-  ambienceA: '#2A2A2E',
-  ambienceB: '#161618',
-  ambienceC: '#000000',
-  blurTint: 'dark',
+  bg: '#F2EBD9',
+  bgElevated: '#F7F1E2',
+  surface: 'rgba(255,253,247,0.72)',
+  surfaceMuted: '#EAE1CB',
+  surfaceSunken: '#E2D8BF',
+  border: 'rgba(40,52,44,0.12)',
+  borderStrong: 'rgba(40,52,44,0.22)',
+  textPrimary: '#22302A',
+  textSecondary: 'rgba(34,48,42,0.66)',
+  textTertiary: 'rgba(34,48,42,0.42)',
+  textInverse: '#F7F1E2',
+  primary: '#3A5C42',
+  primaryContrast: '#F7F1E2',
+  primarySoft: 'rgba(58,92,66,0.14)',
+  primarySoftText: '#2C4633',
+  accent: '#3A5C42',
+  accentContrast: '#F7F1E2',
+  accentSoft: 'rgba(58,92,66,0.14)',
+  accentSoftText: '#2C4633',
+  success: '#3F7A4D',
+  successSoft: 'rgba(63,122,77,0.16)',
+  warning: '#8A6A2C',
+  warningSoft: 'rgba(138,106,44,0.18)',
+  danger: '#A8362C',
+  dangerSoft: 'rgba(168,54,44,0.14)',
+  dangerSoftText: '#7E2018',
+  info: '#3A5C42',
+  overlay: 'rgba(40,52,44,0.05)',
+  shadow: 'rgba(60,72,58,0.16)',
+  scrim: 'rgba(30,40,34,0.40)',
+  glassThin: 'rgba(255,253,247,0.55)',
+  glassRegular: 'rgba(255,253,247,0.70)',
+  glassThick: 'rgba(255,253,247,0.82)',
+  rimLight: 'rgba(255,255,255,0.75)',
+  rimGround: 'rgba(60,72,58,0.06)',
+  ambienceA: '#F2EBD9',
+  ambienceB: '#EDE5D0',
+  ambienceC: '#E6DCC4',
+  blurTint: 'light',
 };
 
 export const tokens = {
@@ -253,12 +254,13 @@ export type ThemeContext = {
 };
 
 export function useAppTheme(): ThemeContext {
-  // Liquid Glass renders as a single dark field with white-on-glass text,
-  // independent of the OS color scheme — always use the dark palette.
+  // Liquid Glass renders as a single cream field with deep-green-on-glass text,
+  // independent of the OS color scheme — always use this palette. (Kept under the
+  // `dark` key for backward compatibility with theme.ts / darkTheme wiring.)
   return {
     palette: dark,
-    isDark: true,
-    scheme: 'dark',
+    isDark: false,
+    scheme: 'light',
     spacing: tokens.spacing,
     radius: tokens.radius,
     fontSize: tokens.fontSize,

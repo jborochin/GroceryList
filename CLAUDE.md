@@ -68,6 +68,12 @@ When adding keywords/prices, use canonical units from `unitSynonyms.json`. Categ
 
 `RootNavigator` (native stack) wraps `TabNavigator` (bottom tabs) plus three modal-style screens (`RecipeDetail`, `AddRecipe`, `Pantry`). Inside tab screens that navigate between tabs, use `useNavigation<BottomTabNavigationProp<TabParamList>>()` — the nested `navigation.getParent()?.navigate(...)` pattern was tried and produces fragile `never` types. Global declaration merging in `src/navigation/types.ts` gives untyped `useNavigation()` calls the right shape elsewhere.
 
+### Theming
+
+The app renders **one fixed palette** regardless of OS color scheme: a "Liquid Glass" parchment-and-forest-green colorway — cream `#F2EBD9` radial backdrop, translucent warm-white glass surfaces, forest-green `#3A5C42` primary/accent, deep-green `#22302A` text. It's defined in `src/theme/tokens.ts` and consumed everywhere via `useAppTheme()`, never `useColorScheme()`.
+
+**Gotcha:** the active palette is stored under the `dark` key in `tokens.ts` (and `darkTheme` in `theme.ts`) for backwards-compatible wiring — but it is a *light* theme (`useAppTheme()` returns `isDark: false, scheme: 'light'`, and `App.tsx` sets the navigation/status bar to light). The `light` palette object is unused. To change the colorway, edit the `dark` palette; don't be misled by the key name. `App.tsx` hardcodes the cream `#F2EBD9` backdrop behind the navigator, so change it there too.
+
 ## Testing philosophy
 
 Only the `src/utils/` modules have tests (see `src/__tests__/`). Screens are intentionally thin over stores + utils; verify UI changes by running the app. When adding a new pure utility, add a test alongside; when editing normalization, unit conversion, or the pipeline, expect to update multiple test files that share assumptions.
@@ -78,3 +84,4 @@ Only the `src/utils/` modules have tests (see `src/__tests__/`). Screens are int
 - **Adding a new unit** — add aliases to `unitSynonyms.json` *and* a row to `UNIT_TABLE` in `unitConversion.ts` with the correct family and base conversion.
 - **Adding a new ingredient category** — no enum; categories are just strings. Update the `ordered` array in `GroceryListScreen.tsx` if you want section ordering, otherwise it sorts last.
 - **UUID on React Native** — `uuid` requires `react-native-get-random-values` imported *before* `uuid`. Existing stores do this; new ones that use `uuid` must too.
+- **Editing the theme** — the live palette is the `dark` key in `src/theme/tokens.ts` even though it's a light/cream theme; the `light` object is dead. Update `dark` and the hardcoded backdrop color in `App.tsx` together.
