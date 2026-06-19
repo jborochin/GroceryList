@@ -72,7 +72,7 @@ describe('ingredientToNutritionQuery', () => {
       ingredientToNutritionQuery(
         ing({ name: 'small potatoes, thinly sliced', quantity: 2.5, unit: 'each' }),
       ),
-    ).toBe('2 1/2 small potatoes');
+    ).toBe('2 1/2 potatoes');
   });
 
   it('expands recipe shorthand', () => {
@@ -84,6 +84,35 @@ describe('ingredientToNutritionQuery', () => {
   it('drops unknown count units so the food noun stands alone', () => {
     expect(ingredientToNutritionQuery(ing({ name: 'garlic', quantity: 1, unit: 'clove' }))).toBe(
       '1 garlic',
+    );
+  });
+
+  it('strips leading prep/quality descriptors but keeps the food noun', () => {
+    expect(
+      ingredientToNutritionQuery(
+        ing({ name: 'hard boiled pasture-raised eggs', quantity: 2.5, unit: 'each' }),
+      ),
+    ).toBe('2 1/2 eggs');
+    expect(
+      ingredientToNutritionQuery(ing({ name: 'small potatoes', quantity: 2, unit: 'each' })),
+    ).toBe('2 potatoes');
+    expect(
+      ingredientToNutritionQuery(ing({ name: 'crumbled feta', quantity: 1, unit: 'each' })),
+    ).toBe('1 feta');
+  });
+
+  it('keeps food-defining modifiers', () => {
+    expect(ingredientToNutritionQuery(ing({ name: 'cherry tomatoes', quantity: 5, unit: 'each' }))).toBe(
+      '5 cherry tomatoes',
+    );
+    expect(ingredientToNutritionQuery(ing({ name: 'green onion', quantity: 1, unit: 'each' }))).toBe(
+      '1 green onion',
+    );
+  });
+
+  it('does not strip a name made entirely of descriptors', () => {
+    expect(ingredientToNutritionQuery(ing({ name: 'chopped', quantity: 1, unit: 'each' }))).toBe(
+      '1 chopped',
     );
   });
 
