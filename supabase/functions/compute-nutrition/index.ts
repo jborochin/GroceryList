@@ -54,6 +54,34 @@ interface CalorieNinjasItem {
   protein_g?: number;
   carbohydrates_total_g?: number;
   fat_total_g?: number;
+  serving_size_g?: number;
+}
+
+// Defense-in-depth: CalorieNinjas occasionally returns physically impossible
+// figures for a single food (e.g. a misparsed quantity yielding ~1900 cal /
+// 150 g fat for "feta cheese"). Drop an item when its macro energy contradicts
+// its reported calories, or when it implies an absurd portion. The primary fix
+// lives client-side in src/utils/nutritionQuery.ts; this is only a backstop.
+const MACRO_TOLERANCE = 1.25; // allow Atwater estimate to exceed calories by 25%
+const MAX_ITEM_CALORIES = 1500; // no single ingredient should exceed this
+const MAX_ITEM_SERVING_G = 2000; // ~implausible portion for one ingredient
+
+function isPlausibleItem(it: CalorieNinjasItem): boolean {
+  const calories = num(it.calories);
+  const protein = num(it.protein_g);
+  const carbs = num(it.carbohydrates_total_g);
+  const fat = num(it.fat_total_g);
+
+  if (calories > MAX_ITEM_CALORIES) return false;
+  if (num(it.serving_size_g) > MAX_ITEM_SERVING_G) return false;
+
+  // Atwater: 4 cal/g protein & carb, 9 cal/g fat. If the macros imply far more
+  // energy than the reported calories, the quantity was misparsed. Only judge
+  // when there are calories to compare against.
+  const atwater = protein * 4 + carbs * 4 + fat * 9;
+  if (calories > 0 && atwater > calories * MACRO_TOLERANCE + 50) return false;
+
+  return true;
 }
 
 interface CalorieNinjasResponse {
@@ -129,7 +157,12 @@ serve(async (req: Request): Promise<Response> => {
     let totalProtein = 0;
     let totalCarbs = 0;
     let totalFat = 0;
+    let itemsSkipped = 0;
     for (const it of items) {
+      if (!isPlausibleItem(it)) {
+        itemsSkipped += 1;
+        continue;
+      }
       totalCalories += num(it.calories);
       totalProtein += num(it.protein_g);
       totalCarbs += num(it.carbohydrates_total_g);
@@ -138,7 +171,8 @@ serve(async (req: Request): Promise<Response> => {
     const s = validated.servings;
     return json(200, {
       ok: true,
-      itemsMatched: items.length,
+      itemsMatched: items.length - itemsSkipped,
+      itemsSkipped,
       perRecipe: {
         calories: Math.round(totalCalories),
         proteinG: round1(totalProtein),
