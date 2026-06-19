@@ -52,10 +52,15 @@ create table if not exists public.recipes (
   ingredients jsonb not null default '[]'::jsonb,
   instructions text[],
   nutrition_per_serving jsonb,
+  image_url text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   deleted_at timestamptz
 );
+
+-- Migration for existing installs (the create-table above is a no-op once the
+-- table exists): add the recipe photo column captured during web import.
+alter table public.recipes add column if not exists image_url text;
 
 create index if not exists recipes_user_updated_idx on public.recipes(user_id, updated_at);
 

@@ -12,6 +12,7 @@ import {
   parseNutrition,
   parseRecipeFromUrl,
   RecipeParseError,
+  sanitizeImageUrl,
   scrapeNutritionFromHtml,
 } from '../utils/recipeUrlParser';
 
@@ -37,6 +38,16 @@ describe('recipeUrlParser (pure helpers)', () => {
     const result = extractJsonLdBlocks(html);
     expect(result.scriptsFound).toBe(2);
     expect(result.blocks).toHaveLength(1);
+  });
+
+  it('sanitizes image URLs to http(s) only', () => {
+    expect(sanitizeImageUrl('https://img.example/a.jpg')).toBe('https://img.example/a.jpg');
+    expect(sanitizeImageUrl('http://img.example/a.jpg')).toBe('http://img.example/a.jpg');
+    expect(sanitizeImageUrl('javascript:alert(1)')).toBeUndefined();
+    expect(sanitizeImageUrl('data:image/png;base64,xx')).toBeUndefined();
+    expect(sanitizeImageUrl('/relative/path.jpg')).toBeUndefined();
+    expect(sanitizeImageUrl('')).toBeUndefined();
+    expect(sanitizeImageUrl(undefined)).toBeUndefined();
   });
 
   it('finds a Recipe node at top level', () => {
@@ -160,6 +171,48 @@ describe('parseRecipeFromUrl (integration with mocked fetch)', () => {
     expect(recipe.title).toBe('Cake');
     expect(recipe.servings).toBe(4);
     expect(recipe.ingredients).toHaveLength(1);
+  });
+
+  it('extracts a string image from JSON-LD', async () => {
+    mockFetchHtml(`
+      <html><script type="application/ld+json">
+        {"@type":"Recipe","name":"Cake","recipeIngredient":["1 cup flour"],"image":"https://img.example/cake.jpg"}
+      </script></html>
+    `);
+    const recipe = await parseRecipeFromUrl('https://example.com/cake');
+    expect(recipe.imageUrl).toBe('https://img.example/cake.jpg');
+  });
+
+  it('extracts an ImageObject image from JSON-LD', async () => {
+    mockFetchHtml(`
+      <html><script type="application/ld+json">
+        {"@type":"Recipe","name":"Cake","recipeIngredient":["1 cup flour"],"image":{"@type":"ImageObject","url":"https://img.example/obj.jpg"}}
+      </script></html>
+    `);
+    const recipe = await parseRecipeFromUrl('https://example.com/cake');
+    expect(recipe.imageUrl).toBe('https://img.example/obj.jpg');
+  });
+
+  it('rejects a javascript: image and falls back to none', async () => {
+    mockFetchHtml(`
+      <html><script type="application/ld+json">
+        {"@type":"Recipe","name":"Cake","recipeIngredient":["1 cup flour"],"image":"javascript:alert(1)"}
+      </script></html>
+    `);
+    const recipe = await parseRecipeFromUrl('https://example.com/cake');
+    expect(recipe.imageUrl).toBeUndefined();
+  });
+
+  it('falls back to og:image when JSON-LD has no image', async () => {
+    mockFetchHtml(`
+      <html><head>
+        <meta property="og:image" content="https://img.example/og.jpg" />
+      </head><script type="application/ld+json">
+        {"@type":"Recipe","name":"Cake","recipeIngredient":["1 cup flour"]}
+      </script></html>
+    `);
+    const recipe = await parseRecipeFromUrl('https://example.com/cake');
+    expect(recipe.imageUrl).toBe('https://img.example/og.jpg');
   });
 
   it('averages a recipeYield range', async () => {

@@ -8,7 +8,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRecipeStore } from '../store/useRecipeStore';
-import { RecipeCard } from '../components/RecipeCard';
+import { RecipeGridCard } from '../components/RecipeGridCard';
 import { EmptyState } from '../components/EmptyState';
 import { RootStackParamList } from '../navigation/types';
 import { useAppTheme } from '../theme/tokens';
@@ -17,7 +17,6 @@ import {
   AmbientBackground,
   CollapsingHeader,
   Header,
-  IconButton,
   Input,
   Button,
   Text,
@@ -75,6 +74,9 @@ export function RecipeLibraryScreen() {
         showsVerticalScrollIndicator={false}
         onScroll={onScroll}
         scrollEventThrottle={16}
+        numColumns={2}
+        columnWrapperStyle={{ gap: t.spacing.md }}
+        ItemSeparatorComponent={() => <View style={{ height: t.spacing.md }} />}
         ListHeaderComponent={
           <View>
             <Header
@@ -107,18 +109,12 @@ export function RecipeLibraryScreen() {
           </View>
         }
         renderItem={({ item }) => (
-          <RecipeCard
+          <RecipeGridCard
             recipe={item}
             onPress={() => navigation.navigate('RecipeDetail', { recipeId: item.id })}
-            trailing={
-              <IconButton
-                icon="delete-outline"
-                variant="danger"
-                size={18}
-                onPress={() => handleDelete(item.id, item.title)}
-                accessibilityLabel={`Delete ${item.title}`}
-              />
-            }
+            onDelete={() => handleDelete(item.id, item.title)}
+            horizontalPadding={t.spacing.lg}
+            columnGap={t.spacing.md}
           />
         )}
         ListEmptyComponent={
