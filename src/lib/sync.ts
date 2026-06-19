@@ -43,6 +43,7 @@ function recipeToRow(r: Recipe, userId: string) {
     ingredients: r.ingredients,
     instructions: r.instructions ?? null,
     nutrition_per_serving: r.nutritionPerServing ?? null,
+    image_url: r.imageUrl ?? null,
     created_at: new Date(r.createdAt).toISOString(),
     updated_at: new Date(r.updatedAt).toISOString(),
     deleted_at: null,
@@ -58,6 +59,7 @@ function rowToRecipe(row: Record<string, unknown>): Recipe {
     ingredients: (row.ingredients as Recipe['ingredients']) ?? [],
     instructions: (row.instructions as string[] | null) ?? undefined,
     nutritionPerServing: (row.nutrition_per_serving as Recipe['nutritionPerServing']) ?? undefined,
+    imageUrl: (row.image_url as string | null) ?? undefined,
     createdAt: row.created_at ? new Date(row.created_at as string).getTime() : Date.now(),
     updatedAt: row.updated_at ? new Date(row.updated_at as string).getTime() : Date.now(),
   };

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Alert, Linking, View } from 'react-native';
+import { Image } from 'expo-image';
 import { confirm } from '../utils/confirm';
 import Animated, {
   useAnimatedScrollHandler,
@@ -168,6 +169,22 @@ export function RecipeDetailScreen() {
           />
         ) : null}
       </View>
+
+      {!editing && recipe.imageUrl ? (
+        <Image
+          source={{ uri: recipe.imageUrl }}
+          style={{
+            width: '100%',
+            height: 200,
+            borderRadius: t.radius.lg,
+            marginBottom: t.spacing.md,
+            backgroundColor: t.palette.surfaceMuted,
+          }}
+          contentFit="cover"
+          transition={200}
+          accessibilityLabel={`Photo of ${recipe.title}`}
+        />
+      ) : null}
 
       {editing && draft ? (
         <Input

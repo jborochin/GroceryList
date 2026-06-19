@@ -22,6 +22,7 @@ export interface Recipe {
   ingredients: Ingredient[];
   instructions?: string[];
   nutritionPerServing?: NutritionPerServing;
+  imageUrl?: string;
   createdAt: number;
   updatedAt: number;
 }

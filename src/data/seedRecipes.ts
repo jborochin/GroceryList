@@ -27,6 +27,8 @@ export const SEED_RECIPES: Recipe[] = [
       { name: 'black pepper', quantity: 0.5, unit: 'tsp' },
     ],
     nutritionPerServing: { calories: 420, proteinG: 42, carbsG: 18, fatG: 19 },
+    imageUrl:
+      'https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?w=800&q=70&auto=format&fit=crop',
   }),
   mkRecipe('seed-overnight-oats', {
     title: 'Overnight Oats with Berries',
@@ -40,6 +42,8 @@ export const SEED_RECIPES: Recipe[] = [
       { name: 'cinnamon', quantity: 0.25, unit: 'tsp' },
     ],
     nutritionPerServing: { calories: 380, proteinG: 18, carbsG: 62, fatG: 7 },
+    imageUrl:
+      'https://images.unsplash.com/photo-1517673400267-0251440c45dc?w=800&q=70&auto=format&fit=crop',
   }),
   mkRecipe('seed-beef-stir-fry', {
     title: 'Beef Stir-Fry with Rice',
@@ -56,6 +60,8 @@ export const SEED_RECIPES: Recipe[] = [
       { name: 'green onion', quantity: 3, unit: 'each' },
     ],
     nutritionPerServing: { calories: 510, proteinG: 32, carbsG: 45, fatG: 22 },
+    imageUrl:
+      'https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=800&q=70&auto=format&fit=crop',
   }),
 ];
 

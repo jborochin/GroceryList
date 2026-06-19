@@ -55,6 +55,9 @@ export async function parseRecipeFromUrl(url: string): Promise<ParsedRecipe> {
     throw new RecipeParseError('not-found', 'No recipe schema found on this page.');
   }
   const { parsed, ingredientStrings, missing } = mapRecipeNode(recipeNode, url);
+  if (!parsed.imageUrl) {
+    parsed.imageUrl = sanitizeImageUrl(extractOgImageFromHtml(html));
+  }
   if (missing.length === 0) return parsed;
 
   // Tier 2: HTML scrape — authoritative since values come from the source page.
@@ -297,6 +300,7 @@ function mapRecipeNode(node: Record<string, unknown>, sourceUrl: string): Mapped
     ingredients,
     instructions: instructions.length > 0 ? instructions : undefined,
     nutritionPerServing,
+    imageUrl: sanitizeImageUrl(extractImageUrl(node.image)),
   };
 
   return { parsed, ingredientStrings, missing };
@@ -524,4 +528,56 @@ function coerceStringArray(v: unknown): string[] {
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return !!v && typeof v === 'object' && !Array.isArray(v);
+}
+
+// The JSON-LD `image` property is wildly inconsistent across sites: a bare URL
+// string, an array of URLs, an ImageObject ({ url }), or an array of those.
+// Walk the variants and return the first URL we can find.
+function extractImageUrl(raw: unknown): string | undefined {
+  const fromNode = (node: unknown): string | undefined => {
+    if (typeof node === 'string') return node;
+    if (isRecord(node)) {
+      const url = node.url ?? node.contentUrl ?? node['@id'];
+      if (typeof url === 'string') return url;
+    }
+    return undefined;
+  };
+  if (Array.isArray(raw)) {
+    for (const item of raw) {
+      const url = fromNode(item);
+      if (url) return url;
+    }
+    return undefined;
+  }
+  return fromNode(raw);
+}
+
+// Imported HTML/JSON-LD is untrusted. Only accept absolute http(s) URLs so a
+// malicious page can't smuggle in javascript:/data:/file: schemes that later
+// get handed to an <Image>. Total and non-throwing.
+export function sanitizeImageUrl(raw: unknown): string | undefined {
+  if (typeof raw !== 'string') return undefined;
+  const trimmed = raw.trim();
+  if (!trimmed) return undefined;
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') return trimmed;
+  } catch {
+    // not an absolute URL
+  }
+  return undefined;
+}
+
+// Fallback when the recipe JSON-LD has no image: most pages still expose a
+// social-share preview via <meta property="og:image"> / twitter:image.
+function extractOgImageFromHtml(html: string): string | undefined {
+  const patterns = [
+    /<meta[^>]+(?:property|name)=["'](?:og:image(?::secure_url)?|twitter:image(?::src)?)["'][^>]+content=["']([^"']+)["']/i,
+    /<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["'](?:og:image(?::secure_url)?|twitter:image(?::src)?)["']/i,
+  ];
+  for (const re of patterns) {
+    const m = re.exec(html);
+    if (m?.[1]) return m[1];
+  }
+  return undefined;
 }

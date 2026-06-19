@@ -19,6 +19,7 @@ import {
   RecipeParseError,
   RecipeParseErrorKind,
   ParsedRecipe,
+  sanitizeImageUrl,
 } from '../utils/recipeUrlParser';
 import { IngredientEditor } from '../components/IngredientEditor';
 import { ServingStepper } from '../components/ServingStepper';
@@ -149,6 +150,7 @@ export function AddRecipeScreen() {
   }));
 
   const [title, setTitle] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
   const [sourceUrl, setSourceUrl] = useState<string | undefined>(undefined);
   const [servings, setServings] = useState(4);
   const [ingredients, setIngredients] = useState<Ingredient[]>([{ name: '', quantity: 1, unit: 'each' }]);
@@ -158,6 +160,7 @@ export function AddRecipeScreen() {
 
   const applyParsed = (parsed: ParsedRecipe) => {
     setTitle(parsed.title);
+    setImageUrl(parsed.imageUrl ?? '');
     setSourceUrl(parsed.sourceUrl);
     setServings(parsed.servings);
     setIngredients(
@@ -219,6 +222,7 @@ export function AddRecipeScreen() {
       ingredients: cleaned,
       instructions: steps.length > 0 ? steps : undefined,
       nutritionPerServing: nutrition,
+      imageUrl: sanitizeImageUrl(imageUrl.trim()),
     });
     navigation.goBack();
   };
@@ -382,6 +386,17 @@ export function AddRecipeScreen() {
             value={title}
             onChangeText={setTitle}
             placeholder="What are you making?"
+            containerStyle={{ marginBottom: t.spacing.md }}
+          />
+
+          <Input
+            label="Image URL (optional)"
+            value={imageUrl}
+            onChangeText={setImageUrl}
+            placeholder="https://…/photo.jpg"
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="url"
             containerStyle={{ marginBottom: t.spacing.md }}
           />
 
