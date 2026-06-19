@@ -1,5 +1,6 @@
 import { Ingredient, NutritionPerServing, Recipe } from '../types';
 import { parseIngredient } from './ingredientParser';
+import { ingredientToNutritionQuery } from './nutritionQuery';
 import { computeMissingMacros } from './computeNutrition';
 
 function isWebRuntime(): boolean {
@@ -54,7 +55,7 @@ export async function parseRecipeFromUrl(url: string): Promise<ParsedRecipe> {
     }
     throw new RecipeParseError('not-found', 'No recipe schema found on this page.');
   }
-  const { parsed, ingredientStrings, missing } = mapRecipeNode(recipeNode, url);
+  const { parsed, missing } = mapRecipeNode(recipeNode, url);
   if (!parsed.imageUrl) {
     parsed.imageUrl = sanitizeImageUrl(extractOgImageFromHtml(html));
   }
@@ -79,10 +80,16 @@ export async function parseRecipeFromUrl(url: string): Promise<ParsedRecipe> {
     mergedParsed = { ...parsed, nutritionPerServing: merged };
   }
   const stillMissing = missing.filter((k) => !filled.includes(k));
-  if (stillMissing.length === 0 || ingredientStrings.length === 0) return mergedParsed;
+  // Build clean, fraction-formatted query clauses from the parsed ingredients —
+  // raw JSON-LD strings (decimals, embedded commas, parentheticals, "evoo") make
+  // CalorieNinjas wildly overestimate. See nutritionQuery.ts.
+  const nutritionQueries = mergedParsed.ingredients
+    .map(ingredientToNutritionQuery)
+    .filter(Boolean);
+  if (stillMissing.length === 0 || nutritionQueries.length === 0) return mergedParsed;
 
   // Tier 3: CalorieNinjas — estimated values, flagged for the badge.
-  const computed = await computeMissingMacros(ingredientStrings, mergedParsed.servings, stillMissing);
+  const computed = await computeMissingMacros(nutritionQueries, mergedParsed.servings, stillMissing);
   if (!computed) return mergedParsed;
   const finalBase: NutritionPerServing = mergedParsed.nutritionPerServing ?? {
     calories: 0,
@@ -270,7 +277,6 @@ const ALL_MACRO_KEYS: Array<keyof NutritionPerServing> = ['calories', 'proteinG'
 
 interface MappedRecipe {
   parsed: ParsedRecipe;
-  ingredientStrings: string[];
   missing: Array<keyof NutritionPerServing>;
 }
 
@@ -303,7 +309,7 @@ function mapRecipeNode(node: Record<string, unknown>, sourceUrl: string): Mapped
     imageUrl: sanitizeImageUrl(extractImageUrl(node.image)),
   };
 
-  return { parsed, ingredientStrings, missing };
+  return { parsed, missing };
 }
 
 export function parseInstructions(raw: unknown): string[] {

@@ -15,6 +15,8 @@ import { Recipe, NutritionPerServing } from '../types';
 import { IngredientEditor } from '../components/IngredientEditor';
 import { ServingStepper } from '../components/ServingStepper';
 import { scaleIngredients, scaleNutrition } from '../utils/recipeScaling';
+import { ingredientToNutritionQuery } from '../utils/nutritionQuery';
+import { computeMissingMacros } from '../utils/computeNutrition';
 import { formatEntry } from '../utils/formatters';
 import { RootStackParamList } from '../navigation/types';
 import { useAppTheme } from '../theme/tokens';
@@ -47,6 +49,7 @@ export function RecipeDetailScreen() {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<Recipe | null>(null);
   const [previewServings, setPreviewServings] = useState(0);
+  const [recomputing, setRecomputing] = useState(false);
 
   useEffect(() => {
     if (recipe && previewServings === 0) setPreviewServings(recipe.servings);
@@ -119,6 +122,39 @@ export function RecipeDetailScreen() {
       if (parallax) parallax.value = e.contentOffset.y;
     },
   });
+
+  const handleRecompute = async () => {
+    const queries = recipe.ingredients.map(ingredientToNutritionQuery).filter(Boolean);
+    if (queries.length === 0) {
+      Alert.alert('No ingredients', 'Add ingredients before estimating nutrition.');
+      return;
+    }
+    setRecomputing(true);
+    try {
+      const computed = await computeMissingMacros(queries, recipe.servings, [
+        'calories',
+        'proteinG',
+        'carbsG',
+        'fatG',
+      ]);
+      if (!computed) {
+        Alert.alert(
+          "Couldn't estimate",
+          'Nutrition lookup is unavailable right now. Try again later.',
+        );
+        return;
+      }
+      const base: NutritionPerServing = recipe.nutritionPerServing ?? {
+        calories: 0,
+        proteinG: 0,
+        carbsG: 0,
+        fatG: 0,
+      };
+      updateRecipe(recipe.id, { nutritionPerServing: { ...base, ...computed } });
+    } finally {
+      setRecomputing(false);
+    }
+  };
 
   const setNutritionField = (key: keyof NutritionPerServing, value: string) => {
     if (!draft) return;
@@ -383,16 +419,38 @@ export function RecipeDetailScreen() {
             />
           </View>
         ) : previewNutrition ? (
-          <View style={{ flexDirection: 'row' }}>
-            <NutritionStat label="Calories" value={`${Math.round(previewNutrition.calories)}`} />
-            <NutritionStat label="Protein" value={`${Math.round(previewNutrition.proteinG)}g`} />
-            <NutritionStat label="Carbs" value={`${Math.round(previewNutrition.carbsG)}g`} />
-            <NutritionStat label="Fat" value={`${Math.round(previewNutrition.fatG)}g`} />
-          </View>
+          <>
+            <View style={{ flexDirection: 'row' }}>
+              <NutritionStat label="Calories" value={`${Math.round(previewNutrition.calories)}`} />
+              <NutritionStat label="Protein" value={`${Math.round(previewNutrition.proteinG)}g`} />
+              <NutritionStat label="Carbs" value={`${Math.round(previewNutrition.carbsG)}g`} />
+              <NutritionStat label="Fat" value={`${Math.round(previewNutrition.fatG)}g`} />
+            </View>
+            <Button
+              label={recomputing ? 'Estimating…' : 'Recompute from ingredients'}
+              icon="calculator-variant-outline"
+              variant="secondary"
+              onPress={handleRecompute}
+              disabled={recomputing}
+              fullWidth
+              style={{ marginTop: t.spacing.md }}
+            />
+          </>
         ) : (
-          <Text variant="body" tone="tertiary">
-            Not set
-          </Text>
+          <View>
+            <Text variant="body" tone="tertiary">
+              Not set
+            </Text>
+            <Button
+              label={recomputing ? 'Estimating…' : 'Estimate from ingredients'}
+              icon="calculator-variant-outline"
+              variant="secondary"
+              onPress={handleRecompute}
+              disabled={recomputing}
+              fullWidth
+              style={{ marginTop: t.spacing.md }}
+            />
+          </View>
         )}
       </Surface>
 
