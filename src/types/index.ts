@@ -81,6 +81,9 @@ export interface TdeeInputs {
   unitSystem: UnitSystem;
 }
 
+// How often the user wants to cook — drives meal-plan variety.
+export type CookingFrequency = 'batch' | 'few_days' | 'daily';
+
 export interface UserSettings {
   dailyCalorieTarget: number;
   macroSplit: { proteinPct: number; carbsPct: number; fatPct: number };
@@ -90,6 +93,7 @@ export interface UserSettings {
   tdeeInputs: TdeeInputs | null;
   cuisinePreferences: string[];
   dietaryRestrictions: string[];
+  cookingFrequency: CookingFrequency;
 }
 
 export interface PriceOverride {

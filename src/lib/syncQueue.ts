@@ -34,6 +34,23 @@ function persist(entries: OutboxEntry[]): Promise<void> {
   return writeChain;
 }
 
+// The column that uniquely identifies a row within its user's data, used to
+// collapse repeated failed pushes for the same row into one outbox entry and
+// to let the pull merge veto server rows that have unsynced local changes.
+export function naturalKey(table: OutboxTable, payload: Record<string, unknown>): unknown {
+  switch (table) {
+    case 'recipes':
+    case 'pantry_items':
+      return payload.id;
+    case 'meal_plan_entries':
+      return payload.recipe_id;
+    case 'price_overrides':
+      return payload.normalized_name;
+    case 'user_settings':
+      return payload.user_id;
+  }
+}
+
 export async function enqueue(entry: Omit<OutboxEntry, 'id' | 'enqueuedAt'>): Promise<void> {
   const list = await read();
   const next: OutboxEntry = {
@@ -41,7 +58,17 @@ export async function enqueue(entry: Omit<OutboxEntry, 'id' | 'enqueuedAt'>): Pr
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     enqueuedAt: Date.now(),
   };
-  await persist([...list, next]);
+  // Dedupe by (table, op, row): keep only the latest payload so repeated edits
+  // to one row while offline don't grow the queue unboundedly.
+  const key = naturalKey(entry.table, entry.payload);
+  const deduped =
+    key == null
+      ? list
+      : list.filter(
+          (e) =>
+            !(e.table === entry.table && e.op === entry.op && naturalKey(e.table, e.payload) === key)
+        );
+  await persist([...deduped, next]);
 }
 
 export async function peekAll(): Promise<OutboxEntry[]> {

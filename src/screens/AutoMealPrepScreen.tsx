@@ -48,6 +48,11 @@ const CUISINE_LABEL: Record<string, string> = Object.fromEntries(
 const DIETARY_LABEL: Record<string, string> = Object.fromEntries(
   foodPreferences.dietary.map((d) => [d.key, d.label])
 );
+const COOKING_FREQUENCY_LABEL: Record<string, string> = {
+  batch: 'Batch cook',
+  few_days: 'Cook every few days',
+  daily: 'Cook daily',
+};
 
 export function AutoMealPrepScreen() {
   const t = useAppTheme();
@@ -91,6 +96,7 @@ export function AutoMealPrepScreen() {
       targets,
       cuisinePreferences: settings.cuisinePreferences,
       dietaryRestrictions: settings.dietaryRestrictions,
+      cookingFrequency: settings.cookingFrequency,
       meals: catalog,
       days,
       slots,
@@ -192,16 +198,19 @@ export function AutoMealPrepScreen() {
             {Math.round(targets.dailyCalories)} cal · {Math.round(targets.macroGrams.proteinG)}P /{' '}
             {Math.round(targets.macroGrams.carbsG)}C / {Math.round(targets.macroGrams.fatG)}F
           </Text>
-          {(settings.cuisinePreferences.length > 0 || settings.dietaryRestrictions.length > 0) && (
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: t.spacing.sm }}>
-              {settings.dietaryRestrictions.map((d) => (
-                <Pill key={d} label={DIETARY_LABEL[d] ?? d} tone="primary" size="sm" />
-              ))}
-              {settings.cuisinePreferences.map((c) => (
-                <Pill key={c} label={CUISINE_LABEL[c] ?? c} tone="neutral" size="sm" />
-              ))}
-            </View>
-          )}
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: t.spacing.sm }}>
+            <Pill
+              label={COOKING_FREQUENCY_LABEL[settings.cookingFrequency] ?? settings.cookingFrequency}
+              tone="neutral"
+              size="sm"
+            />
+            {settings.dietaryRestrictions.map((d) => (
+              <Pill key={d} label={DIETARY_LABEL[d] ?? d} tone="primary" size="sm" />
+            ))}
+            {settings.cuisinePreferences.map((c) => (
+              <Pill key={c} label={CUISINE_LABEL[c] ?? c} tone="neutral" size="sm" />
+            ))}
+          </View>
           <Text variant="caption" tone="tertiary" style={{ marginTop: t.spacing.sm }}>
             Adjust these in Settings.
           </Text>

@@ -7,8 +7,10 @@ export const KCAL_PER_G_FAT = 9;
 export function computeNutritionSummary(
   plan: MealPlanEntry[],
   recipes: Recipe[],
-  settings: UserSettings
+  settings: UserSettings,
+  planDays = 7
 ): NutritionSummary {
+  const days = Math.max(1, planDays);
   const byId = new Map(recipes.map((r) => [r.id, r]));
   let calories = 0;
   let proteinG = 0;
@@ -32,10 +34,10 @@ export function computeNutritionSummary(
 
   const weekly = { calories, proteinG, carbsG, fatG };
   const daily = {
-    calories: calories / 7,
-    proteinG: proteinG / 7,
-    carbsG: carbsG / 7,
-    fatG: fatG / 7,
+    calories: calories / days,
+    proteinG: proteinG / days,
+    carbsG: carbsG / days,
+    fatG: fatG / days,
   };
 
   const { dailyCalorieTarget, macroSplit } = settings;

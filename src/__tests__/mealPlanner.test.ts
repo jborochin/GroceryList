@@ -105,4 +105,23 @@ describe('planMeals', () => {
     const distinct = new Set(result.items.map((i) => i.mealId));
     expect(distinct.size).toBeGreaterThan(1);
   });
+
+  it('repeats fewer distinct meals for batch cooking than for daily', () => {
+    const meals = [
+      meal({ id: 'a', slots: ['lunch'] }),
+      meal({ id: 'b', slots: ['lunch'] }),
+      meal({ id: 'c', slots: ['lunch'] }),
+    ];
+    const slots: SlotConfig[] = [{ slot: 'lunch', mealsPerDay: 1 }];
+
+    const batch = planMeals(baseInput({ meals, slots, days: 5, cookingFrequency: 'batch' }));
+    const daily = planMeals(baseInput({ meals, slots, days: 5, cookingFrequency: 'daily' }));
+
+    const batchDistinct = new Set(batch.items.map((i) => i.mealId)).size;
+    const dailyDistinct = new Set(daily.items.map((i) => i.mealId)).size;
+
+    // Batch cook reuses one dish all week; daily fans out across the pool.
+    expect(batchDistinct).toBe(1);
+    expect(dailyDistinct).toBeGreaterThan(batchDistinct);
+  });
 });

@@ -62,10 +62,13 @@ export function parseIngredient(raw: string): Ingredient {
     return v !== undefined ? ` ${v} ` : ch;
   }).join('');
 
+  // Tighten ranges so "1 - 2" / "1 – 2" tokenize as a single "1-2" token
+  text = text.replace(/(\d)\s*[-–—]\s*(\d)/g, '$1-$2');
+
   text = text.replace(/\s+/g, ' ').trim();
 
-  // Short-circuit "to taste" / "as needed" / "pinch of X"
-  const tailMatch = text.match(/^(.*?)(?:\s+to\s+taste|\s+as\s+needed)$/);
+  // Short-circuit "to taste" / "as needed" / "pinch of X" (tolerate ", to taste")
+  const tailMatch = text.match(/^(.*?)(?:[,;]\s*|\s+)(?:to\s+taste|as\s+needed)$/);
   if (tailMatch) text = tailMatch[1].trim();
 
   // Try to extract quantity (mixed fraction, simple fraction, decimal, integer, or sum of partials like "1 0.5" from unicode expansion)
@@ -116,6 +119,18 @@ function extractQuantity(text: string): QtyExtract {
       i++;
       continue;
     }
+    // Range like "1-2" / "1.5-2" / "1/2-3/4": use the average of the bounds
+    const rangeMatch = tok.match(/^(\d+(?:\.\d+)?|\d+\/\d+)-(\d+(?:\.\d+)?|\d+\/\d+)$/);
+    if (rangeMatch) {
+      const lo = numericToken(rangeMatch[1]);
+      const hi = numericToken(rangeMatch[2]);
+      if (lo !== null && hi !== null) {
+        value += (lo + hi) / 2;
+        consumed = i + 1;
+        i++;
+        continue;
+      }
+    }
     // Mixed like "1 1/2": next token is a simple fraction
     if (/^\d+$/.test(tok) && i + 1 < tokens.length && /^\d+\/\d+$/.test(tokens[i + 1])) {
       value += Number(tok) + parseFraction(tokens[i + 1]);
@@ -135,6 +150,14 @@ function extractQuantity(text: string): QtyExtract {
       i++;
       continue;
     }
+    // Word range like "3 to 4": average what we have with the upper bound
+    if (tok === 'to' && consumed > 0 && i + 1 < tokens.length) {
+      const hi = numericToken(tokens[i + 1]);
+      if (hi !== null) {
+        value = (value + hi) / 2;
+        consumed = i + 2;
+      }
+    }
     break;
   }
 
@@ -146,6 +169,12 @@ function parseFraction(s: string): number {
   const [n, d] = s.split('/').map(Number);
   if (!d) return 0;
   return n / d;
+}
+
+function numericToken(tok: string): number | null {
+  if (/^\d+(?:\.\d+)?$/.test(tok)) return Number(tok);
+  if (/^\d+\/\d+$/.test(tok)) return parseFraction(tok);
+  return null;
 }
 
 interface UnitExtract {

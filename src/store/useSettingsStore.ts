@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { TdeeInputs, UserSettings } from '../types';
+import { CookingFrequency, TdeeInputs, UserSettings } from '../types';
 import { zustandStorage, STORAGE_KEYS } from './storage';
 
 type OnboardingPayload = {
@@ -11,6 +11,7 @@ type OnboardingPayload = {
   macroGrams?: UserSettings['macroGrams'];
   cuisinePreferences?: string[];
   dietaryRestrictions?: string[];
+  cookingFrequency?: CookingFrequency;
 };
 
 interface SettingsState {
@@ -21,6 +22,7 @@ interface SettingsState {
   setReduceVisualEffects: (value: boolean) => void;
   setCuisinePreferences: (keys: string[]) => void;
   setDietaryRestrictions: (keys: string[]) => void;
+  setCookingFrequency: (freq: CookingFrequency) => void;
   setTdeeInputs: (inputs: TdeeInputs | null) => void;
   setOnboardingCompleted: (value: boolean) => void;
   applyOnboarding: (payload: OnboardingPayload) => void;
@@ -37,6 +39,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   tdeeInputs: null,
   cuisinePreferences: [],
   dietaryRestrictions: [],
+  cookingFrequency: 'few_days',
 };
 
 const clampCalorie = (v: number) => Math.max(1000, Math.min(6000, Math.round(v)));
@@ -87,6 +90,8 @@ export const useSettingsStore = create<SettingsState>()(
         set((s) => ({ settings: { ...s.settings, cuisinePreferences: dedupedStrings(keys) } })),
       setDietaryRestrictions: (keys) =>
         set((s) => ({ settings: { ...s.settings, dietaryRestrictions: dedupedStrings(keys) } })),
+      setCookingFrequency: (freq) =>
+        set((s) => ({ settings: { ...s.settings, cookingFrequency: freq } })),
       setTdeeInputs: (inputs) =>
         set((s) => ({ settings: { ...s.settings, tdeeInputs: inputs } })),
       setOnboardingCompleted: (value) =>
@@ -127,6 +132,9 @@ export const useSettingsStore = create<SettingsState>()(
           if (payload.dietaryRestrictions !== undefined) {
             next.dietaryRestrictions = dedupedStrings(payload.dietaryRestrictions);
           }
+          if (payload.cookingFrequency !== undefined) {
+            next.cookingFrequency = payload.cookingFrequency;
+          }
           return { settings: next };
         });
       },
@@ -155,6 +163,7 @@ export const useSettingsStore = create<SettingsState>()(
             tdeeInputs: ps?.tdeeInputs ?? null,
             cuisinePreferences: Array.isArray(ps?.cuisinePreferences) ? ps!.cuisinePreferences : [],
             dietaryRestrictions: Array.isArray(ps?.dietaryRestrictions) ? ps!.dietaryRestrictions : [],
+            cookingFrequency: ps?.cookingFrequency ?? 'few_days',
           },
         };
       },

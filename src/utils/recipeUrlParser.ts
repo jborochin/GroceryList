@@ -349,6 +349,11 @@ function stripHtml(s: string): string {
 function parseServings(raw: unknown): number {
   if (typeof raw === 'number') return Math.max(1, Math.round(raw));
   if (typeof raw === 'string') {
+    // Range like "4-6 servings" / "4 to 6": use the rounded average
+    const range = raw.match(/(\d+)\s*(?:-|–|—|to)\s*(\d+)/i);
+    if (range) {
+      return Math.max(1, Math.round((parseInt(range[1], 10) + parseInt(range[2], 10)) / 2));
+    }
     const m = raw.match(/\d+/);
     if (m) return Math.max(1, parseInt(m[0], 10));
   }

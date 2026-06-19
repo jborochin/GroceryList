@@ -74,6 +74,44 @@ describe('parseIngredient', () => {
     expect(r.name).toBe('salt');
   });
 
+  it('drops ", to taste" tail with comma', () => {
+    const r = parseIngredient('salt, to taste');
+    expect(r.name).toBe('salt');
+  });
+
+  it('does not mangle names that merely end in "taste"', () => {
+    const r = parseIngredient('1 tbsp tomato paste');
+    expect(r.name).toBe('tomato paste');
+  });
+
+  it('averages hyphen ranges', () => {
+    const r = parseIngredient('1-2 cups flour');
+    expect(r.quantity).toBeCloseTo(1.5, 5);
+    expect(r.unit).toBe('cup');
+    expect(r.name).toBe('flour');
+  });
+
+  it('averages spaced en-dash ranges', () => {
+    const r = parseIngredient('1 – 2 cups flour');
+    expect(r.quantity).toBeCloseTo(1.5, 5);
+    expect(r.unit).toBe('cup');
+    expect(r.name).toBe('flour');
+  });
+
+  it('averages "X to Y" word ranges', () => {
+    const r = parseIngredient('3 to 4 tbsp olive oil');
+    expect(r.quantity).toBeCloseTo(3.5, 5);
+    expect(r.unit).toBe('tbsp');
+    expect(r.name).toBe('olive oil');
+  });
+
+  it('averages fraction ranges', () => {
+    const r = parseIngredient('1/2-3/4 tsp cumin');
+    expect(r.quantity).toBeCloseTo(0.625, 5);
+    expect(r.unit).toBe('tsp');
+    expect(r.name).toBe('cumin');
+  });
+
   it('defaults unit to each when none present', () => {
     const r = parseIngredient('3 eggs');
     expect(r.quantity).toBe(3);

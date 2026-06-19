@@ -35,13 +35,14 @@ export function HomeScreen() {
   const navigation = useNavigation<TabNav & RootNav>();
   const recipes = useRecipeStore((s) => s.recipes);
   const plan = useMealPlanStore((s) => s.entries);
+  const planDays = useMealPlanStore((s) => s.planDays);
   const pantry = usePantryStore((s) => s.items);
   const settings = useSettingsStore((s) => s.settings);
   const overrides = usePriceOverrideStore((s) => s.overrides);
 
   const summary = useMemo(
-    () => computeNutritionSummary(plan, recipes, settings),
-    [plan, recipes, settings]
+    () => computeNutritionSummary(plan, recipes, settings, planDays),
+    [plan, recipes, settings, planDays]
   );
   const grocery = useMemo(() => {
     const agg = aggregate(plan, recipes);

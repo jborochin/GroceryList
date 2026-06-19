@@ -1,17 +1,15 @@
 import React, { useEffect } from 'react';
-import { Platform, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
 } from 'react-native-reanimated';
-import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { tokens, useAppTheme } from '../../theme/tokens';
-import { useReduceTransparency } from '../../hooks/useReduceEffects';
 import { haptics } from '../../utils/haptics';
 
 const HORIZONTAL_PADDING = 16;
@@ -47,8 +45,6 @@ export function AppTabBar({ state, navigation }: BottomTabBarProps) {
   const t = useAppTheme();
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
-  const reduceTransparency = useReduceTransparency();
-
   const tabCount = state.routes.length;
   const innerWidth = windowWidth - HORIZONTAL_PADDING * 2 - INNER_PAD * 2;
   const tabWidth = innerWidth / tabCount;
@@ -63,10 +59,6 @@ export function AppTabBar({ state, navigation }: BottomTabBarProps) {
     transform: [{ translateX: indicatorX.value }],
     width: tabWidth,
   }));
-
-  const allowBlur = !reduceTransparency && Platform.OS !== 'web';
-  const blurTint =
-    Platform.OS === 'ios' ? 'systemUltraThinMaterialDark' : t.palette.blurTint;
 
   return (
     <View
@@ -89,19 +81,10 @@ export function AppTabBar({ state, navigation }: BottomTabBarProps) {
           },
         ]}
       >
-        {/* Layered glass: blur → translucent fill → rim gradient */}
-        {allowBlur ? (
-          <BlurView
-            intensity={t.blur.thick}
-            tint={blurTint}
-            experimentalBlurMethod="dimezisBlurView"
-            style={StyleSheet.absoluteFill}
-          />
-        ) : null}
         <View
           style={[
             StyleSheet.absoluteFill,
-            { backgroundColor: allowBlur ? t.palette.glassThick : t.palette.surface },
+            { backgroundColor: t.palette.ambienceA },
           ]}
         />
         <LinearGradient

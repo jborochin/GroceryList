@@ -27,10 +27,18 @@ import {
   Text,
   Input,
   SectionHeader,
+  SegmentedControl,
   TAB_BAR_SPACE,
   useToast,
 } from '../components/ui';
 import { haptics } from '../utils/haptics';
+import { CookingFrequency } from '../types';
+
+const COOKING_FREQUENCY_ITEMS: Array<{ value: CookingFrequency; label: string }> = [
+  { value: 'batch', label: 'Batch' },
+  { value: 'few_days', label: 'Few days' },
+  { value: 'daily', label: 'Daily' },
+];
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -44,6 +52,7 @@ export function SettingsScreen() {
   const setMacroSplit = useSettingsStore((s) => s.setMacroSplit);
   const setMacroGrams = useSettingsStore((s) => s.setMacroGrams);
   const setReduceVisualEffects = useSettingsStore((s) => s.setReduceVisualEffects);
+  const setCookingFrequency = useSettingsStore((s) => s.setCookingFrequency);
   const setOnboardingCompleted = useSettingsStore((s) => s.setOnboardingCompleted);
   const resetSettings = useSettingsStore((s) => s.resetSettings);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
@@ -216,6 +225,19 @@ export function SettingsScreen() {
             containerStyle={{ flex: 1 }}
           />
         </View>
+      </Surface>
+
+      <SectionHeader title="Cooking frequency" />
+      <Surface variant="outlined" pad={t.spacing.lg}>
+        <Text variant="caption" tone="secondary" style={{ marginBottom: t.spacing.md }}>
+          How often you want to cook. Batch reuses a few dishes all week; daily varies meals each
+          day.
+        </Text>
+        <SegmentedControl
+          items={COOKING_FREQUENCY_ITEMS}
+          value={settings.cookingFrequency}
+          onChange={setCookingFrequency}
+        />
       </Surface>
 
       <SectionHeader title="Account" />

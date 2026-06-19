@@ -28,6 +28,12 @@ describe('unitConversion', () => {
     expect(convert(1, 'each', 'slice')).toBeNull();
   });
 
+  it('treats scoop as a count unit', () => {
+    expect(getFamily('scoop')).toBe('count');
+    expect(convert(2, 'scoop', 'scoop')).toBe(2);
+    expect(convert(1, 'scoop', 'each')).toBeNull();
+  });
+
   it('returns same-value for same unit', () => {
     expect(convert(3, 'tsp', 'tsp')).toBe(3);
   });
