@@ -9,7 +9,8 @@
     "web": "expo start --web",
     "test": "jest",
     "typecheck": "tsc --noEmit",
-    "import:mealdb": "tsx scripts/importMealDb.ts"
+    "import:mealdb": "tsx scripts/importMealDb.ts",
+    "seed:build": "tsx scripts/buildSeedMeals.ts"
   },
   "dependencies": {
     "@expo-google-fonts/geist": "^0.4.1",
