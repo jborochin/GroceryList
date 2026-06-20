@@ -2,6 +2,7 @@ import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { TabNavigator } from './TabNavigator';
 import { RecipeDetailScreen } from '../screens/RecipeDetailScreen';
+import { MealCatalogDetailScreen } from '../screens/MealCatalogDetailScreen';
 import { AddRecipeScreen } from '../screens/AddRecipeScreen';
 import { PantryScreen } from '../screens/PantryScreen';
 import { AutoMealPrepScreen } from '../screens/AutoMealPrepScreen';
@@ -50,6 +51,11 @@ export function RootNavigator() {
         <Stack.Group>
           <Stack.Screen name="Tabs" component={TabNavigator} />
           <Stack.Screen name="RecipeDetail" component={RecipeDetailScreen} />
+          <Stack.Screen
+            name="MealCatalogDetail"
+            component={MealCatalogDetailScreen}
+            options={{ animation: 'slide_from_bottom', presentation: 'modal' }}
+          />
           <Stack.Screen
             name="AddRecipe"
             component={AddRecipeScreen}

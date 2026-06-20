@@ -1,4 +1,5 @@
 import { CookingFrequency, Meal, MealSlot, NutritionPerServing } from '../types';
+import { mulberry32 } from './seededRandom';
 
 export interface SlotConfig {
   slot: MealSlot;
@@ -18,6 +19,11 @@ export interface PlannerInput {
   days: number;
   slots: SlotConfig[];
   cookingFrequency?: CookingFrequency;
+  // When set, the planner introduces reproducible variation: instead of always
+  // taking the single best-scoring meal per slot, it picks (via this seed)
+  // among the meals whose score is within SHUFFLE_BAND of the best. Omit for the
+  // deterministic best plan (identical output to a seedless run).
+  seed?: number;
 }
 
 export interface PlannedItem {
@@ -59,6 +65,14 @@ const VARIETY_PENALTY_BY_FREQ: Record<CookingFrequency, number> = {
   few_days: 0.4,
   daily: 1.5,
 };
+
+// When shuffling, any candidate scoring within this much of the best is treated
+// as comparably good and eligible for random selection. Scores are <= 0 (0 =
+// perfect macro fit), so this band stays tight enough to keep macros on target
+// while still surfacing variety. Capped at SHUFFLE_TOP_K candidates so a slot
+// with many similar meals doesn't dilute toward weaker fits.
+const SHUFFLE_BAND = 0.15;
+const SHUFFLE_TOP_K = 4;
 
 const EMPTY_NUTRITION: NutritionPerServing = { calories: 0, proteinG: 0, carbsG: 0, fatG: 0 };
 
@@ -108,12 +122,15 @@ function passesDietary(meal: Meal, restrictions: string[]): boolean {
  * type), then fills each instance with the best-scoring eligible meal, tracking
  * the running remaining budget so later picks correct for earlier over/under.
  *
- * Deterministic: no randomness; candidates are pre-sorted by id and ties are
- * broken by lexical id order.
+ * Deterministic by default: no randomness; candidates are pre-sorted by id and
+ * ties are broken by lexical id order. When `input.seed` is set, each slot
+ * instead picks randomly (reproducibly, from the seed) among the meals scoring
+ * within SHUFFLE_BAND of the best — adding variety without sacrificing macro fit.
  */
 export function planMeals(input: PlannerInput): PlannerResult {
   const { targets, cuisinePreferences, dietaryRestrictions, meals, days, slots } = input;
   const varietyPenalty = VARIETY_PENALTY_BY_FREQ[input.cookingFrequency ?? 'few_days'];
+  const rng = input.seed !== undefined ? mulberry32(input.seed) : null;
 
   const eligible = meals
     .filter((m) => passesDietary(m, dietaryRestrictions))
@@ -168,10 +185,10 @@ export function planMeals(input: PlannerInput): PlannerResult {
         continue;
       }
 
-      let best: Meal | null = null;
-      let bestServings = 1;
-      let bestScore = -Infinity;
-      for (const meal of candidates) {
+      // Score every candidate, then either take the strict best (seedless,
+      // deterministic) or randomly pick among the top band of comparably-good
+      // meals (seeded — adds variety while keeping macro fit tight).
+      const scored = candidates.map((meal) => {
         const servings = chooseServings(meal, instanceTarget);
         const s = score(
           meal,
@@ -181,10 +198,36 @@ export function planMeals(input: PlannerInput): PlannerResult {
           uses.get(meal.id) ?? 0,
           varietyPenalty
         );
-        if (s > bestScore) {
-          bestScore = s;
-          best = meal;
-          bestServings = servings;
+        return { meal, servings, s };
+      });
+
+      let best: Meal | null = null;
+      let bestServings = 1;
+      if (scored.length > 0) {
+        if (rng) {
+          // Ranked desc by score; ties broken by id to keep the band stable
+          // across runs so a given seed always sees the same candidate set.
+          scored.sort((a, b) =>
+            b.s !== a.s ? b.s - a.s : a.meal.id < b.meal.id ? -1 : 1
+          );
+          const bestScore = scored[0].s;
+          const band = scored
+            .filter((c) => bestScore - c.s <= SHUFFLE_BAND)
+            .slice(0, SHUFFLE_TOP_K);
+          const pick = band[Math.floor(rng() * band.length)];
+          best = pick.meal;
+          bestServings = pick.servings;
+        } else {
+          // Strict argmax with lexical-id tie-break (first candidate is already
+          // the smallest id), matching the original deterministic behavior.
+          let bestScore = -Infinity;
+          for (const c of scored) {
+            if (c.s > bestScore) {
+              bestScore = c.s;
+              best = c.meal;
+              bestServings = c.servings;
+            }
+          }
         }
       }
       if (!best) {

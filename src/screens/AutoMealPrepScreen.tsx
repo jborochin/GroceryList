@@ -87,7 +87,7 @@ export function AutoMealPrepScreen() {
     [settings.dailyCalorieTarget, settings.macroGrams]
   );
 
-  const handleGenerate = () => {
+  const runPlanner = (seed?: number) => {
     const slots: SlotConfig[] = SLOT_ORDER.map((slot) => ({
       slot,
       mealsPerDay: slotCounts[slot],
@@ -100,9 +100,15 @@ export function AutoMealPrepScreen() {
       meals: catalog,
       days,
       slots,
+      seed,
     });
     setResult(r);
   };
+
+  // Generate gives the deterministic best-fit plan; Shuffle re-rolls with a
+  // fresh seed so the user can browse alternative plans that still hit macros.
+  const handleGenerate = () => runPlanner();
+  const handleShuffle = () => runPlanner(Date.now());
 
   const handleCommit = async () => {
     if (!result || result.items.length === 0) return;
@@ -251,7 +257,31 @@ export function AutoMealPrepScreen() {
           ))}
         </Surface>
 
-        <Button label="Generate plan" icon="auto-fix" onPress={handleGenerate} fullWidth size="lg" />
+        {result ? (
+          <View style={{ flexDirection: 'row', gap: t.spacing.sm }}>
+            <View style={{ flex: 1 }}>
+              <Button
+                label="Regenerate"
+                icon="auto-fix"
+                onPress={handleGenerate}
+                variant="secondary"
+                fullWidth
+                size="lg"
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Button
+                label="Shuffle"
+                icon="shuffle-variant"
+                onPress={handleShuffle}
+                fullWidth
+                size="lg"
+              />
+            </View>
+          </View>
+        ) : (
+          <Button label="Generate plan" icon="auto-fix" onPress={handleGenerate} fullWidth size="lg" />
+        )}
 
         {result && (
           <>
