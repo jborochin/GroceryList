@@ -1,16 +1,24 @@
 import React, { useEffect } from 'react';
-import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Platform, Pressable, StyleSheet, View, ViewStyle, useWindowDimensions } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
 } from 'react-native-reanimated';
+import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { tokens, useAppTheme } from '../../theme/tokens';
+import { useReduceTransparency } from '../../hooks/useReduceEffects';
 import { haptics } from '../../utils/haptics';
+
+// ViewStyle plus the web-only backdrop-filter props (BlurView is a no-op on web).
+type WebGlassStyle = ViewStyle & {
+  backdropFilter?: string;
+  WebkitBackdropFilter?: string;
+};
 
 const HORIZONTAL_PADDING = 16;
 const INNER_PAD = 6;
@@ -45,6 +53,30 @@ export function AppTabBar({ state, navigation }: BottomTabBarProps) {
   const t = useAppTheme();
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
+
+  // Live glassmorphism: a real backdrop blur (native BlurView / web backdrop-filter)
+  // under a translucent frosted fill. Falls back to an opaque cream fill when Reduce
+  // Transparency is on.
+  const reduceTransparency = useReduceTransparency();
+  const isWeb = Platform.OS === 'web';
+  const solid = reduceTransparency;
+  const allowBlur = !solid && !isWeb;
+  const blurTint =
+    Platform.OS === 'ios' ? 'systemUltraThinMaterialLight' : t.palette.blurTint;
+  // Cool translucent-white frost (not warm cream) so the bar separates from the
+  // cream backdrop and reads as a frosted glass panel floating above it, while the
+  // backdrop blur of content scrolling underneath still shows through. Opaque
+  // fallback under Reduce Transparency.
+  const FROST = 'rgba(255,255,255,0.55)';
+  const webGlass: WebGlassStyle | null =
+    isWeb && !solid
+      ? {
+          backgroundColor: FROST,
+          backdropFilter: 'blur(24px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+        }
+      : null;
+  const fillColor = solid ? t.palette.ambienceA : FROST;
   const tabCount = state.routes.length;
   const innerWidth = windowWidth - HORIZONTAL_PADDING * 2 - INNER_PAD * 2;
   const tabWidth = innerWidth / tabCount;
@@ -81,18 +113,17 @@ export function AppTabBar({ state, navigation }: BottomTabBarProps) {
           },
         ]}
       >
-        <View
-          style={[
-            StyleSheet.absoluteFill,
-            { backgroundColor: t.palette.ambienceA },
-          ]}
-        />
-        <LinearGradient
-          pointerEvents="none"
-          colors={[t.palette.rimLight, 'transparent', t.palette.rimGround]}
-          locations={[0, 0.5, 1]}
-          style={StyleSheet.absoluteFill}
-        />
+        {allowBlur ? (
+          <BlurView
+            intensity={t.blur.thick}
+            tint={blurTint}
+            experimentalBlurMethod="dimezisBlurView"
+            style={StyleSheet.absoluteFill}
+          />
+        ) : null}
+        {/* Translucent frosted fill over the blur (opaque fallback under Reduce
+            Transparency). Rim gradient removed to avoid the funky sheen. */}
+        <View style={[StyleSheet.absoluteFill, webGlass ?? { backgroundColor: fillColor }]} />
         <View
           pointerEvents="none"
           style={[

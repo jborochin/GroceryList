@@ -17,7 +17,7 @@ interface Props {
   particles?: number;
 }
 
-const COLORS = ['#0A0A0A', '#404040', '#737373', '#A3A3A3', '#D4D4D4'];
+const COLORS = ['#3A5C42', '#557A5E', '#7BAE86', '#B58A3C', '#2C4633'];
 
 // Lightweight confetti — N dots scale + translate radially + fade out.
 // All transform/opacity, no layout work. Respects reduced-motion.

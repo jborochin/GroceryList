@@ -199,5 +199,18 @@
   "coffee": "Beverages",
   "tea": "Beverages",
   "wine": "Beverages",
-  "beer": "Beverages"
+  "beer": "Beverages",
+  "lamb": "Protein",
+  "paneer": "Dairy",
+  "eggplant": "Produce",
+  "olive": "Produce",
+  "pumpkin": "Produce",
+  "fennel": "Produce",
+  "apricot": "Produce",
+  "couscous": "Pantry",
+  "tahini": "Condiments/Oils",
+  "curry paste": "Condiments/Oils",
+  "curry powder": "Spices",
+  "jerk seasoning": "Spices",
+  "pizza dough": "Bakery"
 }

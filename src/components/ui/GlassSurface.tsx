@@ -1,7 +1,6 @@
 import React from 'react';
 import { Platform, Pressable, StyleSheet, View, ViewStyle } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useAppTheme } from '../../theme/tokens';
 import { useReduceTransparency } from '../../hooks/useReduceEffects';
 
@@ -65,10 +64,10 @@ export function GlassSurface({
 
   // Apple's Reduce Transparency fallback colour.
   const solid = reduceTransparency;
-  const fillColor = solid ? 'rgba(28,28,30,0.96)' : fill;
+  const fillColor = solid ? 'rgba(247,242,230,0.96)' : fill;
 
   const blurTint =
-    Platform.OS === 'ios' ? 'systemUltraThinMaterialDark' : t.palette.blurTint;
+    Platform.OS === 'ios' ? 'systemUltraThinMaterialLight' : t.palette.blurTint;
 
   const webGlass: WebGlassStyle | null =
     isWeb && !solid
@@ -113,27 +112,22 @@ export function GlassSurface({
       {tintBg && !solid ? (
         <View style={[StyleSheet.absoluteFill, { backgroundColor: tintBg, opacity: 0.55 }]} />
       ) : null}
+      {/* Crisp hairline edge (kept) — the full-card rim gradient was removed
+          because it read as a funky white sheen on the cream glass. */}
       {rim ? (
-        <LinearGradient
+        <View
           pointerEvents="none"
-          colors={[t.palette.rimLight, 'transparent', t.palette.rimGround]}
-          locations={[0, 0.45, 1]}
-          style={[StyleSheet.absoluteFill, { borderRadius: r }]}
+          style={[
+            StyleSheet.absoluteFill,
+            {
+              borderRadius: r,
+              borderCurve: 'continuous',
+              borderWidth: StyleSheet.hairlineWidth,
+              borderColor: t.palette.rimLight,
+            },
+          ]}
         />
       ) : null}
-      {/* Specular hairline (Apple's bright top edge) */}
-      <View
-        pointerEvents="none"
-        style={[
-          StyleSheet.absoluteFill,
-          {
-            borderRadius: r,
-            borderCurve: 'continuous',
-            borderWidth: StyleSheet.hairlineWidth,
-            borderColor: t.palette.rimLight,
-          },
-        ]}
-      />
       <View style={{ padding: pad }}>{children}</View>
     </View>
   );

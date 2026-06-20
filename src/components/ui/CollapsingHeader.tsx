@@ -27,7 +27,7 @@ export function CollapsingHeader({ title, scrollY, threshold = 24 }: Props) {
   const reduceTransparency = useReduceTransparency();
   const allowBlur = !reduceTransparency && Platform.OS !== 'web';
   const blurTint =
-    Platform.OS === 'ios' ? 'systemUltraThinMaterialDark' : t.palette.blurTint;
+    Platform.OS === 'ios' ? 'systemUltraThinMaterialLight' : t.palette.blurTint;
 
   const containerStyle = useAnimatedStyle(() => {
     const o = interpolate(

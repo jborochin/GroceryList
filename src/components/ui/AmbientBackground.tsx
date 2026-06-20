@@ -9,22 +9,23 @@ import Svg, { Defs, RadialGradient, Stop, Rect } from 'react-native-svg';
 import { useReduceMotion, useReduceTransparency } from '../../hooks/useReduceEffects';
 import { useParallax } from './ParallaxContext';
 
-// Single static radial backdrop for the whole app: charcoal at the center
-// easing to pure black at the edges (8 stops to avoid banding). Mounted once at
-// the root so it never re-renders on navigation. A slow scroll-driven parallax
-// nudges the center ±8px; both the parallax and the blur fall back to a solid
-// fill under Reduce Motion / Reduce Transparency.
+// Single static radial backdrop for the whole app: a light warm cream at the
+// center easing to a slightly deeper cream at the edges (8 stops to avoid
+// banding). Mounted once at the root so it never re-renders on navigation. A slow
+// scroll-driven parallax nudges the center ±8px; both the parallax and the blur
+// fall back to a solid fill under Reduce Motion / Reduce Transparency.
 const OVERSCAN = 16;
+const BACKDROP = '#F2EBD9';
 
 const STOPS: { offset: string; color: string }[] = [
-  { offset: '0%', color: '#2A2A2E' },
-  { offset: '12%', color: '#232327' },
-  { offset: '24%', color: '#1C1C20' },
-  { offset: '36%', color: '#161618' },
-  { offset: '48%', color: '#101012' },
-  { offset: '62%', color: '#0A0A0B' },
-  { offset: '80%', color: '#050506' },
-  { offset: '100%', color: '#000000' },
+  { offset: '0%', color: '#FAF4E6' },
+  { offset: '12%', color: '#F7F0E0' },
+  { offset: '24%', color: '#F4ECDA' },
+  { offset: '36%', color: '#F2EBD9' },
+  { offset: '48%', color: '#EFE7D2' },
+  { offset: '62%', color: '#EBE2C9' },
+  { offset: '80%', color: '#E7DCBF' },
+  { offset: '100%', color: '#E2D6B6' },
 ];
 
 export function AmbientBackground() {
@@ -48,7 +49,7 @@ export function AmbientBackground() {
     return (
       <View
         pointerEvents="none"
-        style={[StyleSheet.absoluteFill, { backgroundColor: '#000000' }]}
+        style={[StyleSheet.absoluteFill, { backgroundColor: BACKDROP }]}
       />
     );
   }
@@ -59,7 +60,7 @@ export function AmbientBackground() {
   return (
     <View
       pointerEvents="none"
-      style={[StyleSheet.absoluteFill, { backgroundColor: '#000000', overflow: 'hidden' }]}
+      style={[StyleSheet.absoluteFill, { backgroundColor: BACKDROP, overflow: 'hidden' }]}
     >
       <Animated.View
         style={[

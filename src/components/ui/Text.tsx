@@ -107,8 +107,8 @@ export function Text({
           fontSize,
           lineHeight,
           letterSpacing,
-          // Subtle shadow keeps white text legible over the radial gradient.
-          textShadowColor: 'rgba(0,0,0,0.25)',
+          // Faint warm-white halo keeps dark text legible over frosted glass.
+          textShadowColor: 'rgba(255,250,240,0.5)',
           textShadowOffset: { width: 0, height: 1 },
           textShadowRadius: 2,
           ...(variant === 'eyebrow' ? { textTransform: 'uppercase' } : null),
