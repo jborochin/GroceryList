@@ -9,7 +9,11 @@ export function recipeIdForMeal(mealId: string): string {
   return deterministicRecipeId(mealId);
 }
 
-function mealToRecipe(meal: Meal): Recipe {
+// Clone a shared-catalog meal into a user Recipe. The id is deterministic
+// (UUIDv5 from the meal slug), so upserting the same meal twice updates in place
+// rather than creating a duplicate. Shared by the planner-commit path and the
+// "Add to my recipes" browse flow.
+export function mealToRecipe(meal: Meal): Recipe {
   const now = Date.now();
   return {
     id: recipeIdForMeal(meal.id),
