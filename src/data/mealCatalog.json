@@ -497,5 +497,1334 @@
       { "name": "sea salt", "quantity": 0.25, "unit": "tsp" }
     ],
     "nutritionPerServing": { "calories": 190, "proteinG": 17, "carbsG": 15, "fatG": 8 }
+  },
+  {
+    "id": "spaghetti-bolognese",
+    "title": "Spaghetti Bolognese",
+    "cuisine": "italian",
+    "slots": ["lunch", "dinner"],
+    "dietaryTags": ["high_protein"],
+    "servings": 1,
+    "prepTimeMinutes": 35,
+    "ingredients": [
+      { "name": "spaghetti", "quantity": 3, "unit": "oz" },
+      { "name": "ground beef", "quantity": 5, "unit": "oz" },
+      { "name": "crushed tomatoes", "quantity": 0.75, "unit": "cup" },
+      { "name": "onion", "quantity": 0.5, "unit": "each" },
+      { "name": "garlic", "quantity": 2, "unit": "clove" },
+      { "name": "parmesan cheese", "quantity": 1, "unit": "oz" }
+    ],
+    "nutritionPerServing": { "calories": 620, "proteinG": 38, "carbsG": 70, "fatG": 22 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/sutysw1468247559.jpg",
+    "instructions": [
+      "Brown the ground beef with diced onion and garlic.",
+      "Add crushed tomatoes and simmer 20 minutes.",
+      "Toss with cooked spaghetti and top with parmesan."
+    ]
+  },
+  {
+    "id": "spaghetti-carbonara",
+    "title": "Spaghetti Carbonara",
+    "cuisine": "italian",
+    "slots": ["dinner"],
+    "dietaryTags": ["high_protein"],
+    "servings": 1,
+    "prepTimeMinutes": 20,
+    "ingredients": [
+      { "name": "spaghetti", "quantity": 3, "unit": "oz" },
+      { "name": "bacon", "quantity": 2, "unit": "oz" },
+      { "name": "egg", "quantity": 2, "unit": "each" },
+      { "name": "parmesan cheese", "quantity": 1.5, "unit": "oz" },
+      { "name": "black pepper", "quantity": 0.5, "unit": "tsp" }
+    ],
+    "nutritionPerServing": { "calories": 660, "proteinG": 34, "carbsG": 65, "fatG": 28 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/llcbn01574260722.jpg",
+    "instructions": [
+      "Cook spaghetti and crisp the chopped bacon.",
+      "Whisk eggs with grated parmesan and pepper.",
+      "Toss hot pasta with bacon, then the egg mix off heat to form a sauce."
+    ]
+  },
+  {
+    "id": "beef-lasagna",
+    "title": "Beef Lasagna",
+    "cuisine": "italian",
+    "slots": ["dinner"],
+    "dietaryTags": ["high_protein"],
+    "servings": 1,
+    "prepTimeMinutes": 45,
+    "ingredients": [
+      { "name": "lasagna noodles", "quantity": 2.5, "unit": "oz" },
+      { "name": "ground beef", "quantity": 5, "unit": "oz" },
+      { "name": "marinara sauce", "quantity": 0.75, "unit": "cup" },
+      { "name": "ricotta cheese", "quantity": 0.33, "unit": "cup" },
+      { "name": "mozzarella", "quantity": 1.5, "unit": "oz" }
+    ],
+    "nutritionPerServing": { "calories": 680, "proteinG": 42, "carbsG": 58, "fatG": 30 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/wtsvxx1511296896.jpg",
+    "instructions": [
+      "Brown beef and stir in marinara sauce.",
+      "Layer noodles, meat sauce, ricotta and mozzarella.",
+      "Bake at 375F for 30 minutes until bubbling."
+    ]
+  },
+  {
+    "id": "margherita-pizza",
+    "title": "Margherita Pizza",
+    "cuisine": "italian",
+    "slots": ["lunch", "dinner"],
+    "dietaryTags": ["vegetarian"],
+    "servings": 1,
+    "prepTimeMinutes": 20,
+    "ingredients": [
+      { "name": "pizza dough", "quantity": 5, "unit": "oz" },
+      { "name": "marinara sauce", "quantity": 0.33, "unit": "cup" },
+      { "name": "mozzarella", "quantity": 2, "unit": "oz" },
+      { "name": "fresh basil", "quantity": 0.25, "unit": "cup" },
+      { "name": "olive oil", "quantity": 1, "unit": "tsp" }
+    ],
+    "nutritionPerServing": { "calories": 560, "proteinG": 22, "carbsG": 72, "fatG": 20 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/x0lk931587671540.jpg",
+    "instructions": [
+      "Stretch the dough and spread with marinara.",
+      "Top with mozzarella and a drizzle of olive oil.",
+      "Bake at 500F for 10 minutes, then add fresh basil."
+    ]
+  },
+  {
+    "id": "penne-arrabiata",
+    "title": "Penne Arrabbiata",
+    "cuisine": "italian",
+    "slots": ["lunch", "dinner"],
+    "dietaryTags": ["vegan", "vegetarian", "dairy_free", "pescatarian"],
+    "servings": 1,
+    "prepTimeMinutes": 20,
+    "ingredients": [
+      { "name": "penne", "quantity": 3, "unit": "oz" },
+      { "name": "crushed tomatoes", "quantity": 0.75, "unit": "cup" },
+      { "name": "garlic", "quantity": 3, "unit": "clove" },
+      { "name": "red pepper flakes", "quantity": 0.5, "unit": "tsp" },
+      { "name": "olive oil", "quantity": 1, "unit": "tbsp" }
+    ],
+    "nutritionPerServing": { "calories": 480, "proteinG": 14, "carbsG": 78, "fatG": 14 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/ustsqw1468250014.jpg",
+    "instructions": [
+      "Sizzle garlic and red pepper flakes in olive oil.",
+      "Add crushed tomatoes and simmer 10 minutes.",
+      "Toss with cooked penne."
+    ]
+  },
+  {
+    "id": "minestrone-soup",
+    "title": "Minestrone Soup",
+    "cuisine": "italian",
+    "slots": ["lunch", "dinner"],
+    "dietaryTags": ["vegan", "vegetarian", "dairy_free", "pescatarian"],
+    "servings": 1,
+    "prepTimeMinutes": 30,
+    "ingredients": [
+      { "name": "vegetable broth", "quantity": 12, "unit": "fl_oz" },
+      { "name": "kidney beans", "quantity": 0.5, "unit": "cup" },
+      { "name": "diced tomatoes", "quantity": 0.5, "unit": "cup" },
+      { "name": "carrot", "quantity": 1, "unit": "each" },
+      { "name": "zucchini", "quantity": 0.5, "unit": "each" },
+      { "name": "pasta", "quantity": 1, "unit": "oz" }
+    ],
+    "nutritionPerServing": { "calories": 360, "proteinG": 15, "carbsG": 62, "fatG": 5 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/xrrwpx1487347049.jpg",
+    "instructions": [
+      "Simmer chopped carrot and zucchini in vegetable broth.",
+      "Add beans, diced tomatoes and pasta.",
+      "Cook until pasta is tender, about 12 minutes."
+    ]
+  },
+  {
+    "id": "caprese-salad",
+    "title": "Tomato Mozzarella Salad",
+    "cuisine": "italian",
+    "slots": ["snack", "lunch"],
+    "dietaryTags": ["vegetarian", "gluten_free", "pescatarian"],
+    "servings": 1,
+    "prepTimeMinutes": 8,
+    "ingredients": [
+      { "name": "tomato", "quantity": 1, "unit": "each" },
+      { "name": "mozzarella", "quantity": 2, "unit": "oz" },
+      { "name": "fresh basil", "quantity": 0.25, "unit": "cup" },
+      { "name": "olive oil", "quantity": 1, "unit": "tbsp" }
+    ],
+    "nutritionPerServing": { "calories": 260, "proteinG": 14, "carbsG": 8, "fatG": 19 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/wvqpwt1468339226.jpg",
+    "instructions": [
+      "Slice tomato and mozzarella.",
+      "Arrange with basil leaves.",
+      "Drizzle with olive oil and a pinch of salt."
+    ]
+  },
+  {
+    "id": "chicken-enchiladas",
+    "title": "Chicken Enchiladas",
+    "cuisine": "mexican",
+    "slots": ["dinner"],
+    "dietaryTags": ["high_protein"],
+    "servings": 1,
+    "prepTimeMinutes": 35,
+    "ingredients": [
+      { "name": "chicken breast", "quantity": 5, "unit": "oz" },
+      { "name": "corn tortilla", "quantity": 3, "unit": "each" },
+      { "name": "salsa", "quantity": 0.5, "unit": "cup" },
+      { "name": "cheddar cheese", "quantity": 1.5, "unit": "oz" },
+      { "name": "onion", "quantity": 0.25, "unit": "each" }
+    ],
+    "nutritionPerServing": { "calories": 580, "proteinG": 44, "carbsG": 42, "fatG": 24 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/qtuwxu1468233098.jpg",
+    "instructions": [
+      "Shred cooked chicken and mix with onion.",
+      "Roll into tortillas, top with salsa and cheese.",
+      "Bake at 375F for 20 minutes."
+    ]
+  },
+  {
+    "id": "veggie-fajitas",
+    "title": "Veggie Fajitas",
+    "cuisine": "mexican",
+    "slots": ["lunch", "dinner"],
+    "dietaryTags": ["vegan", "vegetarian", "dairy_free", "pescatarian"],
+    "servings": 1,
+    "prepTimeMinutes": 20,
+    "ingredients": [
+      { "name": "bell pepper", "quantity": 1, "unit": "each" },
+      { "name": "onion", "quantity": 0.5, "unit": "each" },
+      { "name": "black beans", "quantity": 0.5, "unit": "cup" },
+      { "name": "flour tortilla", "quantity": 2, "unit": "each" },
+      { "name": "olive oil", "quantity": 1, "unit": "tbsp" }
+    ],
+    "nutritionPerServing": { "calories": 470, "proteinG": 15, "carbsG": 72, "fatG": 15 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/tvtxpq1511464705.jpg",
+    "instructions": [
+      "Saute sliced peppers and onion in olive oil.",
+      "Warm the black beans and tortillas.",
+      "Fill tortillas with the vegetables and beans."
+    ]
+  },
+  {
+    "id": "baja-fish-tacos",
+    "title": "Baja Fish Tacos",
+    "cuisine": "mexican",
+    "slots": ["lunch", "dinner"],
+    "dietaryTags": ["pescatarian", "dairy_free"],
+    "servings": 1,
+    "prepTimeMinutes": 25,
+    "ingredients": [
+      { "name": "cod", "quantity": 6, "unit": "oz" },
+      { "name": "corn tortilla", "quantity": 3, "unit": "each" },
+      { "name": "cabbage", "quantity": 1, "unit": "cup" },
+      { "name": "lime", "quantity": 0.5, "unit": "each" },
+      { "name": "salsa", "quantity": 0.25, "unit": "cup" }
+    ],
+    "nutritionPerServing": { "calories": 480, "proteinG": 38, "carbsG": 45, "fatG": 14 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/uvuyxu1503067369.jpg",
+    "instructions": [
+      "Season and pan-sear the cod, then flake.",
+      "Warm tortillas and shred the cabbage.",
+      "Build tacos with fish, cabbage, salsa and lime."
+    ]
+  },
+  {
+    "id": "beef-chili-con-carne",
+    "title": "Beef Chili con Carne",
+    "cuisine": "mexican",
+    "slots": ["lunch", "dinner"],
+    "dietaryTags": ["gluten_free", "dairy_free", "high_protein"],
+    "servings": 1,
+    "prepTimeMinutes": 35,
+    "ingredients": [
+      { "name": "ground beef", "quantity": 5, "unit": "oz" },
+      { "name": "kidney beans", "quantity": 0.5, "unit": "cup" },
+      { "name": "crushed tomatoes", "quantity": 0.75, "unit": "cup" },
+      { "name": "onion", "quantity": 0.5, "unit": "each" },
+      { "name": "chili powder", "quantity": 1, "unit": "tbsp" }
+    ],
+    "nutritionPerServing": { "calories": 560, "proteinG": 40, "carbsG": 40, "fatG": 24 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/uuqvwu1504629254.jpg",
+    "instructions": [
+      "Brown beef with diced onion.",
+      "Stir in chili powder, tomatoes and beans.",
+      "Simmer 25 minutes until thickened."
+    ]
+  },
+  {
+    "id": "quinoa-stuffed-peppers",
+    "title": "Quinoa Stuffed Peppers",
+    "cuisine": "mexican",
+    "slots": ["dinner"],
+    "dietaryTags": ["vegan", "vegetarian", "dairy_free", "gluten_free", "pescatarian"],
+    "servings": 1,
+    "prepTimeMinutes": 40,
+    "ingredients": [
+      { "name": "bell pepper", "quantity": 2, "unit": "each" },
+      { "name": "quinoa", "quantity": 0.5, "unit": "cup" },
+      { "name": "black beans", "quantity": 0.5, "unit": "cup" },
+      { "name": "corn", "quantity": 0.5, "unit": "cup" },
+      { "name": "salsa", "quantity": 0.25, "unit": "cup" }
+    ],
+    "nutritionPerServing": { "calories": 470, "proteinG": 17, "carbsG": 82, "fatG": 8 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/b66myb1683207208.jpg",
+    "instructions": [
+      "Cook quinoa and mix with beans, corn and salsa.",
+      "Halve and seed the peppers, then stuff.",
+      "Bake at 375F for 25 minutes."
+    ]
+  },
+  {
+    "id": "huevos-rancheros",
+    "title": "Huevos Rancheros",
+    "cuisine": "mexican",
+    "slots": ["breakfast"],
+    "dietaryTags": ["vegetarian", "gluten_free", "pescatarian"],
+    "servings": 1,
+    "prepTimeMinutes": 15,
+    "ingredients": [
+      { "name": "egg", "quantity": 2, "unit": "each" },
+      { "name": "corn tortilla", "quantity": 2, "unit": "each" },
+      { "name": "black beans", "quantity": 0.5, "unit": "cup" },
+      { "name": "salsa", "quantity": 0.33, "unit": "cup" },
+      { "name": "avocado", "quantity": 0.25, "unit": "each" }
+    ],
+    "nutritionPerServing": { "calories": 420, "proteinG": 20, "carbsG": 42, "fatG": 19 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/0nswfe1763279040.jpg",
+    "instructions": [
+      "Warm tortillas and heat the beans.",
+      "Fry the eggs to your liking.",
+      "Top tortillas with beans, eggs, salsa and avocado."
+    ]
+  },
+  {
+    "id": "guacamole-chips",
+    "title": "Guacamole & Tortilla Chips",
+    "cuisine": "mexican",
+    "slots": ["snack"],
+    "dietaryTags": ["vegan", "vegetarian", "dairy_free", "pescatarian"],
+    "servings": 1,
+    "prepTimeMinutes": 8,
+    "ingredients": [
+      { "name": "avocado", "quantity": 1, "unit": "each" },
+      { "name": "lime", "quantity": 0.5, "unit": "each" },
+      { "name": "tortilla chips", "quantity": 1, "unit": "oz" },
+      { "name": "salsa", "quantity": 2, "unit": "tbsp" }
+    ],
+    "nutritionPerServing": { "calories": 290, "proteinG": 5, "carbsG": 28, "fatG": 20 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/flrajf1762341295.jpg",
+    "instructions": [
+      "Mash avocado with lime juice and salt.",
+      "Stir in the salsa.",
+      "Serve with tortilla chips."
+    ]
+  },
+  {
+    "id": "beef-broccoli-stir-fry",
+    "title": "Beef & Broccoli Stir-Fry",
+    "cuisine": "asian",
+    "slots": ["lunch", "dinner"],
+    "dietaryTags": ["dairy_free", "high_protein"],
+    "servings": 1,
+    "prepTimeMinutes": 20,
+    "ingredients": [
+      { "name": "sirloin steak", "quantity": 5, "unit": "oz" },
+      { "name": "broccoli", "quantity": 1.5, "unit": "cup" },
+      { "name": "cooked rice", "quantity": 0.75, "unit": "cup" },
+      { "name": "soy sauce", "quantity": 2, "unit": "tbsp" },
+      { "name": "garlic", "quantity": 2, "unit": "clove" }
+    ],
+    "nutritionPerServing": { "calories": 540, "proteinG": 40, "carbsG": 50, "fatG": 18 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/m0p0j81765568742.jpg",
+    "instructions": [
+      "Sear sliced steak in a hot pan.",
+      "Add broccoli and garlic, stir-fry 3 minutes.",
+      "Add soy sauce and serve over rice."
+    ]
+  },
+  {
+    "id": "kung-pao-chicken",
+    "title": "Kung Pao Chicken",
+    "cuisine": "asian",
+    "slots": ["lunch", "dinner"],
+    "dietaryTags": ["dairy_free", "high_protein"],
+    "servings": 1,
+    "prepTimeMinutes": 25,
+    "ingredients": [
+      { "name": "chicken thigh", "quantity": 6, "unit": "oz" },
+      { "name": "peanuts", "quantity": 1, "unit": "oz" },
+      { "name": "bell pepper", "quantity": 0.5, "unit": "each" },
+      { "name": "cooked rice", "quantity": 0.75, "unit": "cup" },
+      { "name": "soy sauce", "quantity": 2, "unit": "tbsp" }
+    ],
+    "nutritionPerServing": { "calories": 600, "proteinG": 40, "carbsG": 48, "fatG": 26 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/1525872624.jpg",
+    "instructions": [
+      "Stir-fry diced chicken until golden.",
+      "Add pepper, peanuts and soy sauce.",
+      "Toss to coat and serve over rice."
+    ]
+  },
+  {
+    "id": "sweet-sour-chicken",
+    "title": "Sweet & Sour Chicken",
+    "cuisine": "asian",
+    "slots": ["lunch", "dinner"],
+    "dietaryTags": ["dairy_free"],
+    "servings": 1,
+    "prepTimeMinutes": 25,
+    "ingredients": [
+      { "name": "chicken breast", "quantity": 6, "unit": "oz" },
+      { "name": "pineapple", "quantity": 0.5, "unit": "cup" },
+      { "name": "bell pepper", "quantity": 0.5, "unit": "each" },
+      { "name": "cooked rice", "quantity": 0.75, "unit": "cup" },
+      { "name": "ketchup", "quantity": 2, "unit": "tbsp" }
+    ],
+    "nutritionPerServing": { "calories": 580, "proteinG": 42, "carbsG": 70, "fatG": 10 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/arzs741766434335.jpg",
+    "instructions": [
+      "Brown diced chicken in a wok.",
+      "Add pepper, pineapple and a ketchup-vinegar sauce.",
+      "Simmer until glossy and serve over rice."
+    ]
+  },
+  {
+    "id": "chicken-fried-rice",
+    "title": "Chicken Fried Rice",
+    "cuisine": "asian",
+    "slots": ["lunch", "dinner"],
+    "dietaryTags": ["dairy_free", "high_protein"],
+    "servings": 1,
+    "prepTimeMinutes": 20,
+    "ingredients": [
+      { "name": "chicken breast", "quantity": 4, "unit": "oz" },
+      { "name": "cooked rice", "quantity": 1, "unit": "cup" },
+      { "name": "egg", "quantity": 1, "unit": "each" },
+      { "name": "peas", "quantity": 0.5, "unit": "cup" },
+      { "name": "soy sauce", "quantity": 2, "unit": "tbsp" }
+    ],
+    "nutritionPerServing": { "calories": 540, "proteinG": 35, "carbsG": 60, "fatG": 16 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/wuyd2h1765655837.jpg",
+    "instructions": [
+      "Scramble the egg, then set aside.",
+      "Stir-fry chicken, add rice and peas.",
+      "Return egg, season with soy sauce."
+    ]
+  },
+  {
+    "id": "beef-lo-mein",
+    "title": "Beef Lo Mein",
+    "cuisine": "asian",
+    "slots": ["lunch", "dinner"],
+    "dietaryTags": ["dairy_free"],
+    "servings": 1,
+    "prepTimeMinutes": 25,
+    "ingredients": [
+      { "name": "egg noodles", "quantity": 3, "unit": "oz" },
+      { "name": "sirloin steak", "quantity": 4, "unit": "oz" },
+      { "name": "stir-fry vegetables", "quantity": 1.5, "unit": "cup" },
+      { "name": "soy sauce", "quantity": 2, "unit": "tbsp" },
+      { "name": "sesame oil", "quantity": 1, "unit": "tsp" }
+    ],
+    "nutritionPerServing": { "calories": 560, "proteinG": 32, "carbsG": 62, "fatG": 20 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/1529444830.jpg",
+    "instructions": [
+      "Boil the noodles and sear the sliced beef.",
+      "Stir-fry the vegetables until crisp-tender.",
+      "Toss everything with soy sauce and sesame oil."
+    ]
+  },
+  {
+    "id": "mapo-tofu",
+    "title": "Mapo Tofu",
+    "cuisine": "asian",
+    "slots": ["lunch", "dinner"],
+    "dietaryTags": ["vegetarian", "dairy_free", "high_protein", "pescatarian"],
+    "servings": 1,
+    "prepTimeMinutes": 20,
+    "ingredients": [
+      { "name": "firm tofu", "quantity": 7, "unit": "oz" },
+      { "name": "cooked rice", "quantity": 0.75, "unit": "cup" },
+      { "name": "green onion", "quantity": 2, "unit": "each" },
+      { "name": "garlic", "quantity": 2, "unit": "clove" },
+      { "name": "soy sauce", "quantity": 2, "unit": "tbsp" }
+    ],
+    "nutritionPerServing": { "calories": 470, "proteinG": 24, "carbsG": 52, "fatG": 18 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/1525874812.jpg",
+    "instructions": [
+      "Cube tofu and simmer in a garlic-soy sauce.",
+      "Add chopped green onion.",
+      "Spoon over steamed rice."
+    ]
+  },
+  {
+    "id": "egg-drop-soup",
+    "title": "Egg Drop Soup",
+    "cuisine": "asian",
+    "slots": ["snack"],
+    "dietaryTags": ["vegetarian", "gluten_free", "dairy_free", "low_carb", "pescatarian"],
+    "servings": 1,
+    "prepTimeMinutes": 10,
+    "ingredients": [
+      { "name": "vegetable broth", "quantity": 12, "unit": "fl_oz" },
+      { "name": "egg", "quantity": 2, "unit": "each" },
+      { "name": "green onion", "quantity": 1, "unit": "each" },
+      { "name": "cornstarch", "quantity": 1, "unit": "tsp" }
+    ],
+    "nutritionPerServing": { "calories": 160, "proteinG": 13, "carbsG": 6, "fatG": 9 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/1529446137.jpg",
+    "instructions": [
+      "Bring broth to a simmer and thicken with cornstarch slurry.",
+      "Slowly stream in beaten eggs while stirring.",
+      "Garnish with green onion."
+    ]
+  },
+  {
+    "id": "chicken-katsu-curry",
+    "title": "Chicken Katsu Curry",
+    "cuisine": "asian",
+    "slots": ["lunch", "dinner"],
+    "dietaryTags": ["dairy_free", "high_protein"],
+    "servings": 1,
+    "prepTimeMinutes": 35,
+    "ingredients": [
+      { "name": "chicken breast", "quantity": 6, "unit": "oz" },
+      { "name": "panko breadcrumbs", "quantity": 0.5, "unit": "cup" },
+      { "name": "cooked rice", "quantity": 0.75, "unit": "cup" },
+      { "name": "curry powder", "quantity": 1, "unit": "tbsp" },
+      { "name": "carrot", "quantity": 1, "unit": "each" }
+    ],
+    "nutritionPerServing": { "calories": 640, "proteinG": 45, "carbsG": 68, "fatG": 18 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/vwrpps1503068729.jpg",
+    "instructions": [
+      "Coat chicken in panko and pan-fry until crisp.",
+      "Simmer a curry sauce with carrot and curry powder.",
+      "Slice the katsu and serve over rice with the sauce."
+    ]
+  },
+  {
+    "id": "dal-tadka",
+    "title": "Dal Tadka",
+    "cuisine": "indian",
+    "slots": ["lunch", "dinner"],
+    "dietaryTags": ["vegan", "vegetarian", "gluten_free", "dairy_free", "pescatarian"],
+    "servings": 1,
+    "prepTimeMinutes": 30,
+    "ingredients": [
+      { "name": "lentils", "quantity": 0.5, "unit": "cup" },
+      { "name": "onion", "quantity": 0.5, "unit": "each" },
+      { "name": "diced tomatoes", "quantity": 0.5, "unit": "cup" },
+      { "name": "garlic", "quantity": 2, "unit": "clove" },
+      { "name": "cumin", "quantity": 1, "unit": "tsp" },
+      { "name": "cooked rice", "quantity": 0.5, "unit": "cup" }
+    ],
+    "nutritionPerServing": { "calories": 450, "proteinG": 20, "carbsG": 78, "fatG": 6 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/wuxrtu1483564410.jpg",
+    "instructions": [
+      "Simmer lentils until soft.",
+      "Saute onion, garlic, tomato and cumin, then stir in.",
+      "Serve over rice."
+    ]
+  },
+  {
+    "id": "matar-paneer",
+    "title": "Matar Paneer",
+    "cuisine": "indian",
+    "slots": ["lunch", "dinner"],
+    "dietaryTags": ["vegetarian", "gluten_free"],
+    "servings": 1,
+    "prepTimeMinutes": 30,
+    "ingredients": [
+      { "name": "paneer", "quantity": 4, "unit": "oz" },
+      { "name": "peas", "quantity": 0.5, "unit": "cup" },
+      { "name": "crushed tomatoes", "quantity": 0.5, "unit": "cup" },
+      { "name": "garam masala", "quantity": 1, "unit": "tsp" },
+      { "name": "cooked rice", "quantity": 0.5, "unit": "cup" }
+    ],
+    "nutritionPerServing": { "calories": 520, "proteinG": 24, "carbsG": 48, "fatG": 26 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/xxpqsy1511452222.jpg",
+    "instructions": [
+      "Brown paneer cubes, then set aside.",
+      "Simmer a tomato-garam masala gravy with peas.",
+      "Fold in paneer and serve over rice."
+    ]
+  },
+  {
+    "id": "baingan-bharta",
+    "title": "Baingan Bharta",
+    "cuisine": "indian",
+    "slots": ["lunch", "dinner"],
+    "dietaryTags": ["vegan", "vegetarian", "gluten_free", "dairy_free", "pescatarian"],
+    "servings": 1,
+    "prepTimeMinutes": 35,
+    "ingredients": [
+      { "name": "eggplant", "quantity": 1, "unit": "each" },
+      { "name": "onion", "quantity": 0.5, "unit": "each" },
+      { "name": "diced tomatoes", "quantity": 0.5, "unit": "cup" },
+      { "name": "garam masala", "quantity": 1, "unit": "tsp" },
+      { "name": "cooked rice", "quantity": 0.5, "unit": "cup" }
+    ],
+    "nutritionPerServing": { "calories": 380, "proteinG": 9, "carbsG": 62, "fatG": 11 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/urtpqw1487341253.jpg",
+    "instructions": [
+      "Roast and mash the eggplant.",
+      "Saute onion, tomato and garam masala, then fold in eggplant.",
+      "Serve over rice."
+    ]
+  },
+  {
+    "id": "rajma-masala",
+    "title": "Rajma (Kidney Bean Curry)",
+    "cuisine": "indian",
+    "slots": ["lunch", "dinner"],
+    "dietaryTags": ["vegan", "vegetarian", "gluten_free", "dairy_free", "pescatarian"],
+    "servings": 1,
+    "prepTimeMinutes": 30,
+    "ingredients": [
+      { "name": "kidney beans", "quantity": 1, "unit": "cup" },
+      { "name": "onion", "quantity": 0.5, "unit": "each" },
+      { "name": "crushed tomatoes", "quantity": 0.5, "unit": "cup" },
+      { "name": "garam masala", "quantity": 1, "unit": "tsp" },
+      { "name": "cooked rice", "quantity": 0.75, "unit": "cup" }
+    ],
+    "nutritionPerServing": { "calories": 490, "proteinG": 18, "carbsG": 88, "fatG": 6 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/sywrsu1511463066.jpg",
+    "instructions": [
+      "Saute onion and stir in tomato and garam masala.",
+      "Add kidney beans and simmer 15 minutes.",
+      "Serve over rice."
+    ]
+  },
+  {
+    "id": "tandoori-chicken",
+    "title": "Tandoori Chicken",
+    "cuisine": "indian",
+    "slots": ["lunch", "dinner"],
+    "dietaryTags": ["gluten_free", "high_protein", "low_carb"],
+    "servings": 1,
+    "prepTimeMinutes": 30,
+    "ingredients": [
+      { "name": "chicken thigh", "quantity": 7, "unit": "oz" },
+      { "name": "greek yogurt", "quantity": 0.25, "unit": "cup" },
+      { "name": "garam masala", "quantity": 1, "unit": "tsp" },
+      { "name": "lemon", "quantity": 0.5, "unit": "each" },
+      { "name": "garlic", "quantity": 2, "unit": "clove" }
+    ],
+    "nutritionPerServing": { "calories": 380, "proteinG": 44, "carbsG": 8, "fatG": 18 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/qptpvt1487339892.jpg",
+    "instructions": [
+      "Marinate chicken in yogurt, garam masala, lemon and garlic.",
+      "Roast or grill until charred and cooked through.",
+      "Rest a few minutes before serving."
+    ]
+  },
+  {
+    "id": "lamb-rogan-josh",
+    "title": "Lamb Rogan Josh",
+    "cuisine": "indian",
+    "slots": ["dinner"],
+    "dietaryTags": ["gluten_free", "dairy_free", "high_protein"],
+    "servings": 1,
+    "prepTimeMinutes": 50,
+    "ingredients": [
+      { "name": "lamb", "quantity": 6, "unit": "oz" },
+      { "name": "onion", "quantity": 0.5, "unit": "each" },
+      { "name": "crushed tomatoes", "quantity": 0.5, "unit": "cup" },
+      { "name": "garam masala", "quantity": 1.5, "unit": "tsp" },
+      { "name": "cooked rice", "quantity": 0.75, "unit": "cup" }
+    ],
+    "nutritionPerServing": { "calories": 620, "proteinG": 38, "carbsG": 48, "fatG": 30 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/vvstvq1487342592.jpg",
+    "instructions": [
+      "Brown the lamb and set aside.",
+      "Saute onion, tomato and garam masala, return lamb.",
+      "Simmer until tender and serve over rice."
+    ]
+  },
+  {
+    "id": "lamb-biryani",
+    "title": "Lamb Biryani",
+    "cuisine": "indian",
+    "slots": ["dinner"],
+    "dietaryTags": ["dairy_free", "high_protein"],
+    "servings": 1,
+    "prepTimeMinutes": 50,
+    "ingredients": [
+      { "name": "lamb", "quantity": 5, "unit": "oz" },
+      { "name": "basmati rice", "quantity": 0.75, "unit": "cup" },
+      { "name": "onion", "quantity": 0.5, "unit": "each" },
+      { "name": "garam masala", "quantity": 1.5, "unit": "tsp" },
+      { "name": "greek yogurt", "quantity": 2, "unit": "tbsp" }
+    ],
+    "nutritionPerServing": { "calories": 660, "proteinG": 36, "carbsG": 72, "fatG": 26 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/xrttsx1487339558.jpg",
+    "instructions": [
+      "Brown lamb with onion and garam masala.",
+      "Layer with parboiled basmati rice and yogurt.",
+      "Cover and steam until the rice is fluffy."
+    ]
+  },
+  {
+    "id": "pad-see-ew-chicken",
+    "title": "Pad See Ew",
+    "cuisine": "thai",
+    "slots": ["lunch", "dinner"],
+    "dietaryTags": ["dairy_free"],
+    "servings": 1,
+    "prepTimeMinutes": 25,
+    "ingredients": [
+      { "name": "rice noodles", "quantity": 3, "unit": "oz" },
+      { "name": "chicken breast", "quantity": 5, "unit": "oz" },
+      { "name": "egg", "quantity": 1, "unit": "each" },
+      { "name": "broccoli", "quantity": 1, "unit": "cup" },
+      { "name": "soy sauce", "quantity": 2, "unit": "tbsp" }
+    ],
+    "nutritionPerServing": { "calories": 580, "proteinG": 38, "carbsG": 62, "fatG": 18 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/uuuspp1468263334.jpg",
+    "instructions": [
+      "Stir-fry chicken, then push aside and scramble the egg.",
+      "Add noodles, broccoli and soy sauce.",
+      "Toss over high heat until charred."
+    ]
+  },
+  {
+    "id": "massaman-beef-curry",
+    "title": "Massaman Beef Curry",
+    "cuisine": "thai",
+    "slots": ["dinner"],
+    "dietaryTags": ["gluten_free", "dairy_free", "high_protein"],
+    "servings": 1,
+    "prepTimeMinutes": 45,
+    "ingredients": [
+      { "name": "beef chuck", "quantity": 5, "unit": "oz" },
+      { "name": "coconut milk", "quantity": 0.5, "unit": "cup" },
+      { "name": "potato", "quantity": 1, "unit": "each" },
+      { "name": "massaman curry paste", "quantity": 1.5, "unit": "tbsp" },
+      { "name": "cooked rice", "quantity": 0.5, "unit": "cup" }
+    ],
+    "nutritionPerServing": { "calories": 640, "proteinG": 34, "carbsG": 52, "fatG": 32 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/tvttqv1504640475.jpg",
+    "instructions": [
+      "Brown beef and stir in curry paste.",
+      "Add coconut milk and potato, simmer until tender.",
+      "Serve over rice."
+    ]
+  },
+  {
+    "id": "tom-kha-gai",
+    "title": "Tom Kha Gai",
+    "cuisine": "thai",
+    "slots": ["lunch", "dinner"],
+    "dietaryTags": ["gluten_free", "dairy_free"],
+    "servings": 1,
+    "prepTimeMinutes": 25,
+    "ingredients": [
+      { "name": "chicken breast", "quantity": 5, "unit": "oz" },
+      { "name": "coconut milk", "quantity": 0.75, "unit": "cup" },
+      { "name": "mushroom", "quantity": 0.5, "unit": "cup" },
+      { "name": "lime", "quantity": 0.5, "unit": "each" },
+      { "name": "ginger", "quantity": 1, "unit": "tbsp" }
+    ],
+    "nutritionPerServing": { "calories": 440, "proteinG": 34, "carbsG": 14, "fatG": 28 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/ol2xxt1763582263.jpg",
+    "instructions": [
+      "Simmer coconut milk with ginger.",
+      "Add sliced chicken and mushrooms, cook through.",
+      "Finish with lime juice."
+    ]
+  },
+  {
+    "id": "thai-basil-chicken",
+    "title": "Thai Basil Chicken",
+    "cuisine": "thai",
+    "slots": ["lunch", "dinner"],
+    "dietaryTags": ["dairy_free", "high_protein"],
+    "servings": 1,
+    "prepTimeMinutes": 20,
+    "ingredients": [
+      { "name": "ground chicken", "quantity": 6, "unit": "oz" },
+      { "name": "fresh basil", "quantity": 0.5, "unit": "cup" },
+      { "name": "bell pepper", "quantity": 0.5, "unit": "each" },
+      { "name": "cooked rice", "quantity": 0.75, "unit": "cup" },
+      { "name": "soy sauce", "quantity": 1.5, "unit": "tbsp" }
+    ],
+    "nutritionPerServing": { "calories": 540, "proteinG": 38, "carbsG": 52, "fatG": 18 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/el64dy1763483009.jpg",
+    "instructions": [
+      "Stir-fry ground chicken until browned.",
+      "Add pepper and soy sauce.",
+      "Toss with basil and serve over rice."
+    ]
+  },
+  {
+    "id": "thai-pumpkin-soup",
+    "title": "Thai Pumpkin Soup",
+    "cuisine": "thai",
+    "slots": ["lunch", "snack"],
+    "dietaryTags": ["vegan", "vegetarian", "gluten_free", "dairy_free", "pescatarian"],
+    "servings": 1,
+    "prepTimeMinutes": 25,
+    "ingredients": [
+      { "name": "pumpkin", "quantity": 1.5, "unit": "cup" },
+      { "name": "coconut milk", "quantity": 0.5, "unit": "cup" },
+      { "name": "vegetable broth", "quantity": 8, "unit": "fl_oz" },
+      { "name": "red curry paste", "quantity": 1, "unit": "tbsp" }
+    ],
+    "nutritionPerServing": { "calories": 300, "proteinG": 6, "carbsG": 32, "fatG": 18 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/1brbso1763585098.jpg",
+    "instructions": [
+      "Simmer pumpkin in broth until soft.",
+      "Blend with coconut milk and curry paste.",
+      "Warm through and serve."
+    ]
+  },
+  {
+    "id": "greek-salad",
+    "title": "Greek Salad",
+    "cuisine": "mediterranean",
+    "slots": ["lunch", "snack"],
+    "dietaryTags": ["vegetarian", "gluten_free", "pescatarian"],
+    "servings": 1,
+    "prepTimeMinutes": 10,
+    "ingredients": [
+      { "name": "cucumber", "quantity": 0.5, "unit": "each" },
+      { "name": "tomato", "quantity": 1, "unit": "each" },
+      { "name": "feta", "quantity": 1.5, "unit": "oz" },
+      { "name": "olives", "quantity": 0.25, "unit": "cup" },
+      { "name": "olive oil", "quantity": 1, "unit": "tbsp" }
+    ],
+    "nutritionPerServing": { "calories": 300, "proteinG": 9, "carbsG": 16, "fatG": 24 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/k29viq1585565980.jpg",
+    "instructions": [
+      "Chop cucumber and tomato.",
+      "Add olives and crumbled feta.",
+      "Dress with olive oil and oregano."
+    ]
+  },
+  {
+    "id": "moussaka",
+    "title": "Moussaka",
+    "cuisine": "mediterranean",
+    "slots": ["dinner"],
+    "dietaryTags": ["gluten_free", "high_protein"],
+    "servings": 1,
+    "prepTimeMinutes": 50,
+    "ingredients": [
+      { "name": "eggplant", "quantity": 1, "unit": "each" },
+      { "name": "ground lamb", "quantity": 4, "unit": "oz" },
+      { "name": "crushed tomatoes", "quantity": 0.5, "unit": "cup" },
+      { "name": "greek yogurt", "quantity": 0.25, "unit": "cup" },
+      { "name": "parmesan cheese", "quantity": 0.5, "unit": "oz" }
+    ],
+    "nutritionPerServing": { "calories": 520, "proteinG": 30, "carbsG": 26, "fatG": 32 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/ctg8jd1585563097.jpg",
+    "instructions": [
+      "Roast sliced eggplant.",
+      "Simmer lamb with tomato, then layer with eggplant.",
+      "Top with yogurt and parmesan, bake 25 minutes."
+    ]
+  },
+  {
+    "id": "lamb-souvlaki",
+    "title": "Lamb Souvlaki",
+    "cuisine": "mediterranean",
+    "slots": ["dinner"],
+    "dietaryTags": ["gluten_free", "high_protein", "dairy_free"],
+    "servings": 1,
+    "prepTimeMinutes": 30,
+    "ingredients": [
+      { "name": "lamb", "quantity": 6, "unit": "oz" },
+      { "name": "lemon", "quantity": 0.5, "unit": "each" },
+      { "name": "garlic", "quantity": 2, "unit": "clove" },
+      { "name": "olive oil", "quantity": 1, "unit": "tbsp" },
+      { "name": "cooked rice", "quantity": 0.5, "unit": "cup" }
+    ],
+    "nutritionPerServing": { "calories": 540, "proteinG": 40, "carbsG": 32, "fatG": 28 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/rjhf741585564676.jpg",
+    "instructions": [
+      "Marinate lamb in lemon, garlic and olive oil.",
+      "Thread onto skewers and grill.",
+      "Serve with rice."
+    ]
+  },
+  {
+    "id": "spanish-tortilla",
+    "title": "Spanish Tortilla",
+    "cuisine": "mediterranean",
+    "slots": ["breakfast"],
+    "dietaryTags": ["vegetarian", "gluten_free", "pescatarian"],
+    "servings": 1,
+    "prepTimeMinutes": 30,
+    "ingredients": [
+      { "name": "egg", "quantity": 3, "unit": "each" },
+      { "name": "potato", "quantity": 1, "unit": "each" },
+      { "name": "onion", "quantity": 0.25, "unit": "each" },
+      { "name": "olive oil", "quantity": 1, "unit": "tbsp" }
+    ],
+    "nutritionPerServing": { "calories": 380, "proteinG": 19, "carbsG": 30, "fatG": 21 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/quuxsx1511476154.jpg",
+    "instructions": [
+      "Soften sliced potato and onion in olive oil.",
+      "Stir into beaten eggs and pour back into the pan.",
+      "Cook gently, flipping once, until set."
+    ]
+  },
+  {
+    "id": "seafood-paella",
+    "title": "Seafood Paella",
+    "cuisine": "mediterranean",
+    "slots": ["dinner"],
+    "dietaryTags": ["pescatarian", "gluten_free", "dairy_free"],
+    "servings": 1,
+    "prepTimeMinutes": 40,
+    "ingredients": [
+      { "name": "rice", "quantity": 0.75, "unit": "cup" },
+      { "name": "shrimp", "quantity": 4, "unit": "oz" },
+      { "name": "peas", "quantity": 0.5, "unit": "cup" },
+      { "name": "bell pepper", "quantity": 0.5, "unit": "each" },
+      { "name": "vegetable broth", "quantity": 8, "unit": "fl_oz" }
+    ],
+    "nutritionPerServing": { "calories": 560, "proteinG": 32, "carbsG": 82, "fatG": 10 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/9bl20p1763248192.jpg",
+    "instructions": [
+      "Toast rice with pepper, then add broth.",
+      "Simmer until nearly absorbed.",
+      "Nestle in shrimp and peas, cook until done."
+    ]
+  },
+  {
+    "id": "lamb-tagine",
+    "title": "Moroccan Lamb Tagine",
+    "cuisine": "middle_eastern",
+    "slots": ["dinner"],
+    "dietaryTags": ["gluten_free", "dairy_free", "high_protein"],
+    "servings": 1,
+    "prepTimeMinutes": 60,
+    "ingredients": [
+      { "name": "lamb", "quantity": 6, "unit": "oz" },
+      { "name": "chickpeas", "quantity": 0.5, "unit": "cup" },
+      { "name": "apricot", "quantity": 0.25, "unit": "cup" },
+      { "name": "onion", "quantity": 0.5, "unit": "each" },
+      { "name": "cumin", "quantity": 1, "unit": "tsp" }
+    ],
+    "nutritionPerServing": { "calories": 600, "proteinG": 38, "carbsG": 48, "fatG": 28 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/yuwtuu1511295751.jpg",
+    "instructions": [
+      "Brown lamb with onion and cumin.",
+      "Add chickpeas and apricots with a little water.",
+      "Cover and simmer until the lamb is tender."
+    ]
+  },
+  {
+    "id": "chicken-couscous",
+    "title": "Chicken Couscous",
+    "cuisine": "middle_eastern",
+    "slots": ["lunch", "dinner"],
+    "dietaryTags": ["dairy_free", "high_protein"],
+    "servings": 1,
+    "prepTimeMinutes": 30,
+    "ingredients": [
+      { "name": "chicken thigh", "quantity": 5, "unit": "oz" },
+      { "name": "couscous", "quantity": 0.5, "unit": "cup" },
+      { "name": "carrot", "quantity": 1, "unit": "each" },
+      { "name": "chickpeas", "quantity": 0.5, "unit": "cup" },
+      { "name": "cumin", "quantity": 1, "unit": "tsp" }
+    ],
+    "nutritionPerServing": { "calories": 580, "proteinG": 38, "carbsG": 68, "fatG": 16 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/qxytrx1511304021.jpg",
+    "instructions": [
+      "Brown chicken with cumin and carrot.",
+      "Add chickpeas and a splash of water.",
+      "Serve over steamed couscous."
+    ]
+  },
+  {
+    "id": "chicken-shawarma-bowl",
+    "title": "Chicken Shawarma Bowl",
+    "cuisine": "middle_eastern",
+    "slots": ["lunch", "dinner"],
+    "dietaryTags": ["gluten_free", "high_protein"],
+    "servings": 1,
+    "prepTimeMinutes": 30,
+    "ingredients": [
+      { "name": "chicken thigh", "quantity": 6, "unit": "oz" },
+      { "name": "cooked rice", "quantity": 0.75, "unit": "cup" },
+      { "name": "cucumber", "quantity": 0.5, "unit": "each" },
+      { "name": "greek yogurt", "quantity": 0.25, "unit": "cup" },
+      { "name": "garlic", "quantity": 1, "unit": "clove" }
+    ],
+    "nutritionPerServing": { "calories": 580, "proteinG": 42, "carbsG": 48, "fatG": 22 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/hcg6l91763596970.jpg",
+    "instructions": [
+      "Season and roast the chicken, then slice.",
+      "Whisk garlic into the yogurt for a sauce.",
+      "Build a bowl with rice, chicken, cucumber and yogurt."
+    ]
+  },
+  {
+    "id": "koshari",
+    "title": "Koshari",
+    "cuisine": "middle_eastern",
+    "slots": ["lunch", "dinner"],
+    "dietaryTags": ["vegan", "vegetarian", "dairy_free", "pescatarian"],
+    "servings": 1,
+    "prepTimeMinutes": 35,
+    "ingredients": [
+      { "name": "rice", "quantity": 0.5, "unit": "cup" },
+      { "name": "lentils", "quantity": 0.33, "unit": "cup" },
+      { "name": "pasta", "quantity": 1, "unit": "oz" },
+      { "name": "chickpeas", "quantity": 0.33, "unit": "cup" },
+      { "name": "tomato sauce", "quantity": 0.5, "unit": "cup" }
+    ],
+    "nutritionPerServing": { "calories": 520, "proteinG": 19, "carbsG": 98, "fatG": 5 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/4er7mj1598733193.jpg",
+    "instructions": [
+      "Cook rice, lentils and pasta separately.",
+      "Combine with chickpeas.",
+      "Top with a spiced tomato sauce and fried onions."
+    ]
+  },
+  {
+    "id": "baba-ganoush",
+    "title": "Baba Ganoush & Pita",
+    "cuisine": "middle_eastern",
+    "slots": ["snack"],
+    "dietaryTags": ["vegan", "vegetarian", "dairy_free", "pescatarian"],
+    "servings": 1,
+    "prepTimeMinutes": 20,
+    "ingredients": [
+      { "name": "eggplant", "quantity": 1, "unit": "each" },
+      { "name": "tahini", "quantity": 1, "unit": "tbsp" },
+      { "name": "lemon", "quantity": 0.5, "unit": "each" },
+      { "name": "pita bread", "quantity": 1, "unit": "each" }
+    ],
+    "nutritionPerServing": { "calories": 280, "proteinG": 8, "carbsG": 42, "fatG": 11 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/8c8m4q1763791156.jpg",
+    "instructions": [
+      "Roast eggplant until collapsed, then scoop the flesh.",
+      "Mash with tahini and lemon juice.",
+      "Serve with warm pita."
+    ]
+  },
+  {
+    "id": "bbq-chicken-skewers",
+    "title": "BBQ Chicken Skewers",
+    "cuisine": "bbq",
+    "slots": ["lunch", "dinner"],
+    "dietaryTags": ["gluten_free", "high_protein", "dairy_free"],
+    "servings": 1,
+    "prepTimeMinutes": 25,
+    "ingredients": [
+      { "name": "chicken breast", "quantity": 6, "unit": "oz" },
+      { "name": "bbq sauce", "quantity": 3, "unit": "tbsp" },
+      { "name": "bell pepper", "quantity": 0.5, "unit": "each" },
+      { "name": "corn", "quantity": 1, "unit": "each" }
+    ],
+    "nutritionPerServing": { "calories": 480, "proteinG": 44, "carbsG": 40, "fatG": 14 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/3um6il1763794322.jpg",
+    "instructions": [
+      "Thread chicken and pepper onto skewers.",
+      "Grill, basting with bbq sauce.",
+      "Serve with grilled corn."
+    ]
+  },
+  {
+    "id": "beef-brisket-plate",
+    "title": "Smoked Beef Brisket Plate",
+    "cuisine": "bbq",
+    "slots": ["dinner"],
+    "dietaryTags": ["gluten_free", "high_protein", "dairy_free"],
+    "servings": 1,
+    "prepTimeMinutes": 30,
+    "ingredients": [
+      { "name": "beef brisket", "quantity": 6, "unit": "oz" },
+      { "name": "bbq sauce", "quantity": 2, "unit": "tbsp" },
+      { "name": "coleslaw mix", "quantity": 1, "unit": "cup" },
+      { "name": "sweet potato", "quantity": 1, "unit": "each" }
+    ],
+    "nutritionPerServing": { "calories": 620, "proteinG": 42, "carbsG": 44, "fatG": 30 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/ursuup1487348423.jpg",
+    "instructions": [
+      "Slice the smoked brisket and brush with bbq sauce.",
+      "Roast the sweet potato.",
+      "Plate with slaw."
+    ]
+  },
+  {
+    "id": "bbq-chicken-burger",
+    "title": "BBQ Chicken Burger",
+    "cuisine": "bbq",
+    "slots": ["lunch", "dinner"],
+    "dietaryTags": ["high_protein"],
+    "servings": 1,
+    "prepTimeMinutes": 20,
+    "ingredients": [
+      { "name": "chicken breast", "quantity": 5, "unit": "oz" },
+      { "name": "hamburger bun", "quantity": 1, "unit": "each" },
+      { "name": "bbq sauce", "quantity": 2, "unit": "tbsp" },
+      { "name": "cheddar cheese", "quantity": 1, "unit": "oz" },
+      { "name": "lettuce", "quantity": 1, "unit": "cup" }
+    ],
+    "nutritionPerServing": { "calories": 560, "proteinG": 44, "carbsG": 44, "fatG": 22 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/vdwloy1713225718.jpg",
+    "instructions": [
+      "Grill the chicken and glaze with bbq sauce.",
+      "Melt cheddar over the top.",
+      "Build the burger with lettuce on a toasted bun."
+    ]
+  },
+  {
+    "id": "baked-salmon-fennel",
+    "title": "Baked Salmon with Fennel",
+    "cuisine": "seafood",
+    "slots": ["dinner"],
+    "dietaryTags": ["pescatarian", "gluten_free", "dairy_free", "low_carb", "high_protein"],
+    "servings": 1,
+    "prepTimeMinutes": 30,
+    "ingredients": [
+      { "name": "salmon", "quantity": 6, "unit": "oz" },
+      { "name": "fennel", "quantity": 1, "unit": "cup" },
+      { "name": "cherry tomatoes", "quantity": 0.5, "unit": "cup" },
+      { "name": "olive oil", "quantity": 1, "unit": "tbsp" },
+      { "name": "lemon", "quantity": 0.5, "unit": "each" }
+    ],
+    "nutritionPerServing": { "calories": 440, "proteinG": 38, "carbsG": 12, "fatG": 27 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/1548772327.jpg",
+    "instructions": [
+      "Toss fennel and tomatoes with olive oil on a tray.",
+      "Lay salmon on top and squeeze over lemon.",
+      "Bake at 400F for 18 minutes."
+    ]
+  },
+  {
+    "id": "garlic-butter-shrimp",
+    "title": "Garlic Butter Shrimp",
+    "cuisine": "seafood",
+    "slots": ["lunch", "dinner"],
+    "dietaryTags": ["pescatarian", "gluten_free", "low_carb", "high_protein"],
+    "servings": 1,
+    "prepTimeMinutes": 15,
+    "ingredients": [
+      { "name": "shrimp", "quantity": 7, "unit": "oz" },
+      { "name": "butter", "quantity": 1, "unit": "tbsp" },
+      { "name": "garlic", "quantity": 3, "unit": "clove" },
+      { "name": "parsley", "quantity": 2, "unit": "tbsp" },
+      { "name": "lemon", "quantity": 0.5, "unit": "each" }
+    ],
+    "nutritionPerServing": { "calories": 320, "proteinG": 40, "carbsG": 6, "fatG": 15 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/ze8uwg1763196123.jpg",
+    "instructions": [
+      "Melt butter and saute garlic.",
+      "Add shrimp and cook until pink.",
+      "Finish with lemon and parsley."
+    ]
+  },
+  {
+    "id": "tuna-nicoise-salad",
+    "title": "Tuna Nicoise Salad",
+    "cuisine": "seafood",
+    "slots": ["lunch"],
+    "dietaryTags": ["pescatarian", "gluten_free", "dairy_free", "high_protein"],
+    "servings": 1,
+    "prepTimeMinutes": 20,
+    "ingredients": [
+      { "name": "tuna", "quantity": 5, "unit": "oz" },
+      { "name": "egg", "quantity": 1, "unit": "each" },
+      { "name": "green beans", "quantity": 0.5, "unit": "cup" },
+      { "name": "potato", "quantity": 1, "unit": "each" },
+      { "name": "olives", "quantity": 0.25, "unit": "cup" }
+    ],
+    "nutritionPerServing": { "calories": 460, "proteinG": 40, "carbsG": 32, "fatG": 18 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/yypwwq1511304979.jpg",
+    "instructions": [
+      "Boil potato, green beans and the egg.",
+      "Arrange over greens with flaked tuna and olives.",
+      "Dress with olive oil and lemon."
+    ]
+  },
+  {
+    "id": "salmon-avocado-salad",
+    "title": "Salmon Avocado Salad",
+    "cuisine": "seafood",
+    "slots": ["lunch"],
+    "dietaryTags": ["pescatarian", "gluten_free", "dairy_free", "low_carb", "high_protein"],
+    "servings": 1,
+    "prepTimeMinutes": 15,
+    "ingredients": [
+      { "name": "salmon", "quantity": 5, "unit": "oz" },
+      { "name": "avocado", "quantity": 0.5, "unit": "each" },
+      { "name": "spinach", "quantity": 2, "unit": "cup" },
+      { "name": "cherry tomatoes", "quantity": 0.5, "unit": "cup" },
+      { "name": "olive oil", "quantity": 1, "unit": "tbsp" }
+    ],
+    "nutritionPerServing": { "calories": 480, "proteinG": 36, "carbsG": 12, "fatG": 32 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/1549542994.jpg",
+    "instructions": [
+      "Pan-sear or flake cooked salmon.",
+      "Toss spinach, tomatoes and avocado.",
+      "Top with salmon and a drizzle of olive oil."
+    ]
+  },
+  {
+    "id": "creamy-fish-pie",
+    "title": "Creamy Fish Pie",
+    "cuisine": "seafood",
+    "slots": ["dinner"],
+    "dietaryTags": ["pescatarian", "high_protein"],
+    "servings": 1,
+    "prepTimeMinutes": 45,
+    "ingredients": [
+      { "name": "cod", "quantity": 5, "unit": "oz" },
+      { "name": "potato", "quantity": 2, "unit": "each" },
+      { "name": "milk", "quantity": 0.5, "unit": "cup" },
+      { "name": "peas", "quantity": 0.5, "unit": "cup" },
+      { "name": "butter", "quantity": 1, "unit": "tbsp" }
+    ],
+    "nutritionPerServing": { "calories": 560, "proteinG": 40, "carbsG": 58, "fatG": 18 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/ysxwuq1487323065.jpg",
+    "instructions": [
+      "Poach cod in milk, then make a simple sauce.",
+      "Fold in peas and top with mashed potato.",
+      "Bake at 400F for 25 minutes."
+    ]
+  },
+  {
+    "id": "szechuan-beef",
+    "title": "Szechuan Beef",
+    "cuisine": "spicy",
+    "slots": ["lunch", "dinner"],
+    "dietaryTags": ["dairy_free", "high_protein"],
+    "servings": 1,
+    "prepTimeMinutes": 25,
+    "ingredients": [
+      { "name": "sirloin steak", "quantity": 5, "unit": "oz" },
+      { "name": "bell pepper", "quantity": 0.5, "unit": "each" },
+      { "name": "cooked rice", "quantity": 0.75, "unit": "cup" },
+      { "name": "chili powder", "quantity": 1, "unit": "tsp" },
+      { "name": "soy sauce", "quantity": 2, "unit": "tbsp" }
+    ],
+    "nutritionPerServing": { "calories": 560, "proteinG": 38, "carbsG": 52, "fatG": 20 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/1529443236.jpg",
+    "instructions": [
+      "Sear sliced beef over high heat.",
+      "Add pepper, chili and soy sauce.",
+      "Toss and serve over rice."
+    ]
+  },
+  {
+    "id": "sichuan-eggplant",
+    "title": "Sichuan Eggplant",
+    "cuisine": "spicy",
+    "slots": ["lunch", "dinner"],
+    "dietaryTags": ["vegan", "vegetarian", "dairy_free", "pescatarian"],
+    "servings": 1,
+    "prepTimeMinutes": 25,
+    "ingredients": [
+      { "name": "eggplant", "quantity": 1, "unit": "each" },
+      { "name": "cooked rice", "quantity": 0.75, "unit": "cup" },
+      { "name": "garlic", "quantity": 2, "unit": "clove" },
+      { "name": "soy sauce", "quantity": 2, "unit": "tbsp" },
+      { "name": "chili powder", "quantity": 1, "unit": "tsp" }
+    ],
+    "nutritionPerServing": { "calories": 420, "proteinG": 9, "carbsG": 76, "fatG": 10 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/1oz4nb1765687990.jpg",
+    "instructions": [
+      "Cube and roast the eggplant until soft.",
+      "Stir-fry with garlic, soy sauce and chili.",
+      "Serve over rice."
+    ]
+  },
+  {
+    "id": "jerk-chicken-rice",
+    "title": "Jerk Chicken with Rice & Peas",
+    "cuisine": "spicy",
+    "slots": ["lunch", "dinner"],
+    "dietaryTags": ["gluten_free", "dairy_free", "high_protein"],
+    "servings": 1,
+    "prepTimeMinutes": 35,
+    "ingredients": [
+      { "name": "chicken thigh", "quantity": 6, "unit": "oz" },
+      { "name": "rice", "quantity": 0.5, "unit": "cup" },
+      { "name": "kidney beans", "quantity": 0.5, "unit": "cup" },
+      { "name": "jerk seasoning", "quantity": 1, "unit": "tbsp" },
+      { "name": "coconut milk", "quantity": 0.25, "unit": "cup" }
+    ],
+    "nutritionPerServing": { "calories": 620, "proteinG": 40, "carbsG": 64, "fatG": 22 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/tytyxu1515363282.jpg",
+    "instructions": [
+      "Rub chicken with jerk seasoning and roast.",
+      "Cook rice with kidney beans and coconut milk.",
+      "Serve the chicken over the rice and peas."
+    ]
+  },
+  {
+    "id": "spicy-shrimp-noodles",
+    "title": "Spicy Thai Shrimp Noodles",
+    "cuisine": "spicy",
+    "slots": ["lunch", "dinner"],
+    "dietaryTags": ["pescatarian", "dairy_free"],
+    "servings": 1,
+    "prepTimeMinutes": 20,
+    "ingredients": [
+      { "name": "rice noodles", "quantity": 3, "unit": "oz" },
+      { "name": "shrimp", "quantity": 5, "unit": "oz" },
+      { "name": "bell pepper", "quantity": 0.5, "unit": "each" },
+      { "name": "sriracha", "quantity": 1, "unit": "tbsp" },
+      { "name": "soy sauce", "quantity": 1.5, "unit": "tbsp" }
+    ],
+    "nutritionPerServing": { "calories": 520, "proteinG": 32, "carbsG": 66, "fatG": 12 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/568t931763584227.jpg",
+    "instructions": [
+      "Soak the rice noodles until pliable.",
+      "Stir-fry shrimp and pepper, add sriracha and soy.",
+      "Toss with the noodles."
+    ]
+  },
+  {
+    "id": "buttermilk-pancakes",
+    "title": "Buttermilk Pancakes",
+    "cuisine": "american",
+    "slots": ["breakfast"],
+    "dietaryTags": ["vegetarian"],
+    "servings": 1,
+    "prepTimeMinutes": 15,
+    "ingredients": [
+      { "name": "flour", "quantity": 0.75, "unit": "cup" },
+      { "name": "buttermilk", "quantity": 0.5, "unit": "cup" },
+      { "name": "egg", "quantity": 1, "unit": "each" },
+      { "name": "maple syrup", "quantity": 1, "unit": "tbsp" },
+      { "name": "baking powder", "quantity": 1, "unit": "tsp" }
+    ],
+    "nutritionPerServing": { "calories": 430, "proteinG": 14, "carbsG": 72, "fatG": 9 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/rwuyqx1511383174.jpg",
+    "instructions": [
+      "Whisk flour and baking powder with buttermilk and egg.",
+      "Cook ladles of batter on a greased griddle.",
+      "Flip once and serve with maple syrup."
+    ]
+  },
+  {
+    "id": "classic-cheeseburger",
+    "title": "Classic Cheeseburger",
+    "cuisine": "american",
+    "slots": ["lunch", "dinner"],
+    "dietaryTags": ["high_protein"],
+    "servings": 1,
+    "prepTimeMinutes": 20,
+    "ingredients": [
+      { "name": "ground beef", "quantity": 5, "unit": "oz" },
+      { "name": "hamburger bun", "quantity": 1, "unit": "each" },
+      { "name": "cheddar cheese", "quantity": 1, "unit": "oz" },
+      { "name": "lettuce", "quantity": 0.5, "unit": "cup" },
+      { "name": "tomato", "quantity": 0.5, "unit": "each" }
+    ],
+    "nutritionPerServing": { "calories": 600, "proteinG": 38, "carbsG": 34, "fatG": 34 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/44bzep1761848278.jpg",
+    "instructions": [
+      "Form and sear a beef patty.",
+      "Melt cheddar over the top.",
+      "Build the burger with lettuce and tomato on a toasted bun."
+    ]
   }
 ]
