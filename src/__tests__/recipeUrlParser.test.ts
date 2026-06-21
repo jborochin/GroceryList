@@ -11,10 +11,12 @@ import {
   parseInstructions,
   parseNutrition,
   parseRecipeFromUrl,
+  reconcileNutritionBasis,
   RecipeParseError,
   sanitizeImageUrl,
   scrapeNutritionFromHtml,
 } from '../utils/recipeUrlParser';
+import type { NutritionEstimate } from '../utils/computeNutrition';
 
 describe('recipeUrlParser (pure helpers)', () => {
   it('extracts JSON-LD blocks', () => {
@@ -403,6 +405,77 @@ describe('scrapeNutritionFromHtml', () => {
       carbsG: 29,
       fatG: 29,
     });
+  });
+});
+
+describe('reconcileNutritionBasis', () => {
+  // delish "Steak Fajita Power Bowls": JSON-LD nutrition is a whole-recipe TOTAL.
+  const fajitaEstimate: NutritionEstimate = {
+    perRecipe: { calories: 3941, proteinG: 212, carbsG: 381, fatG: 210 },
+    perServing: { calories: 985, proteinG: 53, carbsG: 95, fatG: 53 },
+  };
+  // delish "Tuscan Tortellini Salad": JSON-LD nutrition is already per serving.
+  const tortelliniEstimate: NutritionEstimate = {
+    perRecipe: { calories: 3351, proteinG: 143, carbsG: 261, fatG: 203 },
+    perServing: { calories: 558, proteinG: 24, carbsG: 44, fatG: 34 },
+  };
+
+  it('divides a whole-recipe total by servings (fajita case)', () => {
+    const site = { calories: 3259, proteinG: 164, carbsG: 310, fatG: 130 };
+    expect(reconcileNutritionBasis(site, 4, fajitaEstimate)).toEqual({
+      calories: 815, // 3259/4 = 814.75 → 815
+      proteinG: 41,
+      carbsG: 77.5,
+      fatG: 32.5,
+    });
+  });
+
+  it('leaves already-per-serving nutrition unchanged (tortellini case)', () => {
+    const site = { calories: 497, proteinG: 21, carbsG: 39, fatG: 28 };
+    expect(reconcileNutritionBasis(site, 6, tortelliniEstimate)).toEqual(site);
+  });
+
+  it('divides an implausibly-high total even with NO estimate (plausibility prior)', () => {
+    // 3259 cal/serving is physiologically implausible; 815 is sane → divide.
+    const site = { calories: 3259, proteinG: 164, carbsG: 310, fatG: 130 };
+    expect(reconcileNutritionBasis(site, 4, null)).toEqual({
+      calories: 815,
+      proteinG: 41,
+      carbsG: 77.5,
+      fatG: 32.5,
+    });
+  });
+
+  it('keeps a plausible per-serving value with no estimate (does not over-divide)', () => {
+    // 497 is a fine per serving and 497/6≈83 is also plausible → ambiguous, no
+    // estimate → default to per serving (schema.org contract).
+    const site = { calories: 497, proteinG: 21, carbsG: 39, fatG: 28 };
+    expect(reconcileNutritionBasis(site, 6, null)).toEqual(site);
+  });
+
+  it('uses the estimate to break an ambiguous tie toward total', () => {
+    // 900 is plausible kept AND divided (900/3=300). A high estimate says total.
+    const site = { calories: 900, proteinG: 60, carbsG: 90, fatG: 30 };
+    const highEstimate: NutritionEstimate = {
+      perRecipe: { calories: 950, proteinG: 63, carbsG: 95, fatG: 32 },
+      perServing: { calories: 317, proteinG: 21, carbsG: 32, fatG: 11 },
+    };
+    expect(reconcileNutritionBasis(site, 3, highEstimate)).toEqual({
+      calories: 300,
+      proteinG: 20,
+      carbsG: 30,
+      fatG: 10,
+    });
+  });
+
+  it('does not divide when servings is 1 (total == per serving)', () => {
+    const site = { calories: 800, proteinG: 40, carbsG: 80, fatG: 20 };
+    expect(reconcileNutritionBasis(site, 1, fajitaEstimate)).toEqual(site);
+  });
+
+  it('returns the input unchanged without a usable calorie anchor', () => {
+    const site = { proteinG: 164, carbsG: 310, fatG: 130 };
+    expect(reconcileNutritionBasis(site, 4, fajitaEstimate)).toEqual(site);
   });
 });
 

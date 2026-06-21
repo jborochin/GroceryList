@@ -68,12 +68,20 @@ Five JSON files in `src/data/` are hot-pathed by utilities:
 - `priceDatabase.json` — ~100 US prices, `name → { pricePerUnit, unit }` (consumed by `priceEstimator`)
 - `mealCatalog.json` — ~88 shared meals driving auto meal-plans (`mealPlanner`); bundled offline source of truth, mirrored to `public.meals`
 - `foodPreferences.json` — canonical cuisine + dietary keys (the only valid values for a meal's `cuisine` / `dietaryTags`)
+- `ingredientDensities.json` — `normalizeName → { gPerMl?, gramsEach? }`, fills quantity→gram gaps the USDA engine can't (consumed by `nutritionEstimator`)
+- `usdaOverrides.json` — `normalizeName → fdcId`, pins fuzzy USDA matches (consumed by the `usda-nutrition` edge function; **keep its inline `OVERRIDES` copy in sync** since Deno can't import `src/`)
 
 When adding keywords/prices, use canonical units from `unitSynonyms.json`. Category keys are sorted by length at module init so `"chicken broth" → Pantry` correctly beats `"chicken" → Protein`.
 
 ### URL recipe import
 
 `src/utils/recipeUrlParser.ts` fetches a page, regex-extracts every `<script type="application/ld+json">` block, and walks nested `@graph` / array structures looking for `@type` containing `"Recipe"`. It throws `RecipeParseError` with `kind: 'network' | 'not-found' | 'malformed'` — `AddRecipeScreen` differentiates these in its error UI and falls back to the manual-entry tab with the URL prefilled. Sites without JSON-LD or behind bot-protection will fail by design; the fallback path is the happy path for those.
+
+### Nutrition: basis correction + the estimation engine
+
+**Load-bearing gotcha:** schema.org says `NutritionInformation` is *per serving*, but many sites (delish/Hearst) publish whole-recipe **TOTALS** — storing those verbatim inflated everything by the servings multiple (~4×). `reconcileNutritionBasis()` in `recipeUrlParser.ts` normalizes site nutrition to per serving: it picks the basis whose per-serving calories is physiologically plausible (40–1500 cal); when both/neither is plausible it defers to an independent estimate's recipe-total-vs-per-serving calories (calories anchor the decision, applied to all four macros). The **stored** value is always the site's own numbers, just basis-corrected — so it tracks the published figure within rounding.
+
+The independent estimate comes from `estimateNutrition()` in `computeNutrition.ts` (returns `{perRecipe, perServing}`). It prefers the **USDA FoodData Central** engine (`usda-nutrition` edge function → per-100g macros + household-measure portions; needs a `FDC_API_KEY` secret) and falls back to the legacy CalorieNinjas `compute-nutrition` function. The gram math is the pure, testable `nutritionEstimator.ts` (weight via `convert()`; volume/count via USDA portions then `ingredientDensities.json`; **skips no-quantity/garnish lines** so they don't get default portions). USDA payload→macros mapping lives in `usdaMapping.ts` (mirrored inline in the edge function, which can't import from `src/`); `usdaOverrides.json` pins common foods to specific `fdcId`s. Validate end-to-end with `npm run validate:nutrition` (`scripts/validateNutrition.ts` — fact-checks delish recipes; `--engine usda` needs the key).
 
 ### Navigation topology
 

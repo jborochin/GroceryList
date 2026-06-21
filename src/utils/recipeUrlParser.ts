@@ -1,6 +1,6 @@
 import { Ingredient, NutritionPerServing, Recipe } from '../types';
 import { parseIngredient } from './ingredientParser';
-import { computeMissingMacros } from './computeNutrition';
+import { estimateNutrition, NutritionEstimate } from './computeNutrition';
 
 function isWebRuntime(): boolean {
   return typeof document !== 'undefined' && typeof window !== 'undefined';
@@ -58,43 +58,142 @@ export async function parseRecipeFromUrl(url: string): Promise<ParsedRecipe> {
   if (!parsed.imageUrl) {
     parsed.imageUrl = sanitizeImageUrl(extractOgImageFromHtml(html));
   }
-  if (missing.length === 0) return parsed;
+
+  // Collect the macros the page itself provides. Tier 1: JSON-LD (parsed.nutritionPerServing
+  // holds 0 for any absent key, so trust only the keys NOT in `missing`).
+  const sitePartial: Partial<NutritionPerServing> = {};
+  const provided = new Set<keyof NutritionPerServing>();
+  for (const key of ALL_MACRO_KEYS) {
+    if (!missing.includes(key) && parsed.nutritionPerServing) {
+      sitePartial[key] = parsed.nutritionPerServing[key];
+      provided.add(key);
+    }
+  }
 
   // Tier 2: HTML scrape — authoritative since values come from the source page.
-  const scraped = scrapeNutritionFromHtml(html);
-  let mergedParsed: ParsedRecipe = parsed;
-  const filled: Array<keyof NutritionPerServing> = [];
-  for (const key of missing) {
-    if (typeof scraped[key] === 'number') filled.push(key);
+  if (missing.length > 0) {
+    const scraped = scrapeNutritionFromHtml(html);
+    for (const key of missing) {
+      if (typeof scraped[key] === 'number') {
+        sitePartial[key] = scraped[key]!;
+        provided.add(key);
+      }
+    }
   }
-  if (filled.length > 0) {
-    const base: NutritionPerServing = parsed.nutritionPerServing ?? {
-      calories: 0,
-      proteinG: 0,
-      carbsG: 0,
-      fatG: 0,
-    };
-    const merged: NutritionPerServing = { ...base };
-    for (const key of filled) merged[key] = scraped[key]!;
-    mergedParsed = { ...parsed, nutritionPerServing: merged };
-  }
-  const stillMissing = missing.filter((k) => !filled.includes(k));
-  if (stillMissing.length === 0 || ingredientStrings.length === 0) return mergedParsed;
+  const stillMissing = ALL_MACRO_KEYS.filter((k) => !provided.has(k));
 
-  // Tier 3: CalorieNinjas — estimated values, flagged for the badge.
-  const computed = await computeMissingMacros(ingredientStrings, mergedParsed.servings, stillMissing);
-  if (!computed) return mergedParsed;
-  const finalBase: NutritionPerServing = mergedParsed.nutritionPerServing ?? {
-    calories: 0,
-    proteinG: 0,
-    carbsG: 0,
-    fatG: 0,
-  };
+  // Independent estimate (USDA → CalorieNinjas). Used to (a) detect whether the
+  // site's published nutrition is a whole-recipe total or already per serving, and
+  // (b) fill any macros the page never provided. delish, for instance, publishes
+  // recipe TOTALS in JSON-LD — treating those as per serving inflated everything ~4×.
+  const estimate = ingredientStrings.length
+    ? await estimateNutrition(ingredientStrings, parsed.servings)
+    : null;
+
+  // Basis-correct the site-provided macros to per serving.
+  const corrected = reconcileNutritionBasis(sitePartial, parsed.servings, estimate);
+
+  // Tier 3: fill macros the page never gave us from the estimate (flagged for the badge).
+  const finalNutrition: Partial<NutritionPerServing> = { ...corrected };
+  const estimatedMacros: Array<keyof NutritionPerServing> = [];
+  if (estimate) {
+    for (const key of stillMissing) {
+      const v = estimate.perServing[key];
+      if (typeof v === 'number' && Number.isFinite(v)) {
+        finalNutrition[key] = v;
+        estimatedMacros.push(key);
+      }
+    }
+  }
+
+  const haveAny = ALL_MACRO_KEYS.some((k) => typeof finalNutrition[k] === 'number');
+  const nutritionPerServing: NutritionPerServing | undefined = haveAny
+    ? {
+        calories: finalNutrition.calories ?? 0,
+        proteinG: finalNutrition.proteinG ?? 0,
+        carbsG: finalNutrition.carbsG ?? 0,
+        fatG: finalNutrition.fatG ?? 0,
+      }
+    : undefined;
+
   return {
-    ...mergedParsed,
-    nutritionPerServing: { ...finalBase, ...computed },
-    estimatedMacros: Object.keys(computed) as Array<keyof NutritionPerServing>,
+    ...parsed,
+    nutritionPerServing,
+    estimatedMacros: estimatedMacros.length > 0 ? estimatedMacros : undefined,
   };
+}
+
+function roundMacro(key: keyof NutritionPerServing, value: number): number {
+  return key === 'calories' ? Math.round(value) : Math.round(value * 10) / 10;
+}
+
+// A single recipe serving almost always lands in this calorie band. Used as an
+// engine-independent prior: a "per-serving" value of 3259 cal (delish's fajita
+// TOTAL) is obviously not per serving, while dividing it yields a plausible 815.
+const MIN_PLAUSIBLE_SERVING_CALORIES = 40;
+const MAX_PLAUSIBLE_SERVING_CALORIES = 1500;
+
+function isPlausibleServingCalories(cal: number): boolean {
+  return cal >= MIN_PLAUSIBLE_SERVING_CALORIES && cal <= MAX_PLAUSIBLE_SERVING_CALORIES;
+}
+
+/**
+ * Normalize site-published nutrition to per serving.
+ *
+ * Schema.org says NutritionInformation is per serving, but many sites (delish and
+ * other Hearst properties) publish whole-recipe TOTALS — treating those as per
+ * serving inflated everything by the servings multiple (~4×). We decide the basis
+ * from the site's calories two ways, in order:
+ *
+ *   1. Plausibility: if exactly one of {keep as-is, divide by servings} lands in a
+ *      sane per-serving calorie band, choose it. This catches the obvious cases
+ *      (3259 → 815) without relying on a network estimate.
+ *   2. Otherwise (both or neither plausible — genuinely ambiguous) defer to the
+ *      independent estimate: pick whichever basis the estimate's recipe-total vs
+ *      per-serving calories is closer to (log distance). With no estimate, default
+ *      to "already per serving" (the schema.org contract).
+ *
+ * Calories anchor the decision; the SAME basis is applied to every macro. Returns
+ * the input unchanged for a single serving or with no usable calorie anchor.
+ */
+export function reconcileNutritionBasis(
+  site: Partial<NutritionPerServing>,
+  servings: number,
+  estimate: NutritionEstimate | null,
+): Partial<NutritionPerServing> {
+  const s = Math.max(1, Math.round(servings));
+  if (s <= 1) return site;
+
+  const siteCal = site.calories;
+  if (typeof siteCal !== 'number' || siteCal <= 0) return site;
+
+  const keepPlausible = isPlausibleServingCalories(siteCal);
+  const dividePlausible = isPlausibleServingCalories(siteCal / s);
+
+  let divide: boolean;
+  if (keepPlausible !== dividePlausible) {
+    // Exactly one basis is plausible — trust the plausibility prior.
+    divide = dividePlausible;
+  } else {
+    // Ambiguous — defer to the independent estimate when it's usable.
+    const totalCal = estimate?.perRecipe.calories ?? 0;
+    const servCal = estimate?.perServing.calories ?? 0;
+    if (totalCal > 0 && servCal > 0) {
+      const distTotal = Math.abs(Math.log(siteCal / totalCal));
+      const distServing = Math.abs(Math.log(siteCal / servCal));
+      divide = distTotal < distServing;
+    } else {
+      divide = false; // no signal → assume per serving
+    }
+  }
+
+  if (!divide) return site;
+  const out: Partial<NutritionPerServing> = {};
+  for (const key of ALL_MACRO_KEYS) {
+    const v = site[key];
+    if (typeof v === 'number') out[key] = roundMacro(key, v / s);
+  }
+  return out;
 }
 
 async function fetchHtml(url: string): Promise<string> {

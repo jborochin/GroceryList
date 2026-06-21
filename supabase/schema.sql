@@ -269,3 +269,16 @@ alter table public.meals enable row level security;
 
 drop policy if exists "meals_public_read" on public.meals;
 create policy "meals_public_read" on public.meals for select using (true);
+
+-- =====================================================================
+-- usda_cache — memoizes USDA FoodData Central lookups for the
+-- usda-nutrition edge function (service-role write only, no client access).
+-- =====================================================================
+create table if not exists public.usda_cache (
+  name text primary key,
+  payload jsonb not null,
+  fetched_at timestamptz not null default now()
+);
+
+alter table public.usda_cache enable row level security;
+-- No policies: only the edge function's service-role key can read/write.

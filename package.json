@@ -10,7 +10,8 @@
     "test": "jest",
     "typecheck": "tsc --noEmit",
     "import:mealdb": "tsx scripts/importMealDb.ts",
-    "seed:build": "tsx scripts/buildSeedMeals.ts"
+    "seed:build": "tsx scripts/buildSeedMeals.ts",
+    "validate:nutrition": "tsx scripts/validateNutrition.ts"
   },
   "dependencies": {
     "@expo-google-fonts/geist": "^0.4.1",
