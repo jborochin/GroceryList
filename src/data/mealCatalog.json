@@ -14,7 +14,15 @@
       { "name": "chia seeds", "quantity": 1, "unit": "tbsp" },
       { "name": "honey", "quantity": 1, "unit": "tsp" }
     ],
-    "nutritionPerServing": { "calories": 350, "proteinG": 12, "carbsG": 55, "fatG": 9 }
+    "nutritionPerServing": { "calories": 350, "proteinG": 12, "carbsG": 55, "fatG": 9 },
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fd/Protein_overnight_oats.jpg/960px-Protein_overnight_oats.jpg",
+    "instructions": [
+      "A creamy no-cook breakfast you stir together at night and eat cold in the morning.",
+      "In a jar or bowl, combine the rolled oats, chia seeds, milk, and honey, and stir well so the chia is evenly distributed and not clumping.",
+      "Cover and refrigerate at least 6 hours or overnight, until the oats are soft and the mixture has thickened to a spoonable pudding.",
+      "In the morning, stir, loosen with a splash of milk if too thick, and top with the blueberries.",
+      "Tip: Keeps in the fridge up to 4 days; add the berries just before eating so they stay fresh."
+    ]
   },
   {
     "id": "greek-yogurt-bowl",
@@ -30,7 +38,15 @@
       { "name": "strawberries", "quantity": 0.5, "unit": "cup" },
       { "name": "honey", "quantity": 1, "unit": "tsp" }
     ],
-    "nutritionPerServing": { "calories": 320, "proteinG": 24, "carbsG": 38, "fatG": 8 }
+    "nutritionPerServing": { "calories": 320, "proteinG": 24, "carbsG": 38, "fatG": 8 },
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/37/Granola_and_yogurt_-_Bubbles_%2B_Brunch_2018_-_Sarah_Stierch_02.jpg/960px-Granola_and_yogurt_-_Bubbles_%2B_Brunch_2018_-_Sarah_Stierch_02.jpg",
+    "instructions": [
+      "A protein-packed 5-minute breakfast bowl with crunchy granola and fresh fruit.",
+      "Hull and slice the strawberries.",
+      "Spoon the Greek yogurt into a bowl and smooth the top.",
+      "Scatter the granola and strawberries over the yogurt and drizzle with the honey.",
+      "Tip: Add the granola right before serving so it stays crunchy instead of going soft in the yogurt."
+    ]
   },
   {
     "id": "veggie-scramble",
@@ -47,7 +63,17 @@
       { "name": "cheddar cheese", "quantity": 1, "unit": "oz" },
       { "name": "olive oil", "quantity": 1, "unit": "tsp" }
     ],
-    "nutritionPerServing": { "calories": 300, "proteinG": 22, "carbsG": 8, "fatG": 20 }
+    "nutritionPerServing": { "calories": 300, "proteinG": 22, "carbsG": 8, "fatG": 20 },
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/20/Scrambed_eggs.jpg/960px-Scrambed_eggs.jpg",
+    "instructions": [
+      "Fluffy soft-scrambled eggs loaded with sauteed peppers and wilted spinach.",
+      "Dice the bell pepper and grate the cheddar. Whisk the eggs with a pinch of salt until uniform and slightly frothy.",
+      "Heat the olive oil in a nonstick skillet over medium heat, add the bell pepper, and cook 3-4 minutes until softened.",
+      "Add the spinach and cook about 1 minute until just wilted.",
+      "Pour in the eggs, let them set 15 seconds, then push them gently across the pan with a spatula. Cook 1-2 minutes, folding, until softly set but still glossy and not browned.",
+      "Off the heat, stir in the cheddar so it melts from the residual heat, and serve immediately.",
+      "Tip: Pull the eggs off the heat while slightly underdone; they keep cooking in the hot pan and turn rubbery if you wait for them to look fully done."
+    ]
   },
   {
     "id": "avocado-toast-eggs",
@@ -63,7 +89,16 @@
       { "name": "egg", "quantity": 2, "unit": "each" },
       { "name": "lemon", "quantity": 0.25, "unit": "each" }
     ],
-    "nutritionPerServing": { "calories": 380, "proteinG": 18, "carbsG": 30, "fatG": 22 }
+    "nutritionPerServing": { "calories": 380, "proteinG": 18, "carbsG": 30, "fatG": 22 },
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5b/Avocado_toast_at_Voyager_Espresso_%2833134505776%29.jpg/960px-Avocado_toast_at_Voyager_Espresso_%2833134505776%29.jpg",
+    "instructions": [
+      "Crisp toast topped with mashed lemony avocado and a fried egg.",
+      "Toast the bread until golden and crisp, 2-3 minutes.",
+      "Scoop the avocado into a bowl, squeeze in the lemon juice, add a pinch of salt, and mash to a chunky spread. Spread it over the toast.",
+      "Heat a lightly oiled nonstick skillet over medium heat. Crack in the eggs and fry 2-3 minutes for runny yolks (until the whites are fully set and opaque), or about 4 minutes for firmer yolks.",
+      "Slide the eggs onto the avocado toast and finish with salt and pepper.",
+      "Tip: For a neater fried egg, cover the pan for the last minute to set the top of the white without flipping."
+    ]
   },
   {
     "id": "tofu-scramble",
@@ -80,7 +115,16 @@
       { "name": "turmeric", "quantity": 0.25, "unit": "tsp" },
       { "name": "olive oil", "quantity": 1, "unit": "tbsp" }
     ],
-    "nutritionPerServing": { "calories": 290, "proteinG": 18, "carbsG": 14, "fatG": 18 }
+    "nutritionPerServing": { "calories": 290, "proteinG": 18, "carbsG": 14, "fatG": 18 },
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5b/Tofu_Scramble_in_New_Orleans.jpg/960px-Tofu_Scramble_in_New_Orleans.jpg",
+    "instructions": [
+      "A vegan scramble where crumbled tofu stands in for eggs, colored golden with turmeric.",
+      "Drain the tofu, press gently with a towel to remove excess water, then crumble into bite-size curds. Dice the onion.",
+      "Heat the olive oil in a skillet over medium heat and cook the onion 3-4 minutes until translucent.",
+      "Add the crumbled tofu and turmeric with a pinch of salt and cook 5-6 minutes, stirring occasionally, until heated through and lightly golden at the edges.",
+      "Stir in the spinach and cook about 1 minute until wilted, then serve.",
+      "Tip: Pressing the tofu first is key; wet tofu steams instead of browning and turns mushy."
+    ]
   },
   {
     "id": "protein-smoothie",
@@ -96,7 +140,15 @@
       { "name": "frozen mixed berries", "quantity": 0.5, "unit": "cup" },
       { "name": "milk", "quantity": 1, "unit": "cup" }
     ],
-    "nutritionPerServing": { "calories": 330, "proteinG": 30, "carbsG": 40, "fatG": 6 }
+    "nutritionPerServing": { "calories": 330, "proteinG": 30, "carbsG": 40, "fatG": 6 },
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/Kiwi_Smoothie.jpg/960px-Kiwi_Smoothie.jpg",
+    "instructions": [
+      "A thick, frosty berry smoothie that takes 5 minutes and travels well.",
+      "Peel and break the banana into chunks.",
+      "Add the milk, banana, frozen berries, and protein powder to a blender.",
+      "Blend on high 45-60 seconds until completely smooth with no fruit chunks remaining; if too thick to pour, add a splash more milk and pulse again.",
+      "Tip: Using frozen berries (rather than fresh plus ice) keeps the smoothie cold and thick without watering it down."
+    ]
   },
   {
     "id": "shakshuka",
@@ -114,7 +166,16 @@
       { "name": "cumin", "quantity": 0.5, "unit": "tsp" },
       { "name": "olive oil", "quantity": 1, "unit": "tbsp" }
     ],
-    "nutritionPerServing": { "calories": 340, "proteinG": 18, "carbsG": 22, "fatG": 20 }
+    "nutritionPerServing": { "calories": 340, "proteinG": 18, "carbsG": 22, "fatG": 20 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/g373701551450225.jpg",
+    "instructions": [
+      "Eggs poached in a spiced tomato-and-pepper sauce, served straight from the pan.",
+      "Dice the onion and bell pepper.",
+      "Heat the olive oil in a skillet over medium heat and cook the onion and pepper 5-6 minutes until softened. Stir in the cumin and cook 30 seconds until fragrant.",
+      "Add the crushed tomatoes with a pinch of salt, lower to a gentle simmer, and cook 8-10 minutes until thickened enough that a spoon leaves a brief trail.",
+      "Make two wells in the sauce and crack an egg into each. Cover and cook 5-7 minutes until the whites are set but the yolks are still runny.",
+      "Tip: Cook the sauce until it is thick before adding the eggs; a watery sauce makes the whites spread and cook unevenly."
+    ]
   },
   {
     "id": "greek-chicken-bowl",
@@ -132,7 +193,16 @@
       { "name": "olive oil", "quantity": 1, "unit": "tbsp" },
       { "name": "lemon", "quantity": 0.5, "unit": "each" }
     ],
-    "nutritionPerServing": { "calories": 520, "proteinG": 45, "carbsG": 38, "fatG": 18 }
+    "nutritionPerServing": { "calories": 520, "proteinG": 45, "carbsG": 38, "fatG": 18 },
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e8/Souvlaki_in_Athens.JPG/960px-Souvlaki_in_Athens.JPG",
+    "instructions": [
+      "A bright Mediterranean bowl of lemony chicken over rice with crisp cucumber and tomato.",
+      "Dice the cucumber and halve the cherry tomatoes. Pat the chicken dry and toss with half the olive oil, the lemon juice, salt, and pepper.",
+      "Heat a skillet or grill pan over medium-high heat and cook the chicken 5-6 minutes per side until golden and the internal temperature reaches 165F (74C).",
+      "Rest the chicken 5 minutes, then slice across the grain.",
+      "Warm the rice and build the bowl with rice, sliced chicken, cucumber, and tomatoes; drizzle with the remaining olive oil.",
+      "Tip: Resting the chicken before slicing keeps the juices in; cut too soon and they run out onto the board."
+    ]
   },
   {
     "id": "chicken-burrito-bowl",
@@ -150,7 +220,16 @@
       { "name": "salsa", "quantity": 0.25, "unit": "cup" },
       { "name": "cheddar cheese", "quantity": 1, "unit": "oz" }
     ],
-    "nutritionPerServing": { "calories": 600, "proteinG": 42, "carbsG": 60, "fatG": 20 }
+    "nutritionPerServing": { "calories": 600, "proteinG": 42, "carbsG": 60, "fatG": 20 },
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/Burrito.JPG/960px-Burrito.JPG",
+    "instructions": [
+      "A Tex-Mex bowl of seasoned chicken over rice with beans, corn, and cheese.",
+      "Pat the chicken dry and season with salt, pepper, and a pinch of cumin or chili powder if you have it. Grate the cheddar.",
+      "Heat a lightly oiled skillet over medium-high heat and cook the chicken 5-6 minutes per side until golden and 165F (74C) internal. Rest 5 minutes, then dice or slice.",
+      "Meanwhile, warm the black beans and corn in a small pan over medium heat 2-3 minutes.",
+      "Build the bowl with rice, chicken, beans, and corn, then top with the salsa and cheddar.",
+      "Tip: Drain and rinse canned beans before warming to wash off the starchy liquid and keep the bowl from tasting flat."
+    ]
   },
   {
     "id": "beef-tacos",
@@ -167,7 +246,16 @@
       { "name": "cheddar cheese", "quantity": 1, "unit": "oz" },
       { "name": "salsa", "quantity": 0.25, "unit": "cup" }
     ],
-    "nutritionPerServing": { "calories": 540, "proteinG": 34, "carbsG": 45, "fatG": 24 }
+    "nutritionPerServing": { "calories": 540, "proteinG": 34, "carbsG": 45, "fatG": 24 },
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/73/001_Tacos_de_carnitas%2C_carne_asada_y_al_pastor.jpg/960px-001_Tacos_de_carnitas%2C_carne_asada_y_al_pastor.jpg",
+    "instructions": [
+      "Classic ground beef tacos with crisp lettuce, cheese, and salsa.",
+      "Shred the lettuce and grate the cheddar.",
+      "Brown the ground beef in a dry skillet over medium-high heat 6-8 minutes, breaking it into small crumbles, until no pink remains and the bottom is browned (160F/71C). Season with salt and a pinch of cumin or chili powder; drain excess fat.",
+      "Warm the corn tortillas in a dry skillet over medium heat about 30 seconds per side until soft and pliable.",
+      "Fill the tortillas with beef, lettuce, cheese, and salsa.",
+      "Tip: Let the beef sit undisturbed for a minute at a time while browning; constant stirring steams it gray instead of building a browned crust."
+    ]
   },
   {
     "id": "margherita-pasta",
@@ -184,7 +272,16 @@
       { "name": "parmesan cheese", "quantity": 1, "unit": "oz" },
       { "name": "olive oil", "quantity": 1, "unit": "tbsp" }
     ],
-    "nutritionPerServing": { "calories": 560, "proteinG": 20, "carbsG": 80, "fatG": 16 }
+    "nutritionPerServing": { "calories": 560, "proteinG": 20, "carbsG": 80, "fatG": 16 },
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/33/Spaghettata.JPG/960px-Spaghettata.JPG",
+    "instructions": [
+      "A simple tomato-basil pasta finished with parmesan and good olive oil.",
+      "Bring a pot of salted water to a rolling boil and cook the pasta until al dente, per package timing (usually 9-11 minutes), then drain, reserving a splash of pasta water.",
+      "While the pasta cooks, warm the marinara in a saucepan over medium heat 4-5 minutes until gently bubbling.",
+      "Toss the drained pasta with the sauce and olive oil, loosening with a little pasta water until it coats evenly and glossily.",
+      "Tear in the basil, top with grated parmesan, and serve.",
+      "Tip: Salt the pasta water until it tastes like the sea; it is the only chance to season the pasta itself."
+    ]
   },
   {
     "id": "chicken-alfredo-pasta",
@@ -201,7 +298,17 @@
       { "name": "parmesan cheese", "quantity": 1.5, "unit": "oz" },
       { "name": "garlic", "quantity": 2, "unit": "clove" }
     ],
-    "nutritionPerServing": { "calories": 680, "proteinG": 45, "carbsG": 65, "fatG": 25 }
+    "nutritionPerServing": { "calories": 680, "proteinG": 45, "carbsG": 65, "fatG": 25 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/syqypv1486981727.jpg",
+    "instructions": [
+      "Fettuccine in a creamy parmesan sauce with golden seared chicken.",
+      "Mince the garlic and grate the parmesan. Pat the chicken dry and season with salt and pepper.",
+      "Cook the fettuccine in salted boiling water until al dente (about 10-11 minutes), then drain, reserving a splash of pasta water.",
+      "Meanwhile, sear the chicken in a lightly oiled skillet over medium-high heat 5-6 minutes per side until golden and 165F (74C) internal. Rest 5 minutes, then slice.",
+      "In the same pan over medium-low heat, cook the garlic 30 seconds until fragrant, then pour in the cream and simmer 2 minutes. Off the heat, stir in the parmesan until melted and smooth.",
+      "Toss the fettuccine in the sauce, loosening with pasta water if needed, and top with the sliced chicken.",
+      "Tip: Add the parmesan off the heat; boiling the cheese makes the sauce grainy and stringy."
+    ]
   },
   {
     "id": "teriyaki-salmon-rice",
@@ -218,7 +325,16 @@
       { "name": "teriyaki sauce", "quantity": 2, "unit": "tbsp" },
       { "name": "sesame seeds", "quantity": 1, "unit": "tsp" }
     ],
-    "nutritionPerServing": { "calories": 580, "proteinG": 40, "carbsG": 55, "fatG": 20 }
+    "nutritionPerServing": { "calories": 580, "proteinG": 40, "carbsG": 55, "fatG": 20 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/xxyupu1468262513.jpg",
+    "instructions": [
+      "Glazed teriyaki salmon over rice with steamed broccoli.",
+      "Pat the salmon dry and brush with half the teriyaki sauce. Cut the broccoli into florets.",
+      "Steam or microwave the broccoli until bright green and crisp-tender, about 3-4 minutes.",
+      "Heat a lightly oiled nonstick skillet over medium-high heat. Cook the salmon flesh-side down 3-4 minutes until golden, flip, brush with the remaining teriyaki, and cook 3-4 minutes more until it flakes easily and reaches 145F (63C).",
+      "Serve the salmon over rice with the broccoli and a sprinkle of sesame seeds.",
+      "Tip: Do not move the salmon until it releases easily from the pan; forcing it early tears the flesh and leaves the crust stuck."
+    ]
   },
   {
     "id": "chicken-tikka-masala",
@@ -236,7 +352,16 @@
       { "name": "garam masala", "quantity": 1, "unit": "tsp" },
       { "name": "garlic", "quantity": 2, "unit": "clove" }
     ],
-    "nutritionPerServing": { "calories": 620, "proteinG": 40, "carbsG": 45, "fatG": 28 }
+    "nutritionPerServing": { "calories": 620, "proteinG": 40, "carbsG": 45, "fatG": 28 },
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/00/Chicken_tikka_masala_%28cropped%29.jpg/960px-Chicken_tikka_masala_%28cropped%29.jpg",
+    "instructions": [
+      "Tender chicken in a creamy spiced tomato sauce, served over rice.",
+      "Cut the chicken thigh into bite-size pieces and season with salt. Mince the garlic.",
+      "Heat a lightly oiled skillet over medium-high heat and sear the chicken 4-5 minutes, turning, until browned on the outside (it will finish cooking in the sauce).",
+      "Add the garlic and garam masala and cook 30 seconds until fragrant. Stir in the crushed tomatoes, lower to a simmer, and cook 8-10 minutes until thickened and the chicken is cooked through (165F/74C).",
+      "Stir in the cream and simmer 2 minutes more until the sauce is smooth and orange. Serve over rice.",
+      "Tip: Toast the garam masala in the oil for 30 seconds before adding liquid; blooming the spices in fat deepens the flavor far more than stirring them in raw."
+    ]
   },
   {
     "id": "chickpea-curry",
@@ -254,7 +379,16 @@
       { "name": "curry powder", "quantity": 1, "unit": "tbsp" },
       { "name": "onion", "quantity": 0.5, "unit": "each" }
     ],
-    "nutritionPerServing": { "calories": 480, "proteinG": 18, "carbsG": 65, "fatG": 16 }
+    "nutritionPerServing": { "calories": 480, "proteinG": 18, "carbsG": 65, "fatG": 16 },
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/Chana_masala.jpg/960px-Chana_masala.jpg",
+    "instructions": [
+      "A creamy vegan chickpea curry simmered in coconut and tomato.",
+      "Dice the onion. Drain and rinse the chickpeas.",
+      "Heat a little oil in a saucepan over medium heat and cook the onion 4-5 minutes until softened. Stir in the curry powder and cook 30 seconds until fragrant.",
+      "Add the crushed tomatoes and chickpeas, then pour in the coconut milk. Bring to a gentle simmer and cook 12-15 minutes, stirring occasionally, until thickened and the chickpeas are tender.",
+      "Season with salt and serve over rice.",
+      "Tip: Lightly mash a few chickpeas against the side of the pan as it simmers to naturally thicken the sauce."
+    ]
   },
   {
     "id": "pad-thai-shrimp",
@@ -272,7 +406,17 @@
       { "name": "peanuts", "quantity": 1, "unit": "tbsp" },
       { "name": "pad thai sauce", "quantity": 2, "unit": "tbsp" }
     ],
-    "nutritionPerServing": { "calories": 600, "proteinG": 32, "carbsG": 70, "fatG": 20 }
+    "nutritionPerServing": { "calories": 600, "proteinG": 32, "carbsG": 70, "fatG": 20 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/rg9ze01763479093.jpg",
+    "instructions": [
+      "Stir-fried rice noodles with shrimp, egg, and crunchy peanuts.",
+      "Soak the rice noodles in hot water 8-10 minutes until pliable but still firm, then drain. Roughly chop the peanuts and peel the shrimp if needed.",
+      "Heat a little oil in a wok or large skillet over high heat and stir-fry the shrimp 2-3 minutes until pink and opaque; push to one side.",
+      "Crack the egg into the empty side and scramble 30 seconds until just set, breaking it up.",
+      "Add the drained noodles and pad thai sauce and toss constantly 2-3 minutes until the noodles are tender and coated.",
+      "Toss in the bean sprouts, cook 30 seconds, then serve topped with the chopped peanuts.",
+      "Tip: Keep the heat high and the noodles moving; letting them sit makes them clump and stick."
+    ]
   },
   {
     "id": "thai-green-curry-chicken",
@@ -289,7 +433,16 @@
       { "name": "bell pepper", "quantity": 0.5, "unit": "each" },
       { "name": "cooked rice", "quantity": 0.5, "unit": "cup" }
     ],
-    "nutritionPerServing": { "calories": 560, "proteinG": 38, "carbsG": 40, "fatG": 26 }
+    "nutritionPerServing": { "calories": 560, "proteinG": 38, "carbsG": 40, "fatG": 26 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/sstssx1487349585.jpg",
+    "instructions": [
+      "A fragrant Thai green curry with chicken and peppers in coconut milk.",
+      "Slice the chicken thigh into strips and the bell pepper into thin slices.",
+      "Heat a little oil in a saucepan over medium heat, add the green curry paste, and fry 1 minute until fragrant.",
+      "Pour in the coconut milk, stir to blend, and bring to a gentle simmer. Add the chicken and cook 6-8 minutes until cooked through (165F/74C).",
+      "Add the bell pepper and simmer 3-4 minutes until crisp-tender. Serve over rice.",
+      "Tip: Fry the curry paste in oil before adding coconut milk; this blooms the aromatics and is the difference between a flat and a fragrant curry."
+    ]
   },
   {
     "id": "falafel-wrap",
@@ -306,7 +459,16 @@
       { "name": "cucumber", "quantity": 0.5, "unit": "each" },
       { "name": "lettuce", "quantity": 1, "unit": "cup" }
     ],
-    "nutritionPerServing": { "calories": 520, "proteinG": 18, "carbsG": 68, "fatG": 20 }
+    "nutritionPerServing": { "calories": 520, "proteinG": 18, "carbsG": 68, "fatG": 20 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/ae6clc1760524712.jpg",
+    "instructions": [
+      "A quick wrap of warm falafel, hummus, and crisp veg in pita.",
+      "Slice the cucumber and shred the lettuce.",
+      "Heat the falafel through: in a 375F (190C) oven or air fryer 8-10 minutes, or in a dry skillet over medium heat 2-3 minutes per side, until hot and crisp on the outside.",
+      "Warm the pita briefly (about 20 seconds in a dry pan or microwave) so it folds without cracking.",
+      "Spread the hummus inside the pita, add the lettuce and cucumber, tuck in the falafel, and fold into a wrap.",
+      "Tip: Warming the pita is essential; cold pita splits the moment you fold it."
+    ]
   },
   {
     "id": "bbq-pulled-pork-bowl",
@@ -322,7 +484,15 @@
       { "name": "coleslaw mix", "quantity": 1, "unit": "cup" },
       { "name": "cooked rice", "quantity": 0.75, "unit": "cup" }
     ],
-    "nutritionPerServing": { "calories": 620, "proteinG": 40, "carbsG": 50, "fatG": 28 }
+    "nutritionPerServing": { "calories": 620, "proteinG": 40, "carbsG": 50, "fatG": 28 },
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/Pulled_pork_while_pulling.JPG/960px-Pulled_pork_while_pulling.JPG",
+    "instructions": [
+      "A smoky pulled-pork bowl over rice with crunchy slaw (uses pre-cooked pulled pork).",
+      "Toss the coleslaw mix with a pinch of salt and a splash of vinegar (or a spoonful of the bbq sauce) and set aside to soften slightly.",
+      "Warm the pulled pork in a skillet over medium heat 4-5 minutes until heated through, then stir in the bbq sauce and cook 1-2 minutes until glossy and sticky.",
+      "Build the bowl with rice, saucy pulled pork, and the slaw on top.",
+      "Tip: If starting from a raw pork shoulder instead, slow-cook it until it shreds easily and reaches 195-205F (90-96C) internal; that is when the connective tissue breaks down."
+    ]
   },
   {
     "id": "grilled-steak-veg",
@@ -339,7 +509,17 @@
       { "name": "olive oil", "quantity": 1, "unit": "tbsp" },
       { "name": "garlic", "quantity": 2, "unit": "clove" }
     ],
-    "nutritionPerServing": { "calories": 560, "proteinG": 46, "carbsG": 18, "fatG": 32 }
+    "nutritionPerServing": { "calories": 560, "proteinG": 46, "carbsG": 18, "fatG": 32 },
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1c/Steak_frites_-_yummy.jpg/960px-Steak_frites_-_yummy.jpg",
+    "instructions": [
+      "Juicy grilled sirloin with charred asparagus and zucchini.",
+      "Take the steak out of the fridge 20-30 minutes ahead so it cooks evenly. Pat it very dry and season generously with salt and pepper. Slice the zucchini, trim the asparagus, and mince the garlic.",
+      "Toss the vegetables with half the olive oil, the garlic, and a pinch of salt.",
+      "Heat a grill or grill pan over high heat and cook the steak 3-4 minutes per side for medium-rare (130-135F/54-57C), or longer to taste, until well charred.",
+      "Rest the steak 5 minutes. Meanwhile, grill the vegetables 3-4 minutes, turning, until tender and lightly charred.",
+      "Slice the steak across the grain and serve with the vegetables.",
+      "Tip: A dry surface is what gives steak a brown crust; pat off any moisture and do not crowd the pan."
+    ]
   },
   {
     "id": "lemon-herb-cod",
@@ -356,7 +536,16 @@
       { "name": "olive oil", "quantity": 1, "unit": "tbsp" },
       { "name": "parsley", "quantity": 2, "unit": "tbsp" }
     ],
-    "nutritionPerServing": { "calories": 380, "proteinG": 40, "carbsG": 8, "fatG": 20 }
+    "nutritionPerServing": { "calories": 380, "proteinG": 40, "carbsG": 8, "fatG": 20 },
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f3/Baked_cod_fillet.jpg/960px-Baked_cod_fillet.jpg",
+    "instructions": [
+      "A light baked cod fillet with lemon, herbs, and asparagus on one tray.",
+      "Preheat the oven to 400F (200C). Trim the asparagus and chop the parsley.",
+      "Pat the cod dry and place on a lined sheet pan with the asparagus. Drizzle everything with olive oil, season with salt and pepper, and top the cod with lemon slices.",
+      "Bake 12-15 minutes until the cod is opaque and flakes easily with a fork (145F/63C) and the asparagus is tender.",
+      "Finish with the chopped parsley and a squeeze of lemon.",
+      "Tip: Cod is done the moment it turns from translucent to opaque and flakes; a couple of extra minutes dries it out fast."
+    ]
   },
   {
     "id": "shrimp-stir-fry",
@@ -373,7 +562,16 @@
       { "name": "soy sauce", "quantity": 2, "unit": "tbsp" },
       { "name": "ginger", "quantity": 1, "unit": "tsp" }
     ],
-    "nutritionPerServing": { "calories": 460, "proteinG": 34, "carbsG": 45, "fatG": 14 }
+    "nutritionPerServing": { "calories": 460, "proteinG": 34, "carbsG": 45, "fatG": 14 },
+    "imageUrl": "https://www.themealdb.com/images/media/meals/fpl3mv1766433431.jpg",
+    "instructions": [
+      "A fast shrimp and vegetable stir-fry over rice.",
+      "Pat the shrimp dry. Mince the ginger and have the soy sauce ready by the stove.",
+      "Heat a little oil in a wok or large skillet over high heat until shimmering. Stir-fry the shrimp 2 minutes until just pink, then remove.",
+      "Add the vegetables and ginger and stir-fry 3-4 minutes until crisp-tender and brightly colored.",
+      "Return the shrimp, add the soy sauce, and toss 1 minute to combine and heat through. Serve over rice.",
+      "Tip: Cook the shrimp first and remove them; they only need 2-3 minutes total, and leaving them in while the veg cooks turns them rubbery."
+    ]
   },
   {
     "id": "turkey-chili",
@@ -390,7 +588,16 @@
       { "name": "onion", "quantity": 0.5, "unit": "each" },
       { "name": "chili powder", "quantity": 1, "unit": "tbsp" }
     ],
-    "nutritionPerServing": { "calories": 480, "proteinG": 38, "carbsG": 40, "fatG": 18 }
+    "nutritionPerServing": { "calories": 480, "proteinG": 38, "carbsG": 40, "fatG": 18 },
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/50/Bowl_of_chili.jpg/960px-Bowl_of_chili.jpg",
+    "instructions": [
+      "A lean, hearty turkey chili that is even better the next day.",
+      "Dice the onion. Drain and rinse the kidney beans.",
+      "Heat a little oil in a pot over medium-high heat and cook the onion 3-4 minutes until softened. Add the ground turkey and brown 5-6 minutes, breaking it up, until no longer pink.",
+      "Stir in the chili powder and cook 30 seconds, then add the crushed tomatoes and beans with a pinch of salt.",
+      "Lower the heat and simmer 20-25 minutes, stirring occasionally, until thickened and the flavors meld.",
+      "Tip: Ground turkey is lean and can dry out; keep the chili at a gentle simmer rather than a hard boil, and add a splash of water if it gets too thick."
+    ]
   },
   {
     "id": "spicy-tofu-bowl",
@@ -407,7 +614,16 @@
       { "name": "broccoli", "quantity": 1, "unit": "cup" },
       { "name": "soy sauce", "quantity": 1, "unit": "tbsp" }
     ],
-    "nutritionPerServing": { "calories": 500, "proteinG": 24, "carbsG": 55, "fatG": 20 }
+    "nutritionPerServing": { "calories": 500, "proteinG": 24, "carbsG": 55, "fatG": 20 },
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/88/Chen_Mapo_Tofu.jpg/960px-Chen_Mapo_Tofu.jpg",
+    "instructions": [
+      "Crispy pan-fried tofu glazed in a spicy-savory sauce over rice.",
+      "Press the tofu with a towel 5-10 minutes to remove water, then cut into cubes. Cut the broccoli into florets and stir the sriracha and soy sauce together.",
+      "Steam or microwave the broccoli 3-4 minutes until crisp-tender.",
+      "Heat a little oil in a nonstick skillet over medium-high heat and fry the tofu 8-10 minutes, turning occasionally, until golden and crisp on several sides.",
+      "Add the sriracha-soy sauce and toss 1-2 minutes until the tofu is glazed and sticky. Serve over rice with the broccoli.",
+      "Tip: Do not crowd the pan and do not flip too soon; let each side sit 2-3 minutes to crisp before turning."
+    ]
   },
   {
     "id": "buffalo-chicken-wrap",
@@ -424,7 +640,16 @@
       { "name": "lettuce", "quantity": 1, "unit": "cup" },
       { "name": "ranch dressing", "quantity": 1, "unit": "tbsp" }
     ],
-    "nutritionPerServing": { "calories": 560, "proteinG": 40, "carbsG": 42, "fatG": 24 }
+    "nutritionPerServing": { "calories": 560, "proteinG": 40, "carbsG": 42, "fatG": 24 },
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f8/Smoked_chicken_and_avocado_wrap.jpg/960px-Smoked_chicken_and_avocado_wrap.jpg",
+    "instructions": [
+      "A spicy buffalo chicken wrap cooled with crisp lettuce and ranch.",
+      "Shred the lettuce. Pat the chicken dry and season with salt.",
+      "Cook the chicken in a lightly oiled skillet over medium-high heat 5-6 minutes per side until golden and 165F (74C) internal. Rest 5 minutes, then slice.",
+      "Toss the sliced chicken with the buffalo sauce until coated.",
+      "Warm the tortilla briefly so it rolls without cracking, spread with the ranch, add the lettuce and buffalo chicken, then fold in the sides and roll tightly.",
+      "Tip: Toss the chicken in the sauce only after it is cooked and rested; saucing it raw keeps it from browning."
+    ]
   },
   {
     "id": "greek-yogurt-almonds",
@@ -439,7 +664,15 @@
       { "name": "almonds", "quantity": 0.25, "unit": "oz" },
       { "name": "honey", "quantity": 1, "unit": "tsp" }
     ],
-    "nutritionPerServing": { "calories": 220, "proteinG": 18, "carbsG": 14, "fatG": 10 }
+    "nutritionPerServing": { "calories": 220, "proteinG": 18, "carbsG": 14, "fatG": 10 },
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/Flickr_-_cyclonebill_-_Gr%C3%A6sk_yoghurt_med_honning_og_valn%C3%B8dder.jpg/960px-Flickr_-_cyclonebill_-_Gr%C3%A6sk_yoghurt_med_honning_og_valn%C3%B8dder.jpg",
+    "instructions": [
+      "A 2-minute high-protein snack of creamy yogurt, crunchy almonds, and honey.",
+      "Spoon the Greek yogurt into a bowl.",
+      "Roughly chop the almonds and scatter them over the top.",
+      "Drizzle with the honey and serve.",
+      "Tip: Toast the almonds in a dry pan 2-3 minutes until fragrant for extra crunch and flavor."
+    ]
   },
   {
     "id": "hummus-veggies",
@@ -454,7 +687,14 @@
       { "name": "carrot", "quantity": 1, "unit": "each" },
       { "name": "cucumber", "quantity": 0.5, "unit": "each" }
     ],
-    "nutritionPerServing": { "calories": 180, "proteinG": 7, "carbsG": 20, "fatG": 9 }
+    "nutritionPerServing": { "calories": 180, "proteinG": 7, "carbsG": 20, "fatG": 9 },
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/bf/Lebanese_style_hummus.jpg/960px-Lebanese_style_hummus.jpg",
+    "instructions": [
+      "A crunchy, no-cook snack of fresh veggie sticks with hummus for dipping.",
+      "Peel the carrot and cut it and the cucumber into sticks.",
+      "Spoon the hummus into a small bowl and arrange the veggie sticks alongside for dipping.",
+      "Tip: Cut the vegetables a similar size so they are easy to dip; they keep crisp for a few hours in the fridge in a little water if prepping ahead."
+    ]
   },
   {
     "id": "apple-peanut-butter",
@@ -468,7 +708,13 @@
       { "name": "apple", "quantity": 1, "unit": "each" },
       { "name": "peanut butter", "quantity": 1.5, "unit": "tbsp" }
     ],
-    "nutritionPerServing": { "calories": 250, "proteinG": 7, "carbsG": 30, "fatG": 13 }
+    "nutritionPerServing": { "calories": 250, "proteinG": 7, "carbsG": 30, "fatG": 13 },
+    "instructions": [
+      "A simple sweet-and-salty snack of crisp apple slices with peanut butter.",
+      "Core the apple and slice it into wedges.",
+      "Serve the apple slices with the peanut butter for dipping or spreading.",
+      "Tip: Toss the slices in a little lemon water to keep them from browning if packing them for later."
+    ]
   },
   {
     "id": "cottage-cheese-fruit",
@@ -482,7 +728,14 @@
       { "name": "cottage cheese", "quantity": 0.75, "unit": "cup" },
       { "name": "pineapple", "quantity": 0.5, "unit": "cup" }
     ],
-    "nutritionPerServing": { "calories": 200, "proteinG": 22, "carbsG": 18, "fatG": 4 }
+    "nutritionPerServing": { "calories": 200, "proteinG": 22, "carbsG": 18, "fatG": 4 },
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/16/Cottagecheese200px.jpg/960px-Cottagecheese200px.jpg",
+    "instructions": [
+      "A quick high-protein snack pairing cottage cheese with sweet pineapple.",
+      "Spoon the cottage cheese into a bowl.",
+      "Top with the pineapple chunks and serve.",
+      "Tip: A pinch of black pepper or a drizzle of honey plays up the sweet-savory contrast."
+    ]
   },
   {
     "id": "edamame",
@@ -496,7 +749,15 @@
       { "name": "edamame", "quantity": 1, "unit": "cup" },
       { "name": "sea salt", "quantity": 0.25, "unit": "tsp" }
     ],
-    "nutritionPerServing": { "calories": 190, "proteinG": 17, "carbsG": 15, "fatG": 8 }
+    "nutritionPerServing": { "calories": 190, "proteinG": 17, "carbsG": 15, "fatG": 8 },
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e7/Edamame_by_Zesmerelda_in_Chicago.jpg/960px-Edamame_by_Zesmerelda_in_Chicago.jpg",
+    "instructions": [
+      "Warm steamed edamame tossed with flaky salt, a classic protein-rich snack.",
+      "Bring a pot of water to a boil.",
+      "Add the edamame in their pods and boil 4-5 minutes until bright green and tender, then drain.",
+      "Toss with the sea salt while still hot and serve warm; eat by squeezing the beans from the pods.",
+      "Tip: Salt the pods right after draining so it sticks to the damp shells; add a pinch of chili flakes for extra flavor."
+    ]
   },
   {
     "id": "spaghetti-bolognese",
@@ -517,9 +778,14 @@
     "nutritionPerServing": { "calories": 620, "proteinG": 38, "carbsG": 70, "fatG": 22 },
     "imageUrl": "https://www.themealdb.com/images/media/meals/sutysw1468247559.jpg",
     "instructions": [
-      "Brown the ground beef with diced onion and garlic.",
-      "Add crushed tomatoes and simmer 20 minutes.",
-      "Toss with cooked spaghetti and top with parmesan."
+      "A rich meat sauce simmered with tomatoes and tossed through spaghetti.",
+      "Dice the onion and mince the garlic. Grate the parmesan.",
+      "Heat a little oil in a skillet over medium-high heat and cook the onion 3-4 minutes until softened, then add the garlic for 30 seconds until fragrant.",
+      "Add the ground beef and brown 6-8 minutes, breaking it into crumbles, until no pink remains and the bottom is well browned.",
+      "Stir in the crushed tomatoes with a pinch of salt, lower the heat, and simmer 15-20 minutes until thickened and rich.",
+      "Meanwhile, cook the spaghetti in salted boiling water until al dente (9-11 minutes), then drain.",
+      "Toss the spaghetti with the sauce and top with the parmesan.",
+      "Tip: Let the beef brown undisturbed in patches before stirring; those browned bits are where the deep flavor comes from."
     ]
   },
   {
@@ -540,9 +806,12 @@
     "nutritionPerServing": { "calories": 660, "proteinG": 34, "carbsG": 65, "fatG": 28 },
     "imageUrl": "https://www.themealdb.com/images/media/meals/llcbn01574260722.jpg",
     "instructions": [
-      "Cook spaghetti and crisp the chopped bacon.",
-      "Whisk eggs with grated parmesan and pepper.",
-      "Toss hot pasta with bacon, then the egg mix off heat to form a sauce."
+      "A Roman pasta where eggs and cheese form a silky sauce off the heat, with no cream.",
+      "Grate the parmesan and whisk it with the eggs and black pepper in a bowl. Chop the bacon.",
+      "Cook the spaghetti in salted boiling water until al dente (9-11 minutes); reserve a cup of pasta water before draining.",
+      "While the pasta cooks, fry the bacon in a skillet over medium heat 5-6 minutes until crisp, then turn off the heat.",
+      "Add the drained hot pasta to the bacon pan and toss. Let it cool about 30 seconds, then pour in the egg-cheese mixture and toss quickly, adding splashes of pasta water, until it forms a glossy, creamy sauce that coats the strands.",
+      "Tip: The pan must be off the heat when the eggs go in; too hot and they scramble instead of turning into a smooth sauce."
     ]
   },
   {
@@ -563,9 +832,12 @@
     "nutritionPerServing": { "calories": 680, "proteinG": 42, "carbsG": 58, "fatG": 30 },
     "imageUrl": "https://www.themealdb.com/images/media/meals/wtsvxx1511296896.jpg",
     "instructions": [
-      "Brown beef and stir in marinara sauce.",
-      "Layer noodles, meat sauce, ricotta and mozzarella.",
-      "Bake at 375F for 30 minutes until bubbling."
+      "Layered pasta baked with beef ragu, ricotta, and melted mozzarella.",
+      "Preheat the oven to 375F (190C). Cook the lasagna noodles in salted boiling water until just pliable (8-9 minutes), then drain and lay flat. Grate the mozzarella.",
+      "Brown the ground beef in a skillet over medium-high heat 6-8 minutes until no pink remains, then stir in the marinara and simmer 5 minutes.",
+      "In a small baking dish, layer a little meat sauce, noodles, dabs of ricotta, and more meat sauce, repeating, and finish with the mozzarella on top.",
+      "Bake 20-25 minutes until bubbling and the cheese is golden and melted. Rest 5-10 minutes before cutting.",
+      "Tip: Letting the lasagna rest before slicing lets the layers set so it holds its shape instead of sliding apart."
     ]
   },
   {
@@ -586,9 +858,13 @@
     "nutritionPerServing": { "calories": 560, "proteinG": 22, "carbsG": 72, "fatG": 20 },
     "imageUrl": "https://www.themealdb.com/images/media/meals/x0lk931587671540.jpg",
     "instructions": [
-      "Stretch the dough and spread with marinara.",
-      "Top with mozzarella and a drizzle of olive oil.",
-      "Bake at 500F for 10 minutes, then add fresh basil."
+      "A classic thin pizza with tomato, fresh mozzarella, and basil.",
+      "Preheat the oven as hot as it goes, ideally 500F (260C), with a tray or stone inside.",
+      "Stretch the dough into a thin round and spread with the marinara, leaving a border for the crust.",
+      "Top with torn mozzarella and a drizzle of olive oil.",
+      "Bake 10-12 minutes until the crust is puffed and golden and the cheese is bubbling and blistered in spots.",
+      "Scatter the fresh basil over the hot pizza just before serving.",
+      "Tip: Add the basil after baking; baked into the oven it blackens and turns bitter instead of staying fresh and fragrant."
     ]
   },
   {
@@ -609,9 +885,13 @@
     "nutritionPerServing": { "calories": 480, "proteinG": 14, "carbsG": 78, "fatG": 14 },
     "imageUrl": "https://www.themealdb.com/images/media/meals/ustsqw1468250014.jpg",
     "instructions": [
-      "Sizzle garlic and red pepper flakes in olive oil.",
-      "Add crushed tomatoes and simmer 10 minutes.",
-      "Toss with cooked penne."
+      "A fiery garlic-and-chili tomato pasta, quick and bold.",
+      "Thinly slice the garlic.",
+      "Cook the penne in salted boiling water until al dente (10-11 minutes); reserve a splash of pasta water before draining.",
+      "While it cooks, warm the olive oil in a skillet over medium heat, add the garlic and red pepper flakes, and cook 1-2 minutes until the garlic is fragrant and just barely golden (do not let it brown or it turns bitter).",
+      "Add the crushed tomatoes and a pinch of salt and simmer 8-10 minutes until thickened.",
+      "Toss the penne in the sauce, loosening with pasta water as needed, and serve.",
+      "Tip: Watch the garlic closely; it goes from golden to burnt in seconds, and burnt garlic makes the whole dish bitter."
     ]
   },
   {
@@ -633,9 +913,12 @@
     "nutritionPerServing": { "calories": 360, "proteinG": 15, "carbsG": 62, "fatG": 5 },
     "imageUrl": "https://www.themealdb.com/images/media/meals/xrrwpx1487347049.jpg",
     "instructions": [
-      "Simmer chopped carrot and zucchini in vegetable broth.",
-      "Add beans, diced tomatoes and pasta.",
-      "Cook until pasta is tender, about 12 minutes."
+      "A hearty Italian vegetable and bean soup with small pasta.",
+      "Dice the carrot and zucchini. Drain and rinse the kidney beans.",
+      "Heat a little oil in a pot over medium heat and cook the carrot 3-4 minutes until starting to soften.",
+      "Add the broth, diced tomatoes, and beans, bring to a boil, then lower to a simmer for 10 minutes.",
+      "Add the pasta and zucchini and simmer 8-10 minutes more until the pasta is tender and the vegetables are soft. Season with salt and pepper.",
+      "Tip: Add the pasta toward the end so it does not overcook into mush; if making ahead, cook the pasta separately and add when serving."
     ]
   },
   {
@@ -678,9 +961,12 @@
     "nutritionPerServing": { "calories": 580, "proteinG": 44, "carbsG": 42, "fatG": 24 },
     "imageUrl": "https://www.themealdb.com/images/media/meals/qtuwxu1468233098.jpg",
     "instructions": [
-      "Shred cooked chicken and mix with onion.",
-      "Roll into tortillas, top with salsa and cheese.",
-      "Bake at 375F for 20 minutes."
+      "Corn tortillas rolled around shredded chicken, sauced and baked under cheese.",
+      "Preheat the oven to 375F (190C). Finely dice the onion and grate the cheddar.",
+      "Season the chicken with salt and cook in a lightly oiled skillet over medium-high heat 5-6 minutes per side until 165F (74C). Rest, then shred with two forks and mix with the onion and half the salsa.",
+      "Warm the tortillas about 20 seconds to soften, fill each with chicken, and roll up. Place seam-side down in a baking dish and top with the remaining salsa and the cheddar.",
+      "Bake 15-18 minutes until the cheese is melted and bubbling and the edges are lightly crisp.",
+      "Tip: Warm the tortillas before rolling; cold corn tortillas crack and split as you fill them."
     ]
   },
   {
@@ -701,9 +987,12 @@
     "nutritionPerServing": { "calories": 470, "proteinG": 15, "carbsG": 72, "fatG": 15 },
     "imageUrl": "https://www.themealdb.com/images/media/meals/tvtxpq1511464705.jpg",
     "instructions": [
-      "Saute sliced peppers and onion in olive oil.",
-      "Warm the black beans and tortillas.",
-      "Fill tortillas with the vegetables and beans."
+      "Sizzling peppers and onions with beans, folded into warm tortillas.",
+      "Slice the bell pepper and onion into thin strips. Drain and rinse the black beans.",
+      "Heat the olive oil in a skillet over medium-high heat until shimmering. Add the peppers and onion and cook 6-8 minutes, stirring occasionally, until softened and charred at the edges.",
+      "Add the black beans with a pinch of salt and cumin and cook 2 minutes to heat through.",
+      "Warm the tortillas 20-30 seconds until pliable, then fill with the fajita mixture.",
+      "Tip: Use high heat and resist over-stirring so the vegetables char rather than steam; those charred edges are what make fajitas taste like fajitas."
     ]
   },
   {
@@ -724,9 +1013,12 @@
     "nutritionPerServing": { "calories": 480, "proteinG": 38, "carbsG": 45, "fatG": 14 },
     "imageUrl": "https://www.themealdb.com/images/media/meals/uvuyxu1503067369.jpg",
     "instructions": [
-      "Season and pan-sear the cod, then flake.",
-      "Warm tortillas and shred the cabbage.",
-      "Build tacos with fish, cabbage, salsa and lime."
+      "Light pan-seared cod in soft tortillas with crunchy cabbage and lime.",
+      "Shred the cabbage and toss with a squeeze of lime and a pinch of salt. Cut the remaining lime into wedges.",
+      "Pat the cod dry and season with salt. Heat a lightly oiled skillet over medium-high heat and cook the cod 3-4 minutes per side until opaque and flaking (145F/63C), then break into chunks.",
+      "Warm the tortillas about 30 seconds per side in a dry pan until soft.",
+      "Fill the tortillas with cod, lime-dressed cabbage, and salsa, with lime wedges on the side.",
+      "Tip: Make sure the cod is patted dry and the pan is hot before it goes in, or it will steam and stick instead of searing."
     ]
   },
   {
@@ -747,9 +1039,12 @@
     "nutritionPerServing": { "calories": 560, "proteinG": 40, "carbsG": 40, "fatG": 24 },
     "imageUrl": "https://www.themealdb.com/images/media/meals/uuqvwu1504629254.jpg",
     "instructions": [
-      "Brown beef with diced onion.",
-      "Stir in chili powder, tomatoes and beans.",
-      "Simmer 25 minutes until thickened."
+      "A classic beefy chili with beans, simmered until thick.",
+      "Dice the onion. Drain and rinse the kidney beans.",
+      "Heat a little oil in a pot over medium-high heat, cook the onion 3-4 minutes until soft, then add the beef and brown 6-8 minutes, breaking it up, until no pink remains.",
+      "Stir in the chili powder and cook 30 seconds until fragrant, then add the crushed tomatoes and beans with a pinch of salt.",
+      "Lower the heat and simmer 20-25 minutes, stirring now and then, until thickened and deeply flavored.",
+      "Tip: A longer, gentle simmer develops the flavor; if it thickens too much, loosen with a splash of water or broth."
     ]
   },
   {
@@ -770,9 +1065,12 @@
     "nutritionPerServing": { "calories": 470, "proteinG": 17, "carbsG": 82, "fatG": 8 },
     "imageUrl": "https://www.themealdb.com/images/media/meals/b66myb1683207208.jpg",
     "instructions": [
-      "Cook quinoa and mix with beans, corn and salsa.",
-      "Halve and seed the peppers, then stuff.",
-      "Bake at 375F for 25 minutes."
+      "Bell peppers baked until tender, stuffed with a quinoa, bean, and corn filling.",
+      "Preheat the oven to 375F (190C). Rinse the quinoa and cook it in 1 cup water: bring to a boil, cover, and simmer 15 minutes until the water is absorbed and the grains are fluffy.",
+      "Halve the bell peppers and remove the seeds. Drain and rinse the beans.",
+      "Stir the cooked quinoa with the beans, corn, and salsa and season with salt. Spoon into the pepper halves and set in a baking dish.",
+      "Cover with foil and bake 25-30 minutes until the peppers are tender when pierced.",
+      "Tip: Pre-cooking the quinoa is essential; the peppers soften long before raw quinoa would ever cook through."
     ]
   },
   {
@@ -793,9 +1091,12 @@
     "nutritionPerServing": { "calories": 420, "proteinG": 20, "carbsG": 42, "fatG": 19 },
     "imageUrl": "https://www.themealdb.com/images/media/meals/0nswfe1763279040.jpg",
     "instructions": [
-      "Warm tortillas and heat the beans.",
-      "Fry the eggs to your liking.",
-      "Top tortillas with beans, eggs, salsa and avocado."
+      "Fried eggs over crisp tortillas with warm beans, salsa, and avocado.",
+      "Drain and rinse the beans and warm them in a small pan over medium heat 2-3 minutes; slice the avocado.",
+      "Lightly crisp the tortillas in a dry skillet over medium heat about 1 minute per side, then set on a plate.",
+      "In a lightly oiled skillet over medium heat, fry the eggs 2-3 minutes until the whites are set and opaque but the yolks are still runny.",
+      "Top each tortilla with beans, a fried egg, salsa, and sliced avocado.",
+      "Tip: Warm the salsa briefly for a comforting version, or keep it fresh and cold for contrast against the hot egg."
     ]
   },
   {
@@ -838,9 +1139,12 @@
     "nutritionPerServing": { "calories": 540, "proteinG": 40, "carbsG": 50, "fatG": 18 },
     "imageUrl": "https://www.themealdb.com/images/media/meals/m0p0j81765568742.jpg",
     "instructions": [
-      "Sear sliced steak in a hot pan.",
-      "Add broccoli and garlic, stir-fry 3 minutes.",
-      "Add soy sauce and serve over rice."
+      "Tender beef and crisp broccoli in a glossy garlic-soy sauce over rice.",
+      "Slice the steak thinly across the grain. Mince the garlic and cut the broccoli into florets.",
+      "Heat a little oil in a wok or skillet over high heat until shimmering and stir-fry the beef 2-3 minutes until browned but still juicy, then remove.",
+      "Add the broccoli with a splash of water, cover, and steam-fry 2-3 minutes until bright green and crisp-tender.",
+      "Return the beef, add the garlic and soy sauce, and toss 1-2 minutes until coated and the garlic is fragrant. Serve over rice.",
+      "Tip: Slicing the beef thinly across the grain keeps it tender; thick or with-the-grain slices turn chewy."
     ]
   },
   {
@@ -861,9 +1165,12 @@
     "nutritionPerServing": { "calories": 600, "proteinG": 40, "carbsG": 48, "fatG": 26 },
     "imageUrl": "https://www.themealdb.com/images/media/meals/1525872624.jpg",
     "instructions": [
-      "Stir-fry diced chicken until golden.",
-      "Add pepper, peanuts and soy sauce.",
-      "Toss to coat and serve over rice."
+      "A spicy-savory Sichuan stir-fry of chicken, peppers, and peanuts.",
+      "Dice the chicken thigh and bell pepper into bite-size pieces.",
+      "Heat a little oil in a wok over high heat and stir-fry the chicken 4-5 minutes until golden and cooked through (165F/74C).",
+      "Add the bell pepper and stir-fry 2 minutes until crisp-tender.",
+      "Add the soy sauce and peanuts and toss 1 minute until everything is coated and glossy. Serve over rice.",
+      "Tip: Add the peanuts at the very end so they stay crunchy rather than going soft in the sauce."
     ]
   },
   {
@@ -884,9 +1191,12 @@
     "nutritionPerServing": { "calories": 580, "proteinG": 42, "carbsG": 70, "fatG": 10 },
     "imageUrl": "https://www.themealdb.com/images/media/meals/arzs741766434335.jpg",
     "instructions": [
-      "Brown diced chicken in a wok.",
-      "Add pepper, pineapple and a ketchup-vinegar sauce.",
-      "Simmer until glossy and serve over rice."
+      "Golden chicken with peppers and pineapple in a tangy sweet-and-sour glaze.",
+      "Cut the chicken and bell pepper into bite-size pieces. Stir the ketchup with a splash of water (and a little vinegar and sugar if you have it) to make the sauce.",
+      "Heat a little oil in a skillet over medium-high heat and cook the chicken 5-6 minutes until golden and cooked through (165F/74C).",
+      "Add the bell pepper and pineapple and stir-fry 2-3 minutes until the pepper is crisp-tender.",
+      "Pour in the sauce and toss 1-2 minutes until thickened and glossy. Serve over rice.",
+      "Tip: Pat the chicken dry before cooking so it browns properly instead of stewing in its own moisture."
     ]
   },
   {
@@ -907,9 +1217,12 @@
     "nutritionPerServing": { "calories": 540, "proteinG": 35, "carbsG": 60, "fatG": 16 },
     "imageUrl": "https://www.themealdb.com/images/media/meals/wuyd2h1765655837.jpg",
     "instructions": [
-      "Scramble the egg, then set aside.",
-      "Stir-fry chicken, add rice and peas.",
-      "Return egg, season with soy sauce."
+      "A wok-style fried rice with chicken, egg, and peas, best with cold leftover rice.",
+      "Dice the chicken. Lightly beat the egg. Use cold, day-old rice if possible and break up any clumps.",
+      "Heat a little oil in a wok over high heat and stir-fry the chicken 4-5 minutes until cooked through (165F/74C); push to the side.",
+      "Pour the egg into the empty side and scramble 30 seconds until just set.",
+      "Add the rice and peas and stir-fry 3-4 minutes, pressing the rice against the pan, until heated through and starting to crisp. Add the soy sauce and toss 1 minute.",
+      "Tip: Cold leftover rice is the secret; fresh warm rice is too moist and turns the dish gummy."
     ]
   },
   {
@@ -930,9 +1243,12 @@
     "nutritionPerServing": { "calories": 560, "proteinG": 32, "carbsG": 62, "fatG": 20 },
     "imageUrl": "https://www.themealdb.com/images/media/meals/1529444830.jpg",
     "instructions": [
-      "Boil the noodles and sear the sliced beef.",
-      "Stir-fry the vegetables until crisp-tender.",
-      "Toss everything with soy sauce and sesame oil."
+      "Saucy stir-fried noodles with beef and vegetables.",
+      "Cook the egg noodles per package directions until just tender, then drain. Slice the steak thinly across the grain.",
+      "Heat a little oil in a wok over high heat and stir-fry the beef 2-3 minutes until browned, then remove.",
+      "Add the stir-fry vegetables and cook 3-4 minutes until crisp-tender.",
+      "Return the beef, add the noodles, soy sauce, and sesame oil, and toss 1-2 minutes until everything is hot and coated.",
+      "Tip: Drizzle the sesame oil at the end as a finishing flavor; heating it hard destroys its nutty aroma."
     ]
   },
   {
@@ -953,9 +1269,12 @@
     "nutritionPerServing": { "calories": 470, "proteinG": 24, "carbsG": 52, "fatG": 18 },
     "imageUrl": "https://www.themealdb.com/images/media/meals/1525874812.jpg",
     "instructions": [
-      "Cube tofu and simmer in a garlic-soy sauce.",
-      "Add chopped green onion.",
-      "Spoon over steamed rice."
+      "Silky tofu in a savory, garlicky sauce over rice.",
+      "Cut the tofu into cubes. Mince the garlic and slice the green onions, keeping the green tops for garnish.",
+      "Heat a little oil in a skillet over medium-high heat, add the garlic and the white parts of the green onion, and cook 30 seconds until fragrant.",
+      "Add the soy sauce and a splash of water to make a sauce, bring to a simmer, then gently slide in the tofu and simmer 4-5 minutes, stirring carefully, until heated through and coated.",
+      "Serve over rice topped with the green onion tops.",
+      "Tip: Stir gently with a folding motion so the soft tofu cubes stay intact rather than breaking apart."
     ]
   },
   {
@@ -975,9 +1294,12 @@
     "nutritionPerServing": { "calories": 160, "proteinG": 13, "carbsG": 6, "fatG": 9 },
     "imageUrl": "https://www.themealdb.com/images/media/meals/1529446137.jpg",
     "instructions": [
-      "Bring broth to a simmer and thicken with cornstarch slurry.",
-      "Slowly stream in beaten eggs while stirring.",
-      "Garnish with green onion."
+      "A comforting Chinese soup with silky egg ribbons in seasoned broth.",
+      "Beat the eggs in a small bowl. Slice the green onion. Stir the cornstarch into 1 tablespoon cold water to make a slurry.",
+      "Bring the broth to a gentle boil in a pot, then stir in the cornstarch slurry and simmer 1 minute until slightly thickened.",
+      "Lower to a bare simmer and slowly drizzle in the beaten eggs while gently stirring the broth in one direction; they form delicate ribbons in about 30 seconds.",
+      "Off the heat, season with a splash of soy sauce or salt and top with the green onion.",
+      "Tip: Pour the eggs in a thin, steady stream into barely-simmering (not boiling) broth for fine silky ribbons instead of clumps."
     ]
   },
   {
@@ -998,9 +1320,12 @@
     "nutritionPerServing": { "calories": 640, "proteinG": 45, "carbsG": 68, "fatG": 18 },
     "imageUrl": "https://www.themealdb.com/images/media/meals/vwrpps1503068729.jpg",
     "instructions": [
-      "Coat chicken in panko and pan-fry until crisp.",
-      "Simmer a curry sauce with carrot and curry powder.",
-      "Slice the katsu and serve over rice with the sauce."
+      "Crispy panko-breaded chicken sliced over rice with a smooth curry sauce.",
+      "Dice the carrot. Make the sauce: cook the curry powder in a little oil over medium heat 30 seconds, add the carrot and about 3/4 cup water, and simmer 8-10 minutes until the carrot is soft and the sauce thickens.",
+      "Meanwhile, flatten the chicken to an even thickness, season with salt, and coat all over in the panko, pressing to adhere.",
+      "Heat about 1/4 inch of oil in a skillet over medium-high heat and fry the chicken 3-4 minutes per side until deep golden and cooked through (165F/74C). Drain on paper towel.",
+      "Slice the katsu, serve over rice, and pour the curry sauce alongside.",
+      "Tip: Press the panko on firmly and do not move the chicken while it fries so the crust stays crisp and intact."
     ]
   },
   {
@@ -1022,9 +1347,12 @@
     "nutritionPerServing": { "calories": 450, "proteinG": 20, "carbsG": 78, "fatG": 6 },
     "imageUrl": "https://www.themealdb.com/images/media/meals/wuxrtu1483564410.jpg",
     "instructions": [
-      "Simmer lentils until soft.",
-      "Saute onion, garlic, tomato and cumin, then stir in.",
-      "Serve over rice."
+      "Soft simmered lentils finished with a sizzling cumin-garlic tempering.",
+      "Rinse the lentils. Dice the onion and mince the garlic.",
+      "Simmer the lentils in about 1.5 cups water with a pinch of salt for 20-25 minutes until very soft and breaking down, skimming any foam.",
+      "In a separate small pan, heat a little oil over medium heat and add the cumin; when it sizzles and smells fragrant (about 30 seconds), add the garlic and onion and cook 3-4 minutes until golden, then add the tomato and cook 2 minutes.",
+      "Stir the tempering into the cooked lentils and simmer together 2-3 minutes. Serve over rice.",
+      "Tip: The sizzling tempering (tadka) poured over at the end is what gives this dish its flavor; do not skip toasting the cumin until fragrant."
     ]
   },
   {
@@ -1045,9 +1373,12 @@
     "nutritionPerServing": { "calories": 520, "proteinG": 24, "carbsG": 48, "fatG": 26 },
     "imageUrl": "https://www.themealdb.com/images/media/meals/xxpqsy1511452222.jpg",
     "instructions": [
-      "Brown paneer cubes, then set aside.",
-      "Simmer a tomato-garam masala gravy with peas.",
-      "Fold in paneer and serve over rice."
+      "Soft paneer cubes and peas in a spiced tomato gravy.",
+      "Cut the paneer into cubes.",
+      "Heat a little oil in a skillet over medium-high heat and lightly brown the paneer 2-3 minutes, turning, until golden at the edges, then remove.",
+      "In the same pan, cook the garam masala 30 seconds, then add the crushed tomatoes with a pinch of salt and simmer 5 minutes until thickened.",
+      "Stir in the peas and the paneer and simmer 3-4 minutes until heated through. Serve over rice.",
+      "Tip: Browning the paneer first gives it texture, but keep it gentle; overcooked paneer turns rubbery."
     ]
   },
   {
@@ -1068,9 +1399,11 @@
     "nutritionPerServing": { "calories": 380, "proteinG": 9, "carbsG": 62, "fatG": 11 },
     "imageUrl": "https://www.themealdb.com/images/media/meals/urtpqw1487341253.jpg",
     "instructions": [
-      "Roast and mash the eggplant.",
-      "Saute onion, tomato and garam masala, then fold in eggplant.",
-      "Serve over rice."
+      "Smoky mashed eggplant cooked down with onion, tomato, and spice.",
+      "Roast the whole eggplant: char it directly over a gas flame or under the broiler, turning, 10-15 minutes until the skin is blackened and blistered and the flesh is collapsing. Cool, peel off the skin, and mash the flesh.",
+      "Dice the onion. Heat a little oil in a skillet over medium heat and cook the onion 4-5 minutes until golden, add the garam masala for 30 seconds, then the tomato and cook 3-4 minutes until softened.",
+      "Stir in the mashed eggplant and a pinch of salt and cook 5-6 minutes until thick and well blended. Serve over rice.",
+      "Tip: Charring the eggplant skin is what gives bharta its signature smoky flavor; roast it until the skin is truly blackened."
     ]
   },
   {
@@ -1091,9 +1424,12 @@
     "nutritionPerServing": { "calories": 490, "proteinG": 18, "carbsG": 88, "fatG": 6 },
     "imageUrl": "https://www.themealdb.com/images/media/meals/sywrsu1511463066.jpg",
     "instructions": [
-      "Saute onion and stir in tomato and garam masala.",
-      "Add kidney beans and simmer 15 minutes.",
-      "Serve over rice."
+      "North Indian kidney beans simmered in a spiced onion-tomato gravy.",
+      "Dice the onion. Drain and rinse the kidney beans.",
+      "Heat a little oil in a pot over medium heat and cook the onion 5-6 minutes until deep golden, then add the garam masala and cook 30 seconds until fragrant.",
+      "Add the crushed tomatoes and cook 5 minutes until thick and the oil starts to separate, then add the beans with about 1/2 cup water and a pinch of salt.",
+      "Simmer 12-15 minutes, lightly mashing some beans, until the gravy is thick and creamy. Serve over rice.",
+      "Tip: Mashing a few beans against the pot naturally thickens the gravy and makes it cling to the rice."
     ]
   },
   {
@@ -1114,9 +1450,12 @@
     "nutritionPerServing": { "calories": 380, "proteinG": 44, "carbsG": 8, "fatG": 18 },
     "imageUrl": "https://www.themealdb.com/images/media/meals/qptpvt1487339892.jpg",
     "instructions": [
-      "Marinate chicken in yogurt, garam masala, lemon and garlic.",
-      "Roast or grill until charred and cooked through.",
-      "Rest a few minutes before serving."
+      "Yogurt-marinated chicken roasted until charred and juicy.",
+      "Mince the garlic. Mix the yogurt, garam masala, garlic, lemon juice, and a good pinch of salt. Coat the chicken thighs and marinate at least 30 minutes (up to overnight in the fridge).",
+      "Preheat the oven to 425F (220C) or a grill to high.",
+      "Roast or grill the chicken 18-22 minutes, turning once, until charred at the edges and cooked through to 165F (74C).",
+      "Rest 5 minutes before serving with a squeeze of lemon.",
+      "Tip: The longer the marinade (up to overnight), the more tender and flavorful the chicken; the yogurt's acidity tenderizes the meat."
     ]
   },
   {
@@ -1137,9 +1476,12 @@
     "nutritionPerServing": { "calories": 620, "proteinG": 38, "carbsG": 48, "fatG": 30 },
     "imageUrl": "https://www.themealdb.com/images/media/meals/vvstvq1487342592.jpg",
     "instructions": [
-      "Brown the lamb and set aside.",
-      "Saute onion, tomato and garam masala, return lamb.",
-      "Simmer until tender and serve over rice."
+      "Slow-simmered Kashmiri lamb curry in a rich red gravy.",
+      "Cut the lamb into bite-size cubes and season with salt. Dice the onion.",
+      "Heat a little oil in a pot over medium-high heat and brown the lamb on all sides 4-5 minutes, then remove.",
+      "Lower the heat to medium, cook the onion 5-6 minutes until golden, add the garam masala for 30 seconds, then the crushed tomatoes and cook 3-4 minutes until thick.",
+      "Return the lamb with about 1/2 cup water, cover, and simmer gently 35-40 minutes until the lamb is fork-tender and the gravy is rich. Serve over rice.",
+      "Tip: Low and slow is the key; rushing the simmer leaves the lamb tough, but it should pull apart easily when done."
     ]
   },
   {
@@ -1160,9 +1502,13 @@
     "nutritionPerServing": { "calories": 660, "proteinG": 36, "carbsG": 72, "fatG": 26 },
     "imageUrl": "https://www.themealdb.com/images/media/meals/xrttsx1487339558.jpg",
     "instructions": [
-      "Brown lamb with onion and garam masala.",
-      "Layer with parboiled basmati rice and yogurt.",
-      "Cover and steam until the rice is fluffy."
+      "A fragrant layered rice dish with spiced lamb (a simplified one-pot version).",
+      "Rinse the basmati rice until the water runs clear and soak 15 minutes. Thinly slice the onion. Cut the lamb into small pieces and toss with the yogurt, garam masala, and salt.",
+      "Fry the onion in a little oil over medium-high heat 6-8 minutes until deep golden; remove half for garnish.",
+      "Add the marinated lamb to the pot and brown 4-5 minutes, then add about 1/2 cup water, cover, and simmer 25-30 minutes until the lamb is tender.",
+      "Drain the rice and layer it over the lamb, add about 1 cup water, bring to a boil, then cover and steam on low 12-15 minutes until the rice is fluffy and the water is absorbed.",
+      "Fluff gently, top with the reserved fried onion, and serve.",
+      "Tip: Let the biryani rest covered off the heat 5 minutes after cooking so the rice firms up and the grains stay separate."
     ]
   },
   {
@@ -1183,9 +1529,12 @@
     "nutritionPerServing": { "calories": 580, "proteinG": 38, "carbsG": 62, "fatG": 18 },
     "imageUrl": "https://www.themealdb.com/images/media/meals/uuuspp1468263334.jpg",
     "instructions": [
-      "Stir-fry chicken, then push aside and scramble the egg.",
-      "Add noodles, broccoli and soy sauce.",
-      "Toss over high heat until charred."
+      "Thai stir-fried wide rice noodles with chicken, egg, and broccoli in a savory soy glaze.",
+      "Soak the rice noodles in hot water 8-10 minutes until pliable, then drain. Slice the chicken and cut the broccoli into small florets. Beat the egg.",
+      "Heat a little oil in a wok over high heat and stir-fry the chicken 4-5 minutes until cooked through (165F/74C); push to the side.",
+      "Scramble the egg in the empty side 30 seconds, then add the broccoli and stir-fry 2 minutes.",
+      "Add the noodles and soy sauce and toss 2-3 minutes over high heat until the noodles are tender and lightly charred in spots.",
+      "Tip: Get the wok really hot and let the noodles sit briefly between tosses to pick up the smoky, slightly charred wok flavor."
     ]
   },
   {
@@ -1206,9 +1555,12 @@
     "nutritionPerServing": { "calories": 640, "proteinG": 34, "carbsG": 52, "fatG": 32 },
     "imageUrl": "https://www.themealdb.com/images/media/meals/tvttqv1504640475.jpg",
     "instructions": [
-      "Brown beef and stir in curry paste.",
-      "Add coconut milk and potato, simmer until tender.",
-      "Serve over rice."
+      "A mild, rich Thai-Muslim curry of slow-cooked beef and potato in coconut.",
+      "Cut the beef chuck and potato into chunks.",
+      "Heat a little oil in a pot over medium heat, add the massaman paste, and fry 1 minute until fragrant. Stir in the coconut milk and bring to a gentle simmer.",
+      "Add the beef and about 1/2 cup water, cover, and simmer gently 60-75 minutes until the beef is fork-tender (chuck needs long, slow cooking to break down).",
+      "Add the potato in the last 20 minutes and cook until soft. Serve over rice.",
+      "Tip: Beef chuck must be simmered long and low; it is tough until the connective tissue melts, then it turns meltingly tender."
     ]
   },
   {
@@ -1229,9 +1581,12 @@
     "nutritionPerServing": { "calories": 440, "proteinG": 34, "carbsG": 14, "fatG": 28 },
     "imageUrl": "https://www.themealdb.com/images/media/meals/ol2xxt1763582263.jpg",
     "instructions": [
-      "Simmer coconut milk with ginger.",
-      "Add sliced chicken and mushrooms, cook through.",
-      "Finish with lime juice."
+      "A creamy, tangy Thai coconut-chicken soup with mushrooms.",
+      "Slice the chicken thinly, slice the mushrooms, and grate the ginger.",
+      "In a pot, combine the coconut milk with about 1/2 cup water and the ginger and bring to a gentle simmer (do not boil hard, or the coconut milk can split).",
+      "Add the chicken and mushrooms and simmer 6-8 minutes until the chicken is cooked through (165F/74C) and the mushrooms are soft.",
+      "Off the heat, stir in the lime juice and season with salt or a splash of fish sauce. It should taste creamy, sour, and savory.",
+      "Tip: Add the lime juice off the heat at the end; boiling it dulls the bright sourness that defines this soup."
     ]
   },
   {
@@ -1252,9 +1607,12 @@
     "nutritionPerServing": { "calories": 540, "proteinG": 38, "carbsG": 52, "fatG": 18 },
     "imageUrl": "https://www.themealdb.com/images/media/meals/el64dy1763483009.jpg",
     "instructions": [
-      "Stir-fry ground chicken until browned.",
-      "Add pepper and soy sauce.",
-      "Toss with basil and serve over rice."
+      "A fast, fragrant Thai stir-fry of minced chicken and basil over rice.",
+      "Dice the bell pepper.",
+      "Heat a little oil in a wok over high heat until shimmering, add the ground chicken, and stir-fry 5-6 minutes, breaking it up, until cooked through and lightly browned.",
+      "Add the bell pepper and stir-fry 2 minutes until crisp-tender, then add the soy sauce and toss to coat.",
+      "Turn off the heat, stir in the basil, and toss just until wilted, about 30 seconds. Serve over rice.",
+      "Tip: Add the basil off the heat at the very end so it wilts into the dish while keeping its fresh aroma instead of cooking away."
     ]
   },
   {
@@ -1274,9 +1632,12 @@
     "nutritionPerServing": { "calories": 300, "proteinG": 6, "carbsG": 32, "fatG": 18 },
     "imageUrl": "https://www.themealdb.com/images/media/meals/1brbso1763585098.jpg",
     "instructions": [
-      "Simmer pumpkin in broth until soft.",
-      "Blend with coconut milk and curry paste.",
-      "Warm through and serve."
+      "A silky, lightly spiced coconut-pumpkin soup.",
+      "Peel and cube the pumpkin if not already prepared.",
+      "Heat a little oil in a pot over medium heat, add the red curry paste, and fry 1 minute until fragrant.",
+      "Add the pumpkin and broth, bring to a boil, then simmer 15-18 minutes until the pumpkin is very soft when pierced.",
+      "Stir in the coconut milk and blend until smooth with an immersion or regular blender. Warm through and season with salt.",
+      "Tip: Blend while hot for the silkiest texture, and add the coconut milk after blending so it stays creamy and bright."
     ]
   },
   {
@@ -1320,9 +1681,12 @@
     "nutritionPerServing": { "calories": 520, "proteinG": 30, "carbsG": 26, "fatG": 32 },
     "imageUrl": "https://www.themealdb.com/images/media/meals/ctg8jd1585563097.jpg",
     "instructions": [
-      "Roast sliced eggplant.",
-      "Simmer lamb with tomato, then layer with eggplant.",
-      "Top with yogurt and parmesan, bake 25 minutes."
+      "A Greek baked casserole of eggplant, spiced lamb, and a creamy top.",
+      "Preheat the oven to 400F (200C). Slice the eggplant into 1/2-inch rounds, brush with oil, and roast on a sheet pan 20 minutes until soft and golden, flipping once.",
+      "Meanwhile, brown the ground lamb in a skillet over medium-high heat 5-6 minutes, then add the crushed tomatoes and simmer 8-10 minutes until thick. Grate the parmesan and stir it into the yogurt with a pinch of salt for the topping.",
+      "Layer the eggplant and lamb sauce in a small baking dish and spread the yogurt topping over the top.",
+      "Bake 18-20 minutes until the top is set and lightly golden. Rest 5-10 minutes before serving.",
+      "Tip: Roasting the eggplant first drives off moisture so the finished moussaka holds together instead of turning watery."
     ]
   },
   {
@@ -1343,9 +1707,12 @@
     "nutritionPerServing": { "calories": 540, "proteinG": 40, "carbsG": 32, "fatG": 28 },
     "imageUrl": "https://www.themealdb.com/images/media/meals/rjhf741585564676.jpg",
     "instructions": [
-      "Marinate lamb in lemon, garlic and olive oil.",
-      "Thread onto skewers and grill.",
-      "Serve with rice."
+      "Greek lemon-garlic grilled lamb skewers served with rice.",
+      "Cut the lamb into 1-inch cubes. Mince the garlic and toss the lamb with the garlic, olive oil, lemon juice, salt, and pepper. Marinate at least 30 minutes.",
+      "Thread the lamb onto skewers (soak wooden skewers first so they do not burn).",
+      "Grill or pan-sear over high heat 8-10 minutes, turning, until charred outside and cooked to your liking (about 145F/63C for medium).",
+      "Rest 5 minutes and serve over rice with a squeeze of lemon.",
+      "Tip: Leave a little space between cubes on the skewer so the heat reaches all sides and the lamb chars instead of steaming."
     ]
   },
   {
@@ -1365,9 +1732,12 @@
     "nutritionPerServing": { "calories": 380, "proteinG": 19, "carbsG": 30, "fatG": 21 },
     "imageUrl": "https://www.themealdb.com/images/media/meals/quuxsx1511476154.jpg",
     "instructions": [
-      "Soften sliced potato and onion in olive oil.",
-      "Stir into beaten eggs and pour back into the pan.",
-      "Cook gently, flipping once, until set."
+      "A thick Spanish potato-and-egg omelette, cooked slow and flipped.",
+      "Thinly slice the potato and onion.",
+      "Heat the olive oil in a nonstick skillet over medium-low heat and gently cook the potato and onion 12-15 minutes, stirring occasionally, until soft but not browned.",
+      "Beat the eggs with a pinch of salt, stir in the warm potatoes and onion, then pour everything back into the pan over medium-low heat.",
+      "Cook 4-5 minutes until the bottom and edges are set, then flip using a plate to invert and cook 2-3 minutes more until just set but still slightly soft in the center.",
+      "Tip: Keep the heat gentle the whole way; high heat browns the outside before the inside sets and makes the eggs tough."
     ]
   },
   {
@@ -1388,9 +1758,13 @@
     "nutritionPerServing": { "calories": 560, "proteinG": 32, "carbsG": 82, "fatG": 10 },
     "imageUrl": "https://www.themealdb.com/images/media/meals/9bl20p1763248192.jpg",
     "instructions": [
-      "Toast rice with pepper, then add broth.",
-      "Simmer until nearly absorbed.",
-      "Nestle in shrimp and peas, cook until done."
+      "A Spanish rice dish cooked flat in one pan with shrimp and peas.",
+      "Dice the bell pepper. Pat the shrimp dry.",
+      "Heat a little oil in a wide skillet over medium heat and cook the bell pepper 3-4 minutes, then stir in the rice and toast 1 minute.",
+      "Pour in the broth, bring to a boil, then lower to a simmer and cook 15 minutes without stirring (stirring releases starch and stops the crust from forming).",
+      "Nestle the shrimp and peas into the rice and cook 5 more minutes until the shrimp are pink and opaque and the liquid is absorbed.",
+      "Rest off the heat 5 minutes before serving.",
+      "Tip: Resist stirring once the broth is in; leaving it undisturbed lets the prized lightly-crisp bottom layer (socarrat) form."
     ]
   },
   {
@@ -1411,9 +1785,12 @@
     "nutritionPerServing": { "calories": 600, "proteinG": 38, "carbsG": 48, "fatG": 28 },
     "imageUrl": "https://www.themealdb.com/images/media/meals/yuwtuu1511295751.jpg",
     "instructions": [
-      "Brown lamb with onion and cumin.",
-      "Add chickpeas and apricots with a little water.",
-      "Cover and simmer until the lamb is tender."
+      "A Moroccan slow-braise of lamb with sweet apricots and chickpeas.",
+      "Cut the lamb into chunks and season with salt. Dice the onion and drain the chickpeas.",
+      "Heat a little oil in a pot over medium-high heat and brown the lamb on all sides 4-5 minutes, then remove.",
+      "Cook the onion 4-5 minutes until soft, add the cumin for 30 seconds, then return the lamb with the apricots, chickpeas, and about 1 cup water.",
+      "Cover and simmer gently 60-75 minutes until the lamb is fork-tender and the sauce is thick and glossy.",
+      "Tip: The apricots melt into the sauce over the long simmer, balancing the savory lamb with gentle sweetness; give it the full time for tender meat."
     ]
   },
   {
@@ -1434,9 +1811,12 @@
     "nutritionPerServing": { "calories": 580, "proteinG": 38, "carbsG": 68, "fatG": 16 },
     "imageUrl": "https://www.themealdb.com/images/media/meals/qxytrx1511304021.jpg",
     "instructions": [
-      "Brown chicken with cumin and carrot.",
-      "Add chickpeas and a splash of water.",
-      "Serve over steamed couscous."
+      "Spiced chicken and vegetables served over fluffy steamed couscous.",
+      "Dice the chicken and carrot. Drain the chickpeas.",
+      "Heat a little oil in a skillet over medium-high heat and cook the chicken 5-6 minutes until golden and 165F (74C); add the carrot, chickpeas, and cumin and cook 5 minutes more until the carrot softens.",
+      "Meanwhile, place the couscous in a bowl, pour over an equal amount of boiling water, cover, and let stand 5 minutes, then fluff with a fork.",
+      "Spoon the chicken and vegetables over the couscous.",
+      "Tip: Couscous cooks entirely from the residual heat of the boiling water; just cover and wait, then fluff, with no stovetop needed."
     ]
   },
   {
@@ -1457,9 +1837,11 @@
     "nutritionPerServing": { "calories": 580, "proteinG": 42, "carbsG": 48, "fatG": 22 },
     "imageUrl": "https://www.themealdb.com/images/media/meals/hcg6l91763596970.jpg",
     "instructions": [
-      "Season and roast the chicken, then slice.",
-      "Whisk garlic into the yogurt for a sauce.",
-      "Build a bowl with rice, chicken, cucumber and yogurt."
+      "Spiced chicken thigh over rice with a garlicky yogurt sauce and cucumber.",
+      "Slice the chicken thigh into strips and season with salt and a pinch of cumin or paprika if available. Dice the cucumber. Mince the garlic and stir it into the yogurt with a pinch of salt for the sauce.",
+      "Heat a lightly oiled skillet over medium-high heat and cook the chicken 6-8 minutes, turning, until browned and cooked through (165F/74C).",
+      "Build the bowl with rice, chicken, and cucumber, and drizzle with the garlic yogurt sauce.",
+      "Tip: Chicken thigh stays juicy even when well browned, so let it get good color in the pan for the best shawarma-style flavor."
     ]
   },
   {
@@ -1480,9 +1862,12 @@
     "nutritionPerServing": { "calories": 520, "proteinG": 19, "carbsG": 98, "fatG": 5 },
     "imageUrl": "https://www.themealdb.com/images/media/meals/4er7mj1598733193.jpg",
     "instructions": [
-      "Cook rice, lentils and pasta separately.",
-      "Combine with chickpeas.",
-      "Top with a spiced tomato sauce and fried onions."
+      "Egypt's beloved carb mix of rice, lentils, pasta, and chickpeas under spiced tomato sauce.",
+      "Rinse the lentils and simmer in water 20-25 minutes until tender, then drain. Drain the chickpeas.",
+      "Cook the rice and the pasta separately in salted water until each is tender, then drain.",
+      "Warm the tomato sauce in a small pan over medium heat 3-4 minutes (a pinch of cumin and chili makes it more authentic).",
+      "Layer the rice, lentils, pasta, and chickpeas in a bowl and spoon the warm tomato sauce over the top.",
+      "Tip: Cook each starch separately so nothing turns to mush, then combine just before serving for the right mix of textures."
     ]
   },
   {
@@ -1502,9 +1887,12 @@
     "nutritionPerServing": { "calories": 280, "proteinG": 8, "carbsG": 42, "fatG": 11 },
     "imageUrl": "https://www.themealdb.com/images/media/meals/8c8m4q1763791156.jpg",
     "instructions": [
-      "Roast eggplant until collapsed, then scoop the flesh.",
-      "Mash with tahini and lemon juice.",
-      "Serve with warm pita."
+      "A smoky roasted-eggplant dip with tahini and lemon, served with pita.",
+      "Preheat the oven to 450F (230C). Prick the eggplant all over and roast 30-40 minutes until the skin is blackened and the inside is completely collapsed and soft.",
+      "Cool slightly, scoop out the flesh, and discard the skin.",
+      "Mash or blend the eggplant flesh with the tahini, lemon juice, and a pinch of salt until creamy.",
+      "Warm the pita and cut into wedges for dipping.",
+      "Tip: Roast the eggplant until it looks overdone and totally collapsed; that deep roasting is what gives baba ganoush its smoky depth and silky texture."
     ]
   },
   {
@@ -1524,9 +1912,11 @@
     "nutritionPerServing": { "calories": 480, "proteinG": 44, "carbsG": 40, "fatG": 14 },
     "imageUrl": "https://www.themealdb.com/images/media/meals/3um6il1763794322.jpg",
     "instructions": [
-      "Thread chicken and pepper onto skewers.",
-      "Grill, basting with bbq sauce.",
-      "Serve with grilled corn."
+      "Grilled chicken and pepper skewers glazed with smoky BBQ sauce.",
+      "Cut the chicken and bell pepper into 1-inch pieces and the corn into rounds. Thread onto skewers (soak wooden ones first).",
+      "Preheat a grill or grill pan to medium-high. Grill the skewers 10-12 minutes, turning every few minutes, until the chicken is cooked through (165F/74C) and lightly charred.",
+      "Brush with the BBQ sauce in the last 2-3 minutes of cooking and turn to glaze on all sides.",
+      "Tip: Add the sugary BBQ sauce only at the end; brushed on too early it burns before the chicken is cooked."
     ]
   },
   {
@@ -1546,9 +1936,12 @@
     "nutritionPerServing": { "calories": 620, "proteinG": 42, "carbsG": 44, "fatG": 30 },
     "imageUrl": "https://www.themealdb.com/images/media/meals/ursuup1487348423.jpg",
     "instructions": [
-      "Slice the smoked brisket and brush with bbq sauce.",
-      "Roast the sweet potato.",
-      "Plate with slaw."
+      "Sliced tender brisket with BBQ sauce, slaw, and a baked sweet potato (uses cooked brisket).",
+      "Preheat the oven to 400F (200C). Prick the sweet potato and bake 40-45 minutes until soft when squeezed.",
+      "Toss the coleslaw mix with a pinch of salt and a splash of vinegar and set aside.",
+      "Warm the cooked brisket (covered in the oven for the last 15 minutes, or in a skillet over medium heat 4-5 minutes), then slice across the grain and brush with BBQ sauce.",
+      "Plate the brisket with the slaw and sweet potato.",
+      "Tip: If smoking brisket from raw, cook it low at 225F (107C) until it reaches about 203F (95C) internal and probes like soft butter, then always slice across the grain."
     ]
   },
   {
@@ -1569,9 +1962,12 @@
     "nutritionPerServing": { "calories": 560, "proteinG": 44, "carbsG": 44, "fatG": 22 },
     "imageUrl": "https://www.themealdb.com/images/media/meals/vdwloy1713225718.jpg",
     "instructions": [
-      "Grill the chicken and glaze with bbq sauce.",
-      "Melt cheddar over the top.",
-      "Build the burger with lettuce on a toasted bun."
+      "A juicy grilled chicken burger with melty cheddar and BBQ sauce.",
+      "Pat the chicken dry and season with salt and pepper. If thick, butterfly or pound it to an even thickness so it cooks evenly.",
+      "Cook in a lightly oiled skillet or grill over medium-high heat 5-6 minutes per side until golden and 165F (74C) internal.",
+      "Brush with the BBQ sauce, lay the cheddar on top, and cover 1 minute until the cheese melts.",
+      "Toast the bun cut-side down 1 minute, then build with the lettuce and the chicken patty.",
+      "Tip: Pounding the chicken to an even thickness prevents the thin edges drying out before the thick center is cooked."
     ]
   },
   {
@@ -1592,9 +1988,12 @@
     "nutritionPerServing": { "calories": 440, "proteinG": 38, "carbsG": 12, "fatG": 27 },
     "imageUrl": "https://www.themealdb.com/images/media/meals/1548772327.jpg",
     "instructions": [
-      "Toss fennel and tomatoes with olive oil on a tray.",
-      "Lay salmon on top and squeeze over lemon.",
-      "Bake at 400F for 18 minutes."
+      "A one-pan roast of salmon with sweet fennel and burst tomatoes.",
+      "Preheat the oven to 400F (200C). Thinly slice the fennel and halve the cherry tomatoes.",
+      "Toss the fennel and tomatoes with the olive oil and salt on a sheet pan and roast 10 minutes to soften.",
+      "Pat the salmon dry, set it on the vegetables, top with lemon slices and a little salt, and roast 12-15 minutes until the salmon flakes easily and reaches 145F (63C).",
+      "Finish with a squeeze of lemon.",
+      "Tip: Give the fennel a 10-minute head start; it takes longer to soften than the salmon needs to cook through."
     ]
   },
   {
@@ -1615,9 +2014,12 @@
     "nutritionPerServing": { "calories": 320, "proteinG": 40, "carbsG": 6, "fatG": 15 },
     "imageUrl": "https://www.themealdb.com/images/media/meals/ze8uwg1763196123.jpg",
     "instructions": [
-      "Melt butter and saute garlic.",
-      "Add shrimp and cook until pink.",
-      "Finish with lemon and parsley."
+      "Quick-seared shrimp in a garlic-butter pan sauce with lemon and parsley.",
+      "Pat the shrimp very dry. Mince the garlic and chop the parsley.",
+      "Melt the butter in a skillet over medium-high heat. Add the shrimp in a single layer and cook 1-2 minutes per side until pink and opaque (curled into a loose C, not a tight O).",
+      "Add the garlic in the last 30 seconds and cook just until fragrant, without letting it brown.",
+      "Off the heat, squeeze in the lemon and toss with the parsley.",
+      "Tip: Shrimp cook in just 2-4 minutes total; a tightly curled, opaque shrimp is overdone and rubbery, so pull them early."
     ]
   },
   {
@@ -1638,9 +2040,12 @@
     "nutritionPerServing": { "calories": 460, "proteinG": 40, "carbsG": 32, "fatG": 18 },
     "imageUrl": "https://www.themealdb.com/images/media/meals/yypwwq1511304979.jpg",
     "instructions": [
-      "Boil potato, green beans and the egg.",
-      "Arrange over greens with flaked tuna and olives.",
-      "Dress with olive oil and lemon."
+      "A composed French salad of tuna, egg, potato, green beans, and olives.",
+      "Boil the egg: lower it into boiling water and cook 9 minutes for hard-boiled, then cool in ice water and peel. Cut the potato into chunks and boil 12-15 minutes until tender, then drain.",
+      "Boil the green beans 3-4 minutes until crisp-tender and bright green, then drain and cool under cold water.",
+      "Halve the egg. Arrange the potato, green beans, tuna, egg, and olives in a bowl or on a plate.",
+      "Drizzle with olive oil and a squeeze of lemon or splash of vinegar, and season with salt and pepper.",
+      "Tip: Cooling the green beans under cold water right after boiling stops the cooking and locks in their bright green color and snap."
     ]
   },
   {
@@ -1661,9 +2066,12 @@
     "nutritionPerServing": { "calories": 480, "proteinG": 36, "carbsG": 12, "fatG": 32 },
     "imageUrl": "https://www.themealdb.com/images/media/meals/1549542994.jpg",
     "instructions": [
-      "Pan-sear or flake cooked salmon.",
-      "Toss spinach, tomatoes and avocado.",
-      "Top with salmon and a drizzle of olive oil."
+      "A fresh salad of seared salmon over spinach with avocado and tomatoes.",
+      "Pat the salmon dry and season with salt. Slice the avocado and halve the cherry tomatoes.",
+      "Heat a little oil in a skillet over medium-high heat and cook the salmon 3-4 minutes per side until it flakes easily and reaches 145F (63C). Flake into large pieces.",
+      "Toss the spinach with the olive oil and a pinch of salt, then top with the tomatoes, avocado, and warm salmon.",
+      "Finish with a squeeze of lemon if you like.",
+      "Tip: Let the salmon rest a minute before flaking so it stays in large, moist pieces rather than crumbling."
     ]
   },
   {
@@ -1684,9 +2092,12 @@
     "nutritionPerServing": { "calories": 560, "proteinG": 40, "carbsG": 58, "fatG": 18 },
     "imageUrl": "https://www.themealdb.com/images/media/meals/ysxwuq1487323065.jpg",
     "instructions": [
-      "Poach cod in milk, then make a simple sauce.",
-      "Fold in peas and top with mashed potato.",
-      "Bake at 400F for 25 minutes."
+      "A comforting baked pie of fish in creamy sauce under mashed potato.",
+      "Preheat the oven to 400F (200C). Peel and chunk the potatoes and boil 15-18 minutes until tender, then drain and mash with the butter and a splash of the milk; season with salt.",
+      "Cut the cod into chunks. Warm the remaining milk in a saucepan, add the cod and peas, and poach gently over low heat 4-5 minutes until the fish is just opaque.",
+      "Transfer the fish, peas, and creamy liquid to a small baking dish and spread the mashed potato over the top, roughing it up with a fork.",
+      "Bake 18-20 minutes until the top is golden and the filling is bubbling at the edges.",
+      "Tip: Roughing up the mash with a fork creates peaks that crisp and brown beautifully in the oven."
     ]
   },
   {
@@ -1707,9 +2118,12 @@
     "nutritionPerServing": { "calories": 560, "proteinG": 38, "carbsG": 52, "fatG": 20 },
     "imageUrl": "https://www.themealdb.com/images/media/meals/1529443236.jpg",
     "instructions": [
-      "Sear sliced beef over high heat.",
-      "Add pepper, chili and soy sauce.",
-      "Toss and serve over rice."
+      "A bold, spicy stir-fry of crisp-edged beef and peppers over rice.",
+      "Slice the steak thinly across the grain and the bell pepper into strips. Stir the soy sauce with the chili powder.",
+      "Heat a little oil in a wok over high heat until shimmering and stir-fry the beef in a single layer 2-3 minutes until browned and crisp at the edges, then remove.",
+      "Add the bell pepper and stir-fry 2 minutes until crisp-tender.",
+      "Return the beef, pour in the sauce, and toss 1 minute until everything is coated and glossy. Serve over rice.",
+      "Tip: Cook the beef in a single layer over high heat and do not crowd the pan; piled-up beef steams and will not get those crisp browned edges."
     ]
   },
   {
@@ -1730,9 +2144,11 @@
     "nutritionPerServing": { "calories": 420, "proteinG": 9, "carbsG": 76, "fatG": 10 },
     "imageUrl": "https://www.themealdb.com/images/media/meals/1oz4nb1765687990.jpg",
     "instructions": [
-      "Cube and roast the eggplant until soft.",
-      "Stir-fry with garlic, soy sauce and chili.",
-      "Serve over rice."
+      "Soft, savory-spicy braised eggplant over rice.",
+      "Cut the eggplant into batons. Mince the garlic and stir the soy sauce with the chili powder and a splash of water.",
+      "Heat a generous drizzle of oil in a skillet over medium-high heat and cook the eggplant 6-8 minutes, turning, until deeply golden and soft (eggplant soaks up oil at first, then releases it as it softens).",
+      "Add the garlic and cook 30 seconds until fragrant, then pour in the sauce and simmer 2-3 minutes until the eggplant is glazed and tender. Serve over rice.",
+      "Tip: Cook the eggplant until it is truly soft and collapsing; undercooked eggplant is spongy and bitter."
     ]
   },
   {
@@ -1753,9 +2169,12 @@
     "nutritionPerServing": { "calories": 620, "proteinG": 40, "carbsG": 64, "fatG": 22 },
     "imageUrl": "https://www.themealdb.com/images/media/meals/tytyxu1515363282.jpg",
     "instructions": [
-      "Rub chicken with jerk seasoning and roast.",
-      "Cook rice with kidney beans and coconut milk.",
-      "Serve the chicken over the rice and peas."
+      "Spicy Jamaican jerk chicken with coconut rice and peas (kidney beans).",
+      "Rub the chicken thighs all over with the jerk seasoning and a pinch of salt and marinate at least 20 minutes. Drain the beans.",
+      "Cook the rice with the coconut milk, the beans, and enough water for the rice (about 1 cup total liquid): bring to a boil, cover, and simmer 15 minutes until the liquid is absorbed and the rice is tender.",
+      "Meanwhile, cook the chicken in a lightly oiled skillet or grill over medium-high heat 6-7 minutes per side until charred and cooked through (165F/74C).",
+      "Rest the chicken 5 minutes, then serve over the coconut rice and beans.",
+      "Tip: Jerk seasoning is potent and salty, so taste before adding extra salt, and give it time to marinate for the deepest flavor."
     ]
   },
   {
@@ -1776,9 +2195,12 @@
     "nutritionPerServing": { "calories": 520, "proteinG": 32, "carbsG": 66, "fatG": 12 },
     "imageUrl": "https://www.themealdb.com/images/media/meals/568t931763584227.jpg",
     "instructions": [
-      "Soak the rice noodles until pliable.",
-      "Stir-fry shrimp and pepper, add sriracha and soy.",
-      "Toss with the noodles."
+      "Slurpable rice noodles with shrimp and peppers in a spicy soy-sriracha sauce.",
+      "Soak the rice noodles in hot water 8-10 minutes until pliable, then drain. Slice the bell pepper and stir the sriracha and soy sauce together.",
+      "Heat a little oil in a wok over high heat and stir-fry the shrimp 2-3 minutes until pink and opaque, then remove.",
+      "Add the bell pepper and stir-fry 2 minutes until crisp-tender.",
+      "Return the shrimp, add the noodles and sauce, and toss 1-2 minutes over high heat until everything is hot and coated.",
+      "Tip: Soak the noodles only until bendy but still firm; they finish cooking in the wok, and over-soaked noodles turn to mush when tossed."
     ]
   },
   {
@@ -1799,9 +2221,12 @@
     "nutritionPerServing": { "calories": 430, "proteinG": 14, "carbsG": 72, "fatG": 9 },
     "imageUrl": "https://www.themealdb.com/images/media/meals/rwuyqx1511383174.jpg",
     "instructions": [
-      "Whisk flour and baking powder with buttermilk and egg.",
-      "Cook ladles of batter on a greased griddle.",
-      "Flip once and serve with maple syrup."
+      "Fluffy stacked pancakes with a tender, tangy crumb.",
+      "Whisk the flour and baking powder with a pinch of salt in a bowl. In another bowl, whisk the egg and buttermilk.",
+      "Pour the wet into the dry and stir just until combined; a few lumps are fine, and overmixing makes tough pancakes. Let the batter rest 5 minutes.",
+      "Heat a lightly greased nonstick skillet over medium heat. Pour in rounds of batter and cook 2-3 minutes until bubbles form on the surface and the edges look set, then flip and cook 1-2 minutes until golden.",
+      "Serve with the maple syrup.",
+      "Tip: Flip only once, when bubbles appear and pop on top; flipping early or repeatedly deflates the pancakes."
     ]
   },
   {
@@ -1822,9 +2247,12 @@
     "nutritionPerServing": { "calories": 600, "proteinG": 38, "carbsG": 34, "fatG": 34 },
     "imageUrl": "https://www.themealdb.com/images/media/meals/44bzep1761848278.jpg",
     "instructions": [
-      "Form and sear a beef patty.",
-      "Melt cheddar over the top.",
-      "Build the burger with lettuce and tomato on a toasted bun."
+      "A juicy pan-seared cheeseburger with melted cheddar on a toasted bun.",
+      "Gently form the ground beef into a patty slightly wider than the bun (it shrinks as it cooks) and season both sides generously with salt and pepper. Slice the tomato.",
+      "Heat a skillet over medium-high heat until hot. Cook the patty 3-4 minutes until a deep brown crust forms, then flip and cook 2-3 minutes more (160F/71C for well done).",
+      "Lay the cheddar on the patty in the last minute and cover until melted.",
+      "Toast the bun cut-side down 1 minute, then build with the patty, lettuce, and tomato.",
+      "Tip: Handle the meat as little as possible and do not press the patty with the spatula; pressing squeezes out the juices that keep it moist."
     ]
   }
 ]
