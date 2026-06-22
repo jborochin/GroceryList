@@ -5,6 +5,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { useMealPlanStore } from '../store/useMealPlanStore';
+import { useMealScheduleStore } from '../store/useMealScheduleStore';
 import { NutritionBar } from '../components/NutritionBar';
 import { planMeals, PlannerResult, SlotConfig } from '../utils/mealPlanner';
 import { commitPlannedMeals } from '../utils/commitMealPlan';
@@ -62,6 +63,7 @@ export function AutoMealPrepScreen() {
   const settings = useSettingsStore((s) => s.settings);
   const planEntries = useMealPlanStore((s) => s.entries);
   const clearPlan = useMealPlanStore((s) => s.clearPlan);
+  const clearSchedule = useMealScheduleStore((s) => s.clearSchedule);
 
   const [days, setDays] = useState(7);
   const [slotCounts, setSlotCounts] = useState<Record<MealSlot, number>>({
@@ -114,6 +116,7 @@ export function AutoMealPrepScreen() {
         destructive: true,
       });
       if (!replace) return;
+      clearSchedule();
       clearPlan();
     }
     const summary = commitPlannedMeals(result, catalog);
