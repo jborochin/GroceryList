@@ -8,6 +8,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import Slider from '@react-native-community/slider';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { useRecipeStore } from '../store/useRecipeStore';
 import { useMealPlanStore } from '../store/useMealPlanStore';
@@ -53,6 +54,7 @@ export function SettingsScreen() {
   const setMacroGrams = useSettingsStore((s) => s.setMacroGrams);
   const setReduceVisualEffects = useSettingsStore((s) => s.setReduceVisualEffects);
   const setCookingFrequency = useSettingsStore((s) => s.setCookingFrequency);
+  const setCookingEasePreference = useSettingsStore((s) => s.setCookingEasePreference);
   const setOnboardingCompleted = useSettingsStore((s) => s.setOnboardingCompleted);
   const resetSettings = useSettingsStore((s) => s.resetSettings);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
@@ -238,6 +240,31 @@ export function SettingsScreen() {
           value={settings.cookingFrequency}
           onChange={setCookingFrequency}
         />
+      </Surface>
+
+      <SectionHeader title="Cooking style" />
+      <Surface variant="outlined" pad={t.spacing.lg}>
+        <Text variant="caption" tone="secondary" style={{ marginBottom: t.spacing.md }}>
+          Bias auto-generated meal plans toward quick, simple recipes or more elaborate ones.
+        </Text>
+        <Slider
+          minimumValue={0}
+          maximumValue={1}
+          step={0.05}
+          value={settings.cookingEasePreference}
+          onSlidingComplete={setCookingEasePreference}
+          minimumTrackTintColor={t.palette.primary}
+          maximumTrackTintColor={t.palette.border}
+          thumbTintColor={t.palette.primary}
+        />
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: t.spacing.xs }}>
+          <Text variant="caption" tone="tertiary">
+            Prefer taste
+          </Text>
+          <Text variant="caption" tone="tertiary">
+            Easy to cook
+          </Text>
+        </View>
       </Surface>
 
       <SectionHeader title="Account" />

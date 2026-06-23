@@ -127,12 +127,17 @@ function settingsToRow(s: UserSettings, userId: string) {
     cuisine_preferences: s.cuisinePreferences,
     dietary_restrictions: s.dietaryRestrictions,
     cooking_frequency: s.cookingFrequency,
+    cooking_ease_preference: s.cookingEasePreference,
     tdee_inputs: s.tdeeInputs,
   };
 }
 
 function asCookingFrequency(v: unknown): CookingFrequency {
   return v === 'batch' || v === 'few_days' || v === 'daily' ? v : 'few_days';
+}
+
+function asEasePreference(v: unknown): number {
+  return typeof v === 'number' && Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : 0.5;
 }
 
 function asStringArray(v: unknown): string[] {
@@ -157,6 +162,7 @@ function rowToSettings(row: Record<string, unknown>): UserSettings {
     cuisinePreferences: asStringArray(row.cuisine_preferences),
     dietaryRestrictions: asStringArray(row.dietary_restrictions),
     cookingFrequency: asCookingFrequency(row.cooking_frequency),
+    cookingEasePreference: asEasePreference(row.cooking_ease_preference),
     tdeeInputs: (row.tdee_inputs as TdeeInputs | null) ?? null,
   };
 }

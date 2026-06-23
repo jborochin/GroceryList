@@ -1,4 +1,5 @@
 import { CookingFrequency, Meal, MealSlot, NutritionPerServing } from '../types';
+import { mealEffortScore } from './mealEffort';
 import { mulberry32 } from './seededRandom';
 
 export interface SlotConfig {
@@ -19,6 +20,10 @@ export interface PlannerInput {
   days: number;
   slots: SlotConfig[];
   cookingFrequency?: CookingFrequency;
+  // 0..1 bias between "prefer taste" (0, favor more elaborate meals) and "easy
+  // to cook" (1, favor quick/simple meals). 0.5 (or omitted) is neutral and
+  // leaves selection unchanged.
+  cookingEasePreference?: number;
   // When set, the planner introduces reproducible variation: instead of always
   // taking the single best-scoring meal per slot, it picks (via this seed)
   // among the meals whose score is within SHUFFLE_BAND of the best. Omit for the
@@ -56,6 +61,10 @@ const W_PROTEIN = 3;
 const W_CARBS = 1;
 const W_FAT = 1;
 const CUISINE_BONUS = 0.5;
+
+// Per-meal effort nudge at full bias. Comparable to CUISINE_BONUS so it reorders
+// similarly-fitting meals toward easier/harder without overriding macro fit.
+const EASE_WEIGHT = 0.8;
 
 // Per-prior-use score penalty, scaled by the user's cooking cadence:
 // batch cook tolerates (even prefers) repeats; daily pushes for distinct meals.
@@ -120,7 +129,8 @@ function score(
   target: NutritionPerServing,
   cuisinePreferences: string[],
   priorUses: number,
-  varietyPenalty: number
+  varietyPenalty: number,
+  easeBias: number
 ): number {
   const n = meal.nutritionPerServing;
   const fit = macroFit(
@@ -133,7 +143,9 @@ function score(
     target
   );
   const cuisineBonus = cuisinePreferences.includes(meal.cuisine) ? CUISINE_BONUS : 0;
-  return fit + cuisineBonus - varietyPenalty * priorUses;
+  // easeBias > 0 rewards low-effort meals, < 0 rewards higher-effort ones.
+  const easeBonus = easeBias !== 0 ? EASE_WEIGHT * easeBias * (0.5 - mealEffortScore(meal)) : 0;
+  return fit + cuisineBonus + easeBonus - varietyPenalty * priorUses;
 }
 
 // Pick 1 or 2 servings — 2 only when a single serving badly under-shoots the
@@ -163,6 +175,8 @@ function passesDietary(meal: Meal, restrictions: string[]): boolean {
 export function planMeals(input: PlannerInput): PlannerResult {
   const { targets, cuisinePreferences, dietaryRestrictions, meals, days, slots } = input;
   const varietyPenalty = VARIETY_PENALTY_BY_FREQ[input.cookingFrequency ?? 'few_days'];
+  // Map the 0..1 ease preference to a [-1, 1] bias; 0.5 (or omitted) → 0 (no effect).
+  const easeBias = ((input.cookingEasePreference ?? 0.5) - 0.5) * 2;
   const rng = input.seed !== undefined ? mulberry32(input.seed) : null;
 
   const eligible = meals
@@ -229,7 +243,8 @@ export function planMeals(input: PlannerInput): PlannerResult {
           instanceTarget,
           cuisinePreferences,
           uses.get(meal.id) ?? 0,
-          varietyPenalty
+          varietyPenalty,
+          easeBias
         );
         return { meal, servings, s };
       });

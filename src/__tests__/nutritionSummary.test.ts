@@ -11,6 +11,7 @@ const settings: UserSettings = {
   cuisinePreferences: [],
   dietaryRestrictions: [],
   cookingFrequency: 'few_days',
+  cookingEasePreference: 0.5,
 };
 
 function recipe(id: string, calories: number, proteinG: number): Recipe {
