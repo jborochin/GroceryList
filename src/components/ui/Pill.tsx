@@ -43,8 +43,8 @@ export function Pill({ label, icon, tone = 'neutral', size = 'md', selected, onP
   }
 
   if (selected) {
-    bg = t.palette.textPrimary;
-    fg = t.palette.textInverse;
+    bg = t.palette.primary;
+    fg = t.palette.primaryContrast;
   }
 
   const padY = size === 'sm' ? 5 : 8;

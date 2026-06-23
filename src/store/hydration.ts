@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useRecipeStore } from './useRecipeStore';
 import { useMealPlanStore } from './useMealPlanStore';
+import { useMealScheduleStore } from './useMealScheduleStore';
 import { usePantryStore } from './usePantryStore';
 import { useManualItemStore } from './useManualItemStore';
 import { useDismissedItemStore } from './useDismissedItemStore';
@@ -8,7 +9,7 @@ import { useSettingsStore } from './useSettingsStore';
 import { usePriceOverrideStore } from './usePriceOverrideStore';
 import { useAuthStore } from './useAuthStore';
 
-const stores = [useRecipeStore, useMealPlanStore, usePantryStore, useManualItemStore, useDismissedItemStore, useSettingsStore, usePriceOverrideStore];
+const stores = [useRecipeStore, useMealPlanStore, useMealScheduleStore, usePantryStore, useManualItemStore, useDismissedItemStore, useSettingsStore, usePriceOverrideStore];
 
 export function useHydration(): boolean {
   const [hydrated, setHydrated] = useState(false);

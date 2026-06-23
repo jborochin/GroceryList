@@ -5,6 +5,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { useMealPlanStore } from '../store/useMealPlanStore';
+import { useMealScheduleStore } from '../store/useMealScheduleStore';
 import { NutritionBar } from '../components/NutritionBar';
 import { planMeals, PlannerResult, SlotConfig } from '../utils/mealPlanner';
 import { commitPlannedMeals } from '../utils/commitMealPlan';
@@ -62,6 +63,7 @@ export function AutoMealPrepScreen() {
   const settings = useSettingsStore((s) => s.settings);
   const planEntries = useMealPlanStore((s) => s.entries);
   const clearPlan = useMealPlanStore((s) => s.clearPlan);
+  const clearSchedule = useMealScheduleStore((s) => s.clearSchedule);
 
   const [days, setDays] = useState(7);
   const [slotCounts, setSlotCounts] = useState<Record<MealSlot, number>>({
@@ -87,7 +89,7 @@ export function AutoMealPrepScreen() {
     [settings.dailyCalorieTarget, settings.macroGrams]
   );
 
-  const handleGenerate = () => {
+  const runPlanner = (seed?: number) => {
     const slots: SlotConfig[] = SLOT_ORDER.map((slot) => ({
       slot,
       mealsPerDay: slotCounts[slot],
@@ -100,9 +102,15 @@ export function AutoMealPrepScreen() {
       meals: catalog,
       days,
       slots,
+      seed,
     });
     setResult(r);
   };
+
+  // Generate gives the deterministic best-fit plan; Shuffle re-rolls with a
+  // fresh seed so the user can browse alternative plans that still hit macros.
+  const handleGenerate = () => runPlanner();
+  const handleShuffle = () => runPlanner(Date.now());
 
   const handleCommit = async () => {
     if (!result || result.items.length === 0) return;
@@ -114,6 +122,7 @@ export function AutoMealPrepScreen() {
         destructive: true,
       });
       if (!replace) return;
+      clearSchedule();
       clearPlan();
     }
     const summary = commitPlannedMeals(result, catalog);
@@ -251,7 +260,31 @@ export function AutoMealPrepScreen() {
           ))}
         </Surface>
 
-        <Button label="Generate plan" icon="auto-fix" onPress={handleGenerate} fullWidth size="lg" />
+        {result ? (
+          <View style={{ flexDirection: 'row', gap: t.spacing.sm }}>
+            <View style={{ flex: 1 }}>
+              <Button
+                label="Regenerate"
+                icon="auto-fix"
+                onPress={handleGenerate}
+                variant="secondary"
+                fullWidth
+                size="lg"
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Button
+                label="Shuffle"
+                icon="shuffle-variant"
+                onPress={handleShuffle}
+                fullWidth
+                size="lg"
+              />
+            </View>
+          </View>
+        ) : (
+          <Button label="Generate plan" icon="auto-fix" onPress={handleGenerate} fullWidth size="lg" />
+        )}
 
         {result && (
           <>

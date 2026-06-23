@@ -34,6 +34,19 @@ export interface MealPlanEntry {
 
 export type MealSlot = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 
+// Device-local placement of a planned recipe onto a specific day + meal slot.
+// This is the "calendar" layer that sits on top of the synced MealPlanEntry list:
+// entries stay the authoritative (synced) source of plan membership + total
+// servings, while cells only describe WHERE each serving lands in the week.
+// Never synced — see useMealScheduleStore.
+export interface ScheduleCell {
+  id: string;
+  day: number; // 0..6 (Mon..Sun)
+  slot: MealSlot;
+  recipeId: string;
+  desiredServings: number;
+}
+
 // A curated catalog meal. Unlike Recipe, nutritionPerServing is required
 // (the catalog is hand-authored) and it carries cuisine/slot/dietary metadata
 // so the auto-planner can filter and score it. `id` is a stable slug — never

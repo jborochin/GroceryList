@@ -106,6 +106,63 @@ describe('planMeals', () => {
     expect(distinct.size).toBeGreaterThan(1);
   });
 
+  it('is reproducible for a fixed seed', () => {
+    const meals = [
+      meal({ id: 'a', slots: ['lunch'] }),
+      meal({ id: 'b', slots: ['lunch'] }),
+      meal({ id: 'c', slots: ['lunch'] }),
+      meal({ id: 'd', slots: ['lunch'] }),
+    ];
+    const input = baseInput({ meals, slots: [{ slot: 'lunch', mealsPerDay: 1 }], days: 4, seed: 99 });
+    const a = planMeals(input);
+    const b = planMeals(input);
+    expect(a.items).toEqual(b.items);
+  });
+
+  it('produces different plans for different seeds when meals are comparable', () => {
+    // Four equally-scoring lunch options all fall within the shuffle band, so
+    // the seed decides which is picked.
+    const meals = [
+      meal({ id: 'a', slots: ['lunch'] }),
+      meal({ id: 'b', slots: ['lunch'] }),
+      meal({ id: 'c', slots: ['lunch'] }),
+      meal({ id: 'd', slots: ['lunch'] }),
+    ];
+    const picks = new Set<string>();
+    for (let seed = 0; seed < 25; seed++) {
+      const result = planMeals(
+        baseInput({ meals, slots: [{ slot: 'lunch', mealsPerDay: 1 }], days: 1, seed })
+      );
+      picks.add(result.items[0].mealId);
+    }
+    expect(picks.size).toBeGreaterThan(1);
+  });
+
+  it('still respects dietary restrictions when seeded', () => {
+    const meals = [
+      meal({ id: 'veg', slots: ['breakfast', 'lunch', 'dinner'], dietaryTags: ['vegetarian'] }),
+      meal({ id: 'meat', slots: ['breakfast', 'lunch', 'dinner'], dietaryTags: [] }),
+    ];
+    for (let seed = 0; seed < 10; seed++) {
+      const result = planMeals(baseInput({ meals, dietaryRestrictions: ['vegetarian'], seed }));
+      const used = new Set(result.items.map((i) => i.mealId));
+      expect(used.has('meat')).toBe(false);
+    }
+  });
+
+  it('keeps macros within tolerance when seeded', () => {
+    const meals = [
+      meal({ id: 'eggs', slots: ['breakfast'], nutritionPerServing: { calories: 650, proteinG: 50, carbsG: 60, fatG: 22 } }),
+      meal({ id: 'chicken', slots: ['lunch'], nutritionPerServing: { calories: 670, proteinG: 50, carbsG: 65, fatG: 22 } }),
+      meal({ id: 'salmon', slots: ['dinner'], nutritionPerServing: { calories: 680, proteinG: 50, carbsG: 70, fatG: 23 } }),
+    ];
+    const result = planMeals(baseInput({ meals, seed: 7 }));
+    const day = result.dailyTotals[0];
+    expect(result.unfilledSlots).toBe(0);
+    expect(Math.abs(day.proteinG - 150) / 150).toBeLessThan(0.15);
+    expect(Math.abs(day.calories - 2000) / 2000).toBeLessThan(0.15);
+  });
+
   it('repeats fewer distinct meals for batch cooking than for daily', () => {
     const meals = [
       meal({ id: 'a', slots: ['lunch'] }),
