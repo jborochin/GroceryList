@@ -163,6 +163,62 @@ describe('planMeals', () => {
     expect(Math.abs(day.calories - 2000) / 2000).toBeLessThan(0.15);
   });
 
+  it('favors the easy meal when cookingEasePreference is high', () => {
+    // Two equally-fitting lunch options; one quick, one elaborate.
+    const meals = [
+      meal({
+        id: 'a-easy',
+        slots: ['lunch'],
+        prepTimeMinutes: 5,
+        ingredients: Array.from({ length: 3 }, (_, i) => ({ name: `i${i}`, quantity: 1, unit: 'each' })),
+        instructions: ['mix', 'serve'],
+      }),
+      meal({
+        id: 'b-hard',
+        slots: ['lunch'],
+        prepTimeMinutes: 45,
+        ingredients: Array.from({ length: 12 }, (_, i) => ({ name: `i${i}`, quantity: 1, unit: 'each' })),
+        instructions: Array.from({ length: 8 }, (_, i) => `step ${i}`),
+      }),
+    ];
+    const slots: SlotConfig[] = [{ slot: 'lunch', mealsPerDay: 1 }];
+    const result = planMeals(baseInput({ meals, slots, cookingEasePreference: 1 }));
+    expect(result.items[0].mealId).toBe('a-easy');
+  });
+
+  it('favors the elaborate meal when cookingEasePreference is low', () => {
+    const meals = [
+      meal({
+        id: 'a-easy',
+        slots: ['lunch'],
+        prepTimeMinutes: 5,
+        ingredients: Array.from({ length: 3 }, (_, i) => ({ name: `i${i}`, quantity: 1, unit: 'each' })),
+        instructions: ['mix', 'serve'],
+      }),
+      meal({
+        id: 'b-hard',
+        slots: ['lunch'],
+        prepTimeMinutes: 45,
+        ingredients: Array.from({ length: 12 }, (_, i) => ({ name: `i${i}`, quantity: 1, unit: 'each' })),
+        instructions: Array.from({ length: 8 }, (_, i) => `step ${i}`),
+      }),
+    ];
+    const slots: SlotConfig[] = [{ slot: 'lunch', mealsPerDay: 1 }];
+    const result = planMeals(baseInput({ meals, slots, cookingEasePreference: 0 }));
+    expect(result.items[0].mealId).toBe('b-hard');
+  });
+
+  it('leaves selection unchanged when cookingEasePreference is omitted or neutral', () => {
+    const meals = [
+      meal({ id: 'a-easy', slots: ['lunch'], prepTimeMinutes: 5, instructions: ['mix'] }),
+      meal({ id: 'b-hard', slots: ['lunch'], prepTimeMinutes: 45, instructions: ['a', 'b', 'c', 'd'] }),
+    ];
+    const slots: SlotConfig[] = [{ slot: 'lunch', mealsPerDay: 1 }];
+    const omitted = planMeals(baseInput({ meals, slots }));
+    const neutral = planMeals(baseInput({ meals, slots, cookingEasePreference: 0.5 }));
+    expect(neutral.items).toEqual(omitted.items);
+  });
+
   it('repeats fewer distinct meals for batch cooking than for daily', () => {
     const meals = [
       meal({ id: 'a', slots: ['lunch'] }),

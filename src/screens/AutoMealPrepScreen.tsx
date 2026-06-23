@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View } from 'react-native';
+import Slider from '@react-native-community/slider';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -61,6 +62,7 @@ export function AutoMealPrepScreen() {
   const toast = useToast();
   const navigation = useNavigation<Nav>();
   const settings = useSettingsStore((s) => s.settings);
+  const setCookingEasePreference = useSettingsStore((s) => s.setCookingEasePreference);
   const planEntries = useMealPlanStore((s) => s.entries);
   const clearPlan = useMealPlanStore((s) => s.clearPlan);
   const clearSchedule = useMealScheduleStore((s) => s.clearSchedule);
@@ -99,6 +101,7 @@ export function AutoMealPrepScreen() {
       cuisinePreferences: settings.cuisinePreferences,
       dietaryRestrictions: settings.dietaryRestrictions,
       cookingFrequency: settings.cookingFrequency,
+      cookingEasePreference: settings.cookingEasePreference,
       meals: catalog,
       days,
       slots,
@@ -258,6 +261,32 @@ export function AutoMealPrepScreen() {
               />
             </View>
           ))}
+
+          <View style={{ marginTop: t.spacing.lg }}>
+            <Text variant="body" style={{ marginBottom: t.spacing.xs }}>
+              Cooking style
+            </Text>
+            <Slider
+              minimumValue={0}
+              maximumValue={1}
+              step={0.05}
+              value={settings.cookingEasePreference}
+              onSlidingComplete={setCookingEasePreference}
+              minimumTrackTintColor={t.palette.primary}
+              maximumTrackTintColor={t.palette.border}
+              thumbTintColor={t.palette.primary}
+            />
+            <View
+              style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: t.spacing.xs }}
+            >
+              <Text variant="caption" tone="tertiary">
+                Prefer taste
+              </Text>
+              <Text variant="caption" tone="tertiary">
+                Easy to cook
+              </Text>
+            </View>
+          </View>
         </Surface>
 
         {result ? (

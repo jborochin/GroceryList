@@ -108,6 +108,9 @@ export interface UserSettings {
   cuisinePreferences: string[];
   dietaryRestrictions: string[];
   cookingFrequency: CookingFrequency;
+  // 0 = prefer taste (more elaborate meals) … 1 = easy to cook (quick/simple).
+  // 0.5 is neutral; drives the auto meal planner's effort bias.
+  cookingEasePreference: number;
 }
 
 export interface PriceOverride {
