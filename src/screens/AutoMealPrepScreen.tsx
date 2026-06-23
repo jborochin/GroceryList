@@ -283,7 +283,23 @@ export function AutoMealPrepScreen() {
             </View>
           </View>
         ) : (
-          <Button label="Generate plan" icon="auto-fix" onPress={handleGenerate} fullWidth size="lg" />
+          <View style={{ gap: t.spacing.sm }}>
+            <Button
+              label="Choose meals"
+              icon="gesture-swipe"
+              onPress={() => navigation.navigate('MealSwipe', { days, slotCounts })}
+              fullWidth
+              size="lg"
+            />
+            <Button
+              label="Surprise me"
+              icon="auto-fix"
+              onPress={handleGenerate}
+              variant="secondary"
+              fullWidth
+              size="lg"
+            />
+          </View>
         )}
 
         {result && (

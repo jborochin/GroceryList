@@ -1,4 +1,5 @@
 import { NavigatorScreenParams } from '@react-navigation/native';
+import { MealSlot } from '../types';
 
 export type RootStackParamList = {
   Tabs: NavigatorScreenParams<TabParamList>;
@@ -7,6 +8,7 @@ export type RootStackParamList = {
   AddRecipe: { prefilledUrl?: string } | undefined;
   Pantry: undefined;
   AutoMealPrep: undefined;
+  MealSwipe: { days?: number; slotCounts?: Record<MealSlot, number> } | undefined;
   Auth: undefined;
   Onboarding: undefined;
 };
