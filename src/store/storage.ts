@@ -7,6 +7,7 @@ export const STORAGE_KEYS = {
   recipes: 'mealprep/recipes/v1',
   mealPlan: 'mealprep/mealPlan/v1',
   mealSchedule: 'mealprep/mealSchedule/v1',
+  mealDisposition: 'mealprep/mealDisposition/v1',
   pantry: 'mealprep/pantry/v1',
   manualItems: 'mealprep/manualItems/v1',
   dismissedItems: 'mealprep/dismissedItems/v1',

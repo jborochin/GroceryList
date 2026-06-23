@@ -82,6 +82,36 @@ function relErrSq(actual: number, target: number): number {
   return e * e;
 }
 
+// Macro-fit core shared by the planner's per-slot scoring and the deck's
+// whole-day ordering. <= 0, with 0 = a perfect match; protein weighted 3x as
+// it's usually the binding macro for meal-prep goals.
+function macroFit(n: NutritionPerServing, target: NutritionPerServing): number {
+  return -(
+    W_CALORIES * relErrSq(n.calories, target.calories) +
+    W_PROTEIN * relErrSq(n.proteinG, target.proteinG) +
+    W_CARBS * relErrSq(n.carbsG, target.carbsG) +
+    W_FAT * relErrSq(n.fatG, target.fatG)
+  );
+}
+
+/**
+ * Whole-day macro fit for one meal (single serving) against the daily target,
+ * used to order the cookbook swipe deck best-first. No cuisine/variety
+ * adjustment — pure macro proximity, weighted like the planner (protein 3x).
+ * Higher is better.
+ */
+export function mealFitScore(
+  nutrition: NutritionPerServing,
+  targets: PlannerTargets
+): number {
+  return macroFit(nutrition, {
+    calories: targets.dailyCalories,
+    proteinG: targets.macroGrams.proteinG,
+    carbsG: targets.macroGrams.carbsG,
+    fatG: targets.macroGrams.fatG,
+  });
+}
+
 // Higher is better. macroFit is <= 0 (0 = perfect match); cuisine preference
 // adds, repeated use subtracts.
 function score(
@@ -93,14 +123,17 @@ function score(
   varietyPenalty: number
 ): number {
   const n = meal.nutritionPerServing;
-  const macroFit = -(
-    W_CALORIES * relErrSq(n.calories * servings, target.calories) +
-    W_PROTEIN * relErrSq(n.proteinG * servings, target.proteinG) +
-    W_CARBS * relErrSq(n.carbsG * servings, target.carbsG) +
-    W_FAT * relErrSq(n.fatG * servings, target.fatG)
+  const fit = macroFit(
+    {
+      calories: n.calories * servings,
+      proteinG: n.proteinG * servings,
+      carbsG: n.carbsG * servings,
+      fatG: n.fatG * servings,
+    },
+    target
   );
   const cuisineBonus = cuisinePreferences.includes(meal.cuisine) ? CUISINE_BONUS : 0;
-  return macroFit + cuisineBonus - varietyPenalty * priorUses;
+  return fit + cuisineBonus - varietyPenalty * priorUses;
 }
 
 // Pick 1 or 2 servings — 2 only when a single serving badly under-shoots the

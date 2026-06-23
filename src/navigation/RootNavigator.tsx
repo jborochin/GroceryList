@@ -6,6 +6,7 @@ import { MealCatalogDetailScreen } from '../screens/MealCatalogDetailScreen';
 import { AddRecipeScreen } from '../screens/AddRecipeScreen';
 import { PantryScreen } from '../screens/PantryScreen';
 import { AutoMealPrepScreen } from '../screens/AutoMealPrepScreen';
+import { MealSwipeScreen } from '../screens/MealSwipeScreen';
 import { AuthScreen } from '../screens/AuthScreen';
 import { OnboardingScreen } from '../screens/OnboardingScreen';
 import { RootStackParamList } from './types';
@@ -65,6 +66,11 @@ export function RootNavigator() {
           <Stack.Screen
             name="AutoMealPrep"
             component={AutoMealPrepScreen}
+            options={{ animation: 'slide_from_bottom', presentation: 'modal' }}
+          />
+          <Stack.Screen
+            name="MealSwipe"
+            component={MealSwipeScreen}
             options={{ animation: 'slide_from_bottom', presentation: 'modal' }}
           />
         </Stack.Group>

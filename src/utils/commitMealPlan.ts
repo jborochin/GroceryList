@@ -1,9 +1,13 @@
-import { Meal, Recipe } from '../types';
-import { PlannerResult } from './mealPlanner';
+import { CookingFrequency, Meal, MealSlot, NutritionPerServing, Recipe } from '../types';
+import { planMeals, PlannerResult, PlannerTargets, SlotConfig } from './mealPlanner';
+import { DeckCard } from './mealDeck';
 import { deterministicRecipeId } from './deterministicId';
 import { useRecipeStore } from '../store/useRecipeStore';
 import { useMealPlanStore } from '../store/useMealPlanStore';
 import { useMealScheduleStore, PlannedCell } from '../store/useMealScheduleStore';
+
+const ALL_SLOTS: MealSlot[] = ['breakfast', 'lunch', 'dinner', 'snack'];
+const EMPTY_NUTRITION: NutritionPerServing = { calories: 0, proteinG: 0, carbsG: 0, fatG: 0 };
 
 export function recipeIdForMeal(mealId: string): string {
   return deterministicRecipeId(mealId);
@@ -87,4 +91,106 @@ export function commitPlannedMeals(result: PlannerResult, catalog: Meal[]): Comm
   useMealPlanStore.getState().setPlanDays(result.dailyTotals.length);
 
   return { recipeCount: seen.size, totalServings };
+}
+
+// Adapt a deck card into the Meal shape the planner consumes. Catalog cards
+// resolve to their full catalog meal; recipe cards become a synthetic meal that
+// is eligible for every slot (recipes carry no slot/cuisine metadata) and is
+// macro-scored on whatever nutrition the recipe has.
+function cardToPlannableMeal(
+  card: DeckCard,
+  catalogById: Map<string, Meal>,
+  recipeById: Map<string, Recipe>
+): Meal | null {
+  if (card.source === 'catalog') {
+    return catalogById.get(card.id) ?? null;
+  }
+  const recipe = recipeById.get(card.id);
+  if (!recipe) return null;
+  return {
+    id: recipe.id,
+    title: recipe.title,
+    cuisine: '',
+    slots: ALL_SLOTS,
+    dietaryTags: [],
+    servings: recipe.servings,
+    ingredients: recipe.ingredients,
+    nutritionPerServing: recipe.nutritionPerServing ?? EMPTY_NUTRITION,
+    imageUrl: recipe.imageUrl,
+    instructions: recipe.instructions,
+  };
+}
+
+export interface ArrangeChosenInput {
+  cards: DeckCard[]; // the meals the user swiped up ("this week")
+  catalog: Meal[];
+  recipes: Recipe[];
+  days: number;
+  slots: SlotConfig[];
+  targets: PlannerTargets;
+  cuisinePreferences: string[];
+  cookingFrequency?: CookingFrequency;
+}
+
+export interface ArrangeChosenSummary {
+  recipeCount: number;
+  unfilledSlots: number;
+}
+
+/**
+ * Auto-arrange a user-curated pool of meals into the week and commit it.
+ *
+ * The user already triaged for diet by swiping, so the planner runs with no
+ * dietary filter over ONLY the chosen pool — it just distributes those meals
+ * across the configured day/slot grid to best hit macro targets (repeating
+ * meals when the pool is smaller than the grid; leaving slots unfilled when no
+ * chosen meal fits). Placement then flows through the same `setFromPlanned`
+ * reconciliation as the auto-planner, so grocery + nutrition stay unchanged.
+ */
+export function arrangeAndCommitChosen(input: ArrangeChosenInput): ArrangeChosenSummary {
+  const catalogById = new Map(input.catalog.map((m) => [m.id, m]));
+  const recipeById = new Map(input.recipes.map((r) => [r.id, r]));
+
+  const plannableMeals: Meal[] = [];
+  for (const card of input.cards) {
+    const meal = cardToPlannableMeal(card, catalogById, recipeById);
+    if (meal) plannableMeals.push(meal);
+  }
+
+  const result = planMeals({
+    targets: input.targets,
+    cuisinePreferences: input.cuisinePreferences,
+    dietaryRestrictions: [],
+    cookingFrequency: input.cookingFrequency,
+    meals: plannableMeals,
+    days: input.days,
+    slots: input.slots,
+  });
+
+  const recipeStore = useRecipeStore.getState();
+  const seen = new Set<string>();
+  const placed: PlannedCell[] = [];
+  for (const item of result.items) {
+    // item.mealId is a catalog slug (clone into recipes) or an existing
+    // recipe id (use directly).
+    const catalogMeal = catalogById.get(item.mealId);
+    let recipeId: string;
+    if (catalogMeal) {
+      const recipe = mealToRecipe(catalogMeal);
+      recipeId = recipe.id;
+      if (!seen.has(recipeId)) {
+        recipeStore.upsertRecipe(recipe);
+        seen.add(recipeId);
+      }
+    } else {
+      recipeId = item.mealId;
+      seen.add(recipeId);
+    }
+    placed.push({ day: item.day, slot: item.slot, recipeId, desiredServings: item.servings });
+  }
+
+  useMealScheduleStore.getState().setFromPlanned(placed);
+  useMealPlanStore.getState().setPlanDays(result.dailyTotals.length);
+
+  return { recipeCount: seen.size, unfilledSlots: result.unfilledSlots };
 }
