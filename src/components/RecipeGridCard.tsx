@@ -11,6 +11,8 @@ interface Props {
   recipe: Recipe;
   onPress?: () => void;
   onDelete?: () => void;
+  isFavorited?: boolean;
+  onFavorite?: () => void;
   // Horizontal padding + column gap the parent grid applies, so the card can
   // size itself to exactly half the row (keeps a lone trailing card half-width
   // instead of stretching, which `flex: 1` would do).
@@ -18,7 +20,7 @@ interface Props {
   columnGap: number;
 }
 
-export function RecipeGridCard({ recipe, onPress, onDelete, horizontalPadding, columnGap }: Props) {
+export function RecipeGridCard({ recipe, onPress, onDelete, isFavorited, onFavorite, horizontalPadding, columnGap }: Props) {
   const t = useAppTheme();
   const { width: screenWidth } = useWindowDimensions();
   const cardWidth = (screenWidth - horizontalPadding * 2 - columnGap) / 2;
@@ -33,8 +35,9 @@ export function RecipeGridCard({ recipe, onPress, onDelete, horizontalPadding, c
   const initial = (recipe.title.trim().charAt(0) || '?').toUpperCase();
   const a11yLabel = [recipe.title, macroParts.join(', ')].filter(Boolean).join('. ');
 
-  // The delete control is a sibling overlay (not a child of the card Pressable):
-  // nesting a button inside a button is invalid DOM on web and breaks hit-testing.
+  // The delete and favorite controls are sibling overlays (not children of the
+  // card Pressable): nesting a button inside a button is invalid DOM on web and
+  // breaks hit-testing.
   return (
     <View
       style={{
@@ -103,14 +106,37 @@ export function RecipeGridCard({ recipe, onPress, onDelete, horizontalPadding, c
         </LinearGradient>
       </Pressable>
 
+      {/* Heart — top-left; delete — top-right. Shown independently. */}
+      {onFavorite != null ? (
+        <View style={{ position: 'absolute', top: t.spacing.xs, left: t.spacing.xs }}>
+          <IconButton
+            icon={isFavorited ? 'heart' : 'heart-outline'}
+            variant="soft"
+            size={18}
+            color={isFavorited ? t.palette.primary : t.palette.textInverse}
+            onPress={onFavorite}
+            accessibilityLabel={isFavorited ? `Unfavorite ${recipe.title}` : `Favorite ${recipe.title}`}
+            style={{
+              backgroundColor: 'rgba(24, 28, 22, 0.55)',
+              ...t.shadow.soft,
+            }}
+          />
+        </View>
+      ) : null}
+
       {onDelete ? (
         <View style={{ position: 'absolute', top: t.spacing.xs, right: t.spacing.xs }}>
           <IconButton
             icon="delete-outline"
             variant="danger"
             size={18}
+            color={t.palette.textInverse}
             onPress={onDelete}
             accessibilityLabel={`Delete ${recipe.title}`}
+            style={{
+              backgroundColor: 'rgba(24, 28, 22, 0.55)',
+              ...t.shadow.soft,
+            }}
           />
         </View>
       ) : null}
