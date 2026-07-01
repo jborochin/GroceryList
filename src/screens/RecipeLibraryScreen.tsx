@@ -8,17 +8,19 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRecipeStore } from '../store/useRecipeStore';
+import { useMealPlanStore } from '../store/useMealPlanStore';
+import { useFavoritesStore } from '../store/useFavoritesStore';
 import { RecipeGridCard } from '../components/RecipeGridCard';
 import { MealCatalogCard } from '../components/MealCatalogCard';
 import { EmptyState } from '../components/EmptyState';
 import { RootStackParamList } from '../navigation/types';
-import { Meal, MealSlot } from '../types';
+import { Meal, MealSlot, Recipe } from '../types';
 import {
   getMealCatalog,
   loadMealCatalogCache,
   refreshMealCatalogCache,
 } from '../lib/mealCatalogSync';
-import { mealToRecipe, recipeIdForMeal } from '../utils/commitMealPlan';
+import { ensureRecipeForMeal, mealToRecipe, recipeIdForMeal } from '../utils/commitMealPlan';
 import { useAppTheme } from '../theme/tokens';
 import { confirm } from '../utils/confirm';
 import foodPreferences from '../data/foodPreferences.json';
@@ -36,7 +38,7 @@ import {
 } from '../components/ui';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
-type Mode = 'mine' | 'browse';
+type Mode = 'mine' | 'browse' | 'favorites';
 
 const CUISINE_LABEL: Record<string, string> = Object.fromEntries(
   foodPreferences.cuisines.map((c) => [c.key, c.label])
@@ -52,12 +54,21 @@ const SLOT_LABEL: Record<MealSlot, string> = {
   snack: 'Snack',
 };
 
+// Discriminates a Meal from a Recipe: Meal has `cuisine`, Recipe does not.
+function isMealItem(item: Recipe | Meal): item is Meal {
+  return 'cuisine' in item;
+}
+
 export function RecipeLibraryScreen() {
   const t = useAppTheme();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<Nav>();
   const recipes = useRecipeStore((s) => s.recipes);
   const deleteRecipe = useRecipeStore((s) => s.deleteRecipe);
+  const plan = useMealPlanStore((s) => s.entries);
+  const addEntry = useMealPlanStore((s) => s.addEntry);
+  const favoriteIds = useFavoritesStore((s) => s.favoriteIds);
+  const toggleFavorite = useFavoritesStore((s) => s.toggleFavorite);
   const toast = useToast();
 
   const [mode, setMode] = useState<Mode>('mine');
@@ -84,9 +95,27 @@ export function RecipeLibraryScreen() {
     };
   }, []);
 
+  // O(1) favorite membership test — recomputed only when favoriteIds changes.
+  const favoriteSet = useMemo(() => new Set(favoriteIds), [favoriteIds]);
+
   // Recipe ids already in the library, to flag catalog meals as added. Catalog
   // meals map to a deterministic recipe id, so this is a simple membership test.
   const libraryIds = useMemo(() => new Set(recipes.map((r) => r.id)), [recipes]);
+
+  // Recipe ids already queued in the weekly plan (scheduled or not), to flag
+  // cards as queued regardless of which screen added them.
+  const queuedIds = useMemo(() => new Set(plan.map((e) => e.recipeId)), [plan]);
+
+  const handleQueueRecipe = (recipe: Recipe) => {
+    addEntry(recipe.id, recipe.servings);
+    toast.show({ message: `Added ${recipe.title} to this week`, tone: 'success' });
+  };
+
+  const handleQueueMeal = (meal: Meal) => {
+    const recipeId = ensureRecipeForMeal(meal);
+    addEntry(recipeId, meal.servings);
+    toast.show({ message: `Added ${meal.title} to this week`, tone: 'success' });
+  };
 
   const handleDelete = async (id: string, title: string) => {
     const ok = await confirm({
@@ -139,6 +168,15 @@ export function RecipeLibraryScreen() {
     });
   }, [catalog, query, cuisine, dietary, slot]);
 
+  const favoritedRecipes = useMemo(
+    () => recipes.filter((r) => favoriteSet.has(r.id)),
+    [recipes, favoriteSet]
+  );
+  const favoritedMeals = useMemo(
+    () => catalog.filter((m) => favoriteSet.has(m.id)),
+    [catalog, favoriteSet]
+  );
+
   const scrollY = useSharedValue(0);
   const onScroll = useAnimatedScrollHandler({
     onScroll: (e) => {
@@ -147,7 +185,22 @@ export function RecipeLibraryScreen() {
   });
 
   const browsing = mode === 'browse';
-  const data: Array<Meal | (typeof recipes)[number]> = browsing ? filteredMeals : filteredRecipes;
+  const showingFavorites = mode === 'favorites';
+
+  const data: Array<Recipe | Meal> =
+    mode === 'browse'
+      ? filteredMeals
+      : mode === 'favorites'
+        ? [...favoritedRecipes, ...favoritedMeals]
+        : filteredRecipes;
+
+  const headerSubtitle = showingFavorites
+    ? `${favoritedRecipes.length + favoritedMeals.length} favorited`
+    : browsing
+      ? `${catalog.length} meals to explore`
+      : recipes.length === 0
+        ? 'Build your library to start planning.'
+        : `${recipes.length} saved`;
 
   return (
     <View style={{ flex: 1, backgroundColor: t.palette.bg }}>
@@ -170,16 +223,7 @@ export function RecipeLibraryScreen() {
         ItemSeparatorComponent={() => <View style={{ height: t.spacing.md }} />}
         ListHeaderComponent={
           <View>
-            <Header
-              title="Recipes"
-              subtitle={
-                browsing
-                  ? `${catalog.length} meals to explore`
-                  : recipes.length === 0
-                    ? 'Build your library to start planning.'
-                    : `${recipes.length} saved`
-              }
-            />
+            <Header title="Recipes" subtitle={headerSubtitle} />
             <View style={{ marginBottom: t.spacing.lg }}>
               <SegmentedControl<Mode>
                 value={mode}
@@ -187,10 +231,11 @@ export function RecipeLibraryScreen() {
                 items={[
                   { value: 'mine', label: 'My Recipes', icon: 'bookmark-outline' },
                   { value: 'browse', label: 'Browse', icon: 'earth' },
+                  { value: 'favorites', label: 'Favorites', icon: 'heart' },
                 ]}
               />
             </View>
-            {(browsing || recipes.length > 0) && (
+            {!showingFavorites && (browsing || recipes.length > 0) && (
               <View style={{ marginBottom: t.spacing.md }}>
                 <Input
                   placeholder={browsing ? 'Search the catalog' : 'Search recipes or ingredients'}
@@ -223,36 +268,53 @@ export function RecipeLibraryScreen() {
                 />
               </View>
             )}
-            {!browsing && filteredRecipes.length > 0 && query ? (
+            {mode === 'mine' && filteredRecipes.length > 0 && query ? (
               <Text variant="caption" tone="tertiary" style={{ marginBottom: t.spacing.sm }}>
                 {filteredRecipes.length} {filteredRecipes.length === 1 ? 'match' : 'matches'}
               </Text>
             ) : null}
           </View>
         }
-        renderItem={({ item }) =>
-          browsing ? (
-            <MealCatalogCard
-              meal={item as Meal}
-              added={libraryIds.has(recipeIdForMeal(item.id))}
-              onAdd={() => handleAddMeal(item as Meal)}
-              onPress={() => navigation.navigate('MealCatalogDetail', { mealId: item.id })}
-              horizontalPadding={t.spacing.lg}
-              columnGap={t.spacing.md}
-            />
-          ) : (
+        renderItem={({ item }) => {
+          if (isMealItem(item)) {
+            return (
+              <MealCatalogCard
+                meal={item}
+                added={libraryIds.has(recipeIdForMeal(item.id))}
+                onAdd={() => handleAddMeal(item)}
+                queued={queuedIds.has(recipeIdForMeal(item.id))}
+                onQueue={() => handleQueueMeal(item)}
+                onPress={() => navigation.navigate('MealCatalogDetail', { mealId: item.id })}
+                isFavorited={favoriteSet.has(item.id)}
+                onFavorite={() => toggleFavorite(item.id)}
+                horizontalPadding={t.spacing.lg}
+                columnGap={t.spacing.md}
+              />
+            );
+          }
+          return (
             <RecipeGridCard
-              recipe={item as (typeof recipes)[number]}
+              recipe={item}
               onPress={() => navigation.navigate('RecipeDetail', { recipeId: item.id })}
-              onDelete={() => handleDelete(item.id, item.title)}
+              onDelete={mode === 'mine' ? () => handleDelete(item.id, item.title) : undefined}
+              queued={queuedIds.has(item.id)}
+              onQueue={() => handleQueueRecipe(item)}
+              isFavorited={favoriteSet.has(item.id)}
+              onFavorite={() => toggleFavorite(item.id)}
               horizontalPadding={t.spacing.lg}
               columnGap={t.spacing.md}
             />
-          )
-        }
+          );
+        }}
         ListEmptyComponent={
           <View style={{ marginTop: t.spacing.xxl }}>
-            {browsing ? (
+            {showingFavorites ? (
+              <EmptyState
+                icon="heart-outline"
+                title="No favorites yet"
+                subtitle="Tap the heart on any recipe or catalog meal to save it here."
+              />
+            ) : browsing ? (
               <EmptyState
                 icon="earth"
                 title="No meals match"
@@ -273,7 +335,7 @@ export function RecipeLibraryScreen() {
         }
       />
 
-      {!browsing && (
+      {mode === 'mine' && (
         <View
           style={{
             position: 'absolute',
