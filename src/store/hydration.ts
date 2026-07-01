@@ -9,8 +9,9 @@ import { useDismissedItemStore } from './useDismissedItemStore';
 import { useSettingsStore } from './useSettingsStore';
 import { usePriceOverrideStore } from './usePriceOverrideStore';
 import { useAuthStore } from './useAuthStore';
+import { useFavoritesStore } from './useFavoritesStore';
 
-const stores = [useRecipeStore, useMealPlanStore, useMealScheduleStore, useMealDispositionStore, usePantryStore, useManualItemStore, useDismissedItemStore, useSettingsStore, usePriceOverrideStore];
+const stores = [useRecipeStore, useMealPlanStore, useMealScheduleStore, useMealDispositionStore, usePantryStore, useManualItemStore, useDismissedItemStore, useSettingsStore, usePriceOverrideStore, useFavoritesStore];
 
 export function useHydration(): boolean {
   const [hydrated, setHydrated] = useState(false);
