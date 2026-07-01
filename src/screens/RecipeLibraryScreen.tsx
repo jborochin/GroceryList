@@ -69,6 +69,7 @@ export function RecipeLibraryScreen() {
   const addEntry = useMealPlanStore((s) => s.addEntry);
   const favoriteIds = useFavoritesStore((s) => s.favoriteIds);
   const toggleFavorite = useFavoritesStore((s) => s.toggleFavorite);
+  const removeFavorite = useFavoritesStore((s) => s.removeFavorite);
   const toast = useToast();
 
   const [mode, setMode] = useState<Mode>('mine');
@@ -124,7 +125,10 @@ export function RecipeLibraryScreen() {
       confirmLabel: 'Delete',
       destructive: true,
     });
-    if (ok) deleteRecipe(id);
+    if (ok) {
+      deleteRecipe(id);
+      removeFavorite(id);  // clean up any lingering favorite entry
+    }
   };
 
   const handleAddMeal = (meal: Meal) => {
@@ -172,9 +176,15 @@ export function RecipeLibraryScreen() {
     () => recipes.filter((r) => favoriteSet.has(r.id)),
     [recipes, favoriteSet]
   );
+  const favoritedRecipeIds = useMemo(
+    () => new Set(favoritedRecipes.map((r) => r.id)),
+    [favoritedRecipes]
+  );
   const favoritedMeals = useMemo(
-    () => catalog.filter((m) => favoriteSet.has(m.id)),
-    [catalog, favoriteSet]
+    () => catalog.filter(
+      (m) => favoriteSet.has(m.id) && !favoritedRecipeIds.has(recipeIdForMeal(m.id))
+    ),
+    [catalog, favoriteSet, favoritedRecipeIds]
   );
 
   const scrollY = useSharedValue(0);
