@@ -2,6 +2,7 @@ import { GroceryItem, Ingredient, ManualItem } from '../types';
 import { mergeGroup } from './ingredientAggregator';
 import { canonicalizeUnit } from './ingredientParser';
 import { normalizeName } from './normalizeName';
+import { toPurchasableName } from './purchasableName';
 
 /**
  * Folds user-added manual items into an already-computed grocery list. Runs *after*
@@ -16,7 +17,7 @@ export function mergeManualItems(items: GroceryItem[], manual: ManualItem[]): Gr
   // canonicalize the unit ("lbs" → "lb") so quantities merge/convert/price consistently.
   const groups = new Map<string, { display: string; ings: Ingredient[] }>();
   for (const m of manual) {
-    const display = m.name.trim();
+    const display = toPurchasableName(m.name.trim());
     const normalized = normalizeName(display);
     if (!normalized) continue;
     const ing: Ingredient = {

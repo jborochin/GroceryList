@@ -1,53 +1,10 @@
-import Fuse from 'fuse.js';
-import priceDatabase from '../data/priceDatabase.json';
-import { GroceryItem, PriceEntry, PriceOverride } from '../types';
+import { GroceryItem, PriceOverride } from '../types';
 import { convert } from './unitConversion';
-import { normalizeName } from './normalizeName';
+import { findPrice } from './priceLookup';
+import { getProfile, convertMeasure } from './purchaseProfile';
 
-type PriceDb = Record<string, PriceEntry>;
-const DB = priceDatabase as PriceDb;
-
-const DB_ENTRIES: Array<{ key: string; normalized: string; entry: PriceEntry }> = Object.entries(DB)
-  .map(([k, v]) => ({ key: k, normalized: normalizeName(k), entry: v }));
-
-const fuse = new Fuse(DB_ENTRIES, {
-  keys: ['normalized'],
-  threshold: 0.35,
-  includeScore: true,
-  ignoreLocation: true,
-});
-
-export function findPrice(
-  ingredientName: string,
-  overrides: Record<string, PriceOverride> = {}
-): PriceEntry | null {
-  const normalized = normalizeName(ingredientName);
-  if (!normalized) return null;
-
-  // 1. Overrides first
-  if (overrides[normalized]) {
-    const o = overrides[normalized];
-    return { pricePerUnit: o.pricePerUnit, unit: o.unit };
-  }
-
-  // 2. Exact normalized match
-  const exact = DB_ENTRIES.find((e) => e.normalized === normalized);
-  if (exact) return exact.entry;
-
-  // 3. Substring (bidirectional)
-  const sub = DB_ENTRIES.find(
-    (e) => normalized.includes(e.normalized) || e.normalized.includes(normalized)
-  );
-  if (sub) return sub.entry;
-
-  // 4. Fuzzy
-  const fuzzy = fuse.search(normalized);
-  if (fuzzy.length > 0 && fuzzy[0].score !== undefined && fuzzy[0].score < 0.35) {
-    return fuzzy[0].item.entry;
-  }
-
-  return null;
-}
+// Re-exported for existing call sites/tests that import findPrice from here.
+export { findPrice };
 
 export function estimatePriceForItem(
   item: GroceryItem,
@@ -63,10 +20,17 @@ export function estimatePriceForItem(
     };
   }
 
+  // A purchase profile lets us price sell units that cross a unit family (e.g. a broccoli
+  // `head` priced per `lb`), which plain convert() can't bridge. Falls back to convert() when
+  // there's no profile, preserving the original unit-conflict behavior for unbridgeable items.
+  const profile = getProfile(item.name);
+
   let total = 0;
   let gap = false;
   const newEntries = item.entries.map((e) => {
-    const converted = convert(e.quantity, e.unit, priceEntry.unit);
+    const converted =
+      convert(e.quantity, e.unit, priceEntry.unit) ??
+      convertMeasure(e.quantity, e.unit, priceEntry.unit, profile);
     if (converted === null) {
       gap = true;
       return { ...e, price: undefined, priceReason: 'unit-conflict' as const };

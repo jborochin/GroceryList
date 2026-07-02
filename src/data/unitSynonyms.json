@@ -24,5 +24,10 @@
   "head": ["head", "heads"],
   "dash": ["dash", "dashes"],
   "pinch": ["pinch", "pinches"],
-  "scoop": ["scoop", "scoops"]
+  "scoop": ["scoop", "scoops"],
+  "block": ["block", "blocks"],
+  "bag": ["bag", "bags"],
+  "box": ["box", "boxes"],
+  "loaf": ["loaf", "loaves"],
+  "stick": ["stick", "sticks"]
 }

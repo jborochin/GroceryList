@@ -68,6 +68,24 @@ describe('ingredientAggregator', () => {
     expect(out[0].entries).toHaveLength(2);
   });
 
+  it('strips prep descriptors so differently-cut ingredients merge into one purchasable item', () => {
+    const recipes = [
+      recipe('a', 1, [{ name: 'diced red bell pepper', quantity: 1, unit: 'each' }]),
+      recipe('b', 1, [{ name: 'sliced red bell pepper', quantity: 2, unit: 'each' }]),
+    ];
+    const out = aggregate(
+      [
+        { recipeId: 'a', desiredServings: 1 },
+        { recipeId: 'b', desiredServings: 1 },
+      ],
+      recipes
+    );
+    expect(out).toHaveLength(1);
+    expect(out[0].name).toBe('red bell pepper');
+    expect(out[0].displayName).toBe('red bell pepper');
+    expect(out[0].entries[0].quantity).toBeCloseTo(3, 5);
+  });
+
   it('converts within family when merging', () => {
     const recipes = [
       recipe('a', 1, [{ name: 'milk', quantity: 1, unit: 'cup' }]),

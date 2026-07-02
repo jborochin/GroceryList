@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Pressable } from 'react-native';
+import { Alert, View, Pressable } from 'react-native';
 import Animated, {
   useAnimatedScrollHandler,
   useSharedValue,
@@ -84,14 +84,18 @@ export function WeeklyPlanScreen() {
   const recipes = useRecipeStore((s) => s.recipes);
   const plan = useMealPlanStore((s) => s.entries);
   const planDays = useMealPlanStore((s) => s.planDays);
+  const addEntry = useMealPlanStore((s) => s.addEntry);
   const removeEntry = useMealPlanStore((s) => s.removeEntry);
   const cells = useMealScheduleStore((s) => s.cells);
   const assign = useMealScheduleStore((s) => s.assign);
   const removeCell = useMealScheduleStore((s) => s.removeCell);
   const updateCellServings = useMealScheduleStore((s) => s.updateCellServings);
+  const clearSchedule = useMealScheduleStore((s) => s.clearSchedule);
+  const clearPlan = useMealPlanStore((s) => s.clearPlan);
   const settings = useSettingsStore((s) => s.settings);
 
-  const [picker, setPicker] = useState<{ day: number; slot: MealSlot } | null>(null);
+  type PickerTarget = { mode: 'slot'; day: number; slot: MealSlot } | { mode: 'loose' };
+  const [picker, setPicker] = useState<PickerTarget | null>(null);
 
   // Pull the freshest shared catalog so "Browse catalog" matches Auto Meal Prep.
   useEffect(() => {
@@ -115,8 +119,7 @@ export function WeeklyPlanScreen() {
     return map;
   }, [cells]);
 
-  // Plan recipes that haven't been placed on the calendar yet (e.g. a plan that
-  // arrived via sync from another device, or pre-dates the calendar feature).
+  // Plan recipes queued for the week that haven't been placed on the calendar yet.
   const unscheduled = useMemo(() => {
     const scheduled = new Set(cells.map((c) => c.recipeId));
     return plan
@@ -139,17 +142,33 @@ export function WeeklyPlanScreen() {
     },
   });
 
-  const openPicker = (day: number, slot: MealSlot) => setPicker({ day, slot });
+  const handleClearWeek = () => {
+    Alert.alert('Clear this week?', 'All meals will be removed from the calendar and grocery list.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Clear',
+        style: 'destructive',
+        onPress: () => { clearSchedule(); clearPlan(); },
+      },
+    ]);
+  };
+
+  const openPicker = (day: number, slot: MealSlot) => setPicker({ mode: 'slot', day, slot });
+  const openLoosePicker = () => setPicker({ mode: 'loose' });
 
   const handleSelectRecipe = (recipeId: string, defaultServings: number) => {
-    if (picker) assign(picker.day, picker.slot, recipeId, defaultServings);
+    if (picker?.mode === 'slot') assign(picker.day, picker.slot, recipeId, defaultServings);
+    else if (picker?.mode === 'loose') addEntry(recipeId, defaultServings);
     setPicker(null);
   };
 
   const handleSelectMeal = (meal: Meal) => {
-    if (picker) {
+    if (picker?.mode === 'slot') {
       const recipeId = ensureRecipeForMeal(meal);
       assign(picker.day, picker.slot, recipeId, meal.servings);
+    } else if (picker?.mode === 'loose') {
+      const recipeId = ensureRecipeForMeal(meal);
+      addEntry(recipeId, meal.servings);
     }
     setPicker(null);
   };
@@ -187,9 +206,8 @@ export function WeeklyPlanScreen() {
     );
   }
 
-  const destinationLabel = picker
-    ? `${week[picker.day].label} · ${SLOT_LABEL[picker.slot]}`
-    : '';
+  const destinationLabel =
+    picker?.mode === 'slot' ? `${week[picker.day].label} · ${SLOT_LABEL[picker.slot]}` : 'This week';
 
   return (
     <View style={{ flex: 1, backgroundColor: t.palette.bg }}>
@@ -211,8 +229,26 @@ export function WeeklyPlanScreen() {
               ? 'Tap a meal slot to plan it, or auto-build a week.'
               : `${cells.length} ${cells.length === 1 ? 'meal' : 'meals'} planned · ${totalServings} servings`
           }
-          rightIcon="auto-fix"
-          onRightPress={() => navigation.navigate('AutoMealPrep')}
+          trailing={
+            <View style={{ flexDirection: 'row', gap: t.spacing.xs }}>
+              {hasPlan ? (
+                <IconButton
+                  icon="trash-can-outline"
+                  onPress={handleClearWeek}
+                  variant="tonal"
+                  size={20}
+                  accessibilityLabel="Clear all meals"
+                />
+              ) : null}
+              <IconButton
+                icon="auto-fix"
+                onPress={() => navigation.navigate('AutoMealPrep')}
+                variant="tonal"
+                size={20}
+                accessibilityLabel="Auto meal prep"
+              />
+            </View>
+          }
         />
 
         <View style={{ gap: t.spacing.sm }}>
@@ -340,45 +376,52 @@ export function WeeklyPlanScreen() {
           ))}
         </View>
 
+        <SectionHeader
+          title="Queued to cook"
+          count={unscheduled.length}
+          trailing={
+            <Button label="Add recipe" icon="plus" variant="tonal" size="sm" onPress={openLoosePicker} />
+          }
+        />
         {unscheduled.length > 0 ? (
-          <>
-            <SectionHeader
-              title="Unscheduled"
-              count={unscheduled.length}
-              trailing={<Pill label="Not on calendar" tone="warning" size="sm" />}
-            />
-            <View style={{ gap: t.spacing.sm }}>
-              {unscheduled.map(({ entry, recipe }) => (
-                <Surface key={recipe.id} variant="outlined" pad={t.spacing.md}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.md }}>
-                    <View style={{ flex: 1 }}>
-                      <Text variant="bodyLg" weight="semibold" numberOfLines={1}>
-                        {recipe.title}
-                      </Text>
-                      <Text variant="caption" tone="secondary" style={{ marginTop: 2 }}>
-                        {entry.desiredServings} servings
-                      </Text>
-                    </View>
-                    <Button
-                      label="Place"
-                      icon="calendar-plus"
-                      variant="tonal"
-                      size="sm"
-                      onPress={() => placeUnscheduled(recipe.id, entry.desiredServings)}
-                    />
-                    <IconButton
-                      icon="close"
-                      onPress={() => removeEntry(recipe.id)}
-                      variant="tonal"
-                      size={16}
-                      accessibilityLabel="Remove from plan"
-                    />
+          <View style={{ gap: t.spacing.sm }}>
+            {unscheduled.map(({ entry, recipe }) => (
+              <Surface key={recipe.id} variant="outlined" pad={t.spacing.md}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.md }}>
+                  <View style={{ flex: 1 }}>
+                    <Text variant="bodyLg" weight="semibold" numberOfLines={1}>
+                      {recipe.title}
+                    </Text>
+                    <Text variant="caption" tone="secondary" style={{ marginTop: 2 }}>
+                      {entry.desiredServings} servings
+                    </Text>
                   </View>
-                </Surface>
-              ))}
-            </View>
-          </>
-        ) : null}
+                  <Button
+                    label="Place"
+                    icon="calendar-plus"
+                    variant="tonal"
+                    size="sm"
+                    onPress={() => placeUnscheduled(recipe.id, entry.desiredServings)}
+                  />
+                  <IconButton
+                    icon="close"
+                    onPress={() => removeEntry(recipe.id)}
+                    variant="tonal"
+                    size={16}
+                    accessibilityLabel="Remove from plan"
+                  />
+                </View>
+              </Surface>
+            ))}
+          </View>
+        ) : (
+          <Surface variant="outlined" pad={t.spacing.lg} style={{ alignItems: 'center', gap: t.spacing.sm }}>
+            <Text variant="body" tone="secondary" style={{ textAlign: 'center' }}>
+              Add recipes you plan to cook this week — you can decide which day later.
+            </Text>
+            <Button label="Add recipe" icon="plus" variant="tonal" size="sm" onPress={openLoosePicker} />
+          </Surface>
+        )}
 
         {cells.length > 0 || unscheduled.length > 0 ? (
           <>

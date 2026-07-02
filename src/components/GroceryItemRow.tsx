@@ -7,6 +7,7 @@ import Animated, {
   withSpring,
   withTiming,
   interpolate,
+  interpolateColor,
 } from 'react-native-reanimated';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useAppTheme, tokens } from '../theme/tokens';
@@ -40,8 +41,8 @@ export function GroceryItemRow({ item, index, checked, onToggle, onEditPrice }: 
   }));
 
   const checkboxStyle = useAnimatedStyle(() => ({
-    backgroundColor: progress.value > 0.5 ? t.palette.primary : 'transparent',
-    borderColor: progress.value > 0.5 ? t.palette.primary : t.palette.borderStrong,
+    backgroundColor: interpolateColor(progress.value, [0, 1], ['transparent', t.palette.primary]),
+    borderColor: interpolateColor(progress.value, [0, 1], [t.palette.borderStrong, t.palette.primary]),
     transform: [{ scale: interpolate(progress.value, [0, 1], [1, 1.04]) }],
   }));
 

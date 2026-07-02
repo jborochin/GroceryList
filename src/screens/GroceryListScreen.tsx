@@ -21,6 +21,7 @@ import { usePriceOverrideStore } from '../store/usePriceOverrideStore';
 import { aggregate } from '../utils/ingredientAggregator';
 import { applyPantry } from '../utils/pantryDeduction';
 import { mergeManualItems } from '../utils/mergeManualItems';
+import { roundToPurchasable } from '../utils/purchaseRounding';
 import { estimatePrices } from '../utils/priceEstimator';
 import { normalizeName } from '../utils/normalizeName';
 import { formatEntry } from '../utils/formatters';
@@ -102,7 +103,10 @@ export function GroceryListScreen() {
     const agg = aggregate(plan, recipes);
     const withPantry = applyPantry(agg, pantry);
     const withManual = mergeManualItems(withPantry, manualItems);
-    return estimatePrices(withManual, overrides);
+    // Round each item to what the store actually sells (whole avocados, a head of broccoli)
+    // before pricing, so the total reflects the real purchase.
+    const purchasable = roundToPurchasable(withManual);
+    return estimatePrices(purchasable, overrides);
   }, [plan, recipes, pantry, manualItems, overrides]);
 
   // Items the user has swiped away are filtered out of the computed list, and the

@@ -47,4 +47,11 @@ describe('priceEstimator', () => {
     expect(priced.estimatedPrice).toBeUndefined();
     expect(priced.hasPriceGap).toBe(true);
   });
+
+  it('prices a cross-family purchase unit via the profile bridge (broccoli head → lb)', () => {
+    // Previously a unit-conflict gap; now bridged through the broccoli profile's grams.
+    const priced = estimatePriceForItem(item('broccoli', 1, 'head'));
+    expect(priced.hasPriceGap).toBe(false);
+    expect(priced.estimatedPrice).toBeCloseTo((400 / 453.592) * 2.0, 2);
+  });
 });

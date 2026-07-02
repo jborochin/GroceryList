@@ -1,4 +1,5 @@
 import { Ingredient } from '../types';
+import { stripLeadingDescriptors } from './prepDescriptors';
 
 // CalorieNinjas' natural-language parser reads cooking *fractions* correctly but
 // catastrophically misparses *decimals* — e.g. "0.25 cup feta" returns ~7x the
@@ -48,67 +49,6 @@ const MEASURE_UNITS = new Set([
 const NAME_ALIASES: Record<string, string> = {
   evoo: 'olive oil',
 };
-
-// Leading prep-state / quality / sourcing words that aren't the food itself.
-// CalorieNinjas inflates or even double-counts when these precede the noun
-// (e.g. "hard boiled pasture-raised eggs" parses as TWO items). We only strip a
-// *leading run* of these, stopping at the first real food token, so food-defining
-// modifiers ("cherry tomatoes", "green onion", "olive oil", "ground beef") survive.
-const STRIP_LEADING = new Set([
-  // prep state
-  'boiled',
-  'hard-boiled',
-  'soft-boiled',
-  'cooked',
-  'raw',
-  'roasted',
-  'grilled',
-  'fried',
-  'baked',
-  'steamed',
-  'chopped',
-  'diced',
-  'sliced',
-  'minced',
-  'crumbled',
-  'shredded',
-  'grated',
-  'halved',
-  'mashed',
-  'peeled',
-  'cubed',
-  // quality / size / sourcing
-  'fresh',
-  'freshly',
-  'frozen',
-  'organic',
-  'ripe',
-  'pasture-raised',
-  'pastured',
-  'free-range',
-  'grass-fed',
-  'large',
-  'small',
-  'medium',
-  'hard',
-  // manner adverbs
-  'thinly',
-  'finely',
-  'roughly',
-  'lightly',
-  // non-food quantity words
-  'handful',
-  'handfuls',
-]);
-
-function stripLeadingDescriptors(name: string): string {
-  const tokens = name.split(/\s+/).filter(Boolean);
-  let i = 0;
-  while (i < tokens.length && STRIP_LEADING.has(tokens[i])) i++;
-  // Never strip away the whole name (e.g. "crumbled" with no noun).
-  if (i >= tokens.length) return name;
-  return tokens.slice(i).join(' ');
-}
 
 /**
  * Render a numeric quantity as a CalorieNinjas-safe fraction/mixed-number string.

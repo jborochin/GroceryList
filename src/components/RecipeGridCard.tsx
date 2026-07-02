@@ -13,6 +13,10 @@ interface Props {
   onDelete?: () => void;
   isFavorited?: boolean;
   onFavorite?: () => void;
+  // Whether this recipe is already queued in the weekly plan (any servings,
+  // scheduled or not) — controls the bottom-right affordance (add vs. queued).
+  queued?: boolean;
+  onQueue?: () => void;
   // Horizontal padding + column gap the parent grid applies, so the card can
   // size itself to exactly half the row (keeps a lone trailing card half-width
   // instead of stretching, which `flex: 1` would do).
@@ -20,7 +24,17 @@ interface Props {
   columnGap: number;
 }
 
-export function RecipeGridCard({ recipe, onPress, onDelete, isFavorited, onFavorite, horizontalPadding, columnGap }: Props) {
+export function RecipeGridCard({
+  recipe,
+  onPress,
+  onDelete,
+  isFavorited,
+  onFavorite,
+  queued,
+  onQueue,
+  horizontalPadding,
+  columnGap,
+}: Props) {
   const t = useAppTheme();
   const { width: screenWidth } = useWindowDimensions();
   const cardWidth = (screenWidth - horizontalPadding * 2 - columnGap) / 2;
@@ -133,6 +147,24 @@ export function RecipeGridCard({ recipe, onPress, onDelete, isFavorited, onFavor
             color={t.palette.textInverse}
             onPress={onDelete}
             accessibilityLabel={`Delete ${recipe.title}`}
+            style={{
+              backgroundColor: 'rgba(24, 28, 22, 0.55)',
+              ...t.shadow.soft,
+            }}
+          />
+        </View>
+      ) : null}
+
+      {onQueue != null ? (
+        <View style={{ position: 'absolute', bottom: t.spacing.xs, right: t.spacing.xs }}>
+          <IconButton
+            icon={queued ? 'calendar-check' : 'calendar-plus'}
+            variant="soft"
+            size={18}
+            color={queued ? t.palette.success : t.palette.textInverse}
+            onPress={queued ? undefined : onQueue}
+            haptic={!queued}
+            accessibilityLabel={queued ? `${recipe.title} is queued for this week` : `Add ${recipe.title} to this week`}
             style={{
               backgroundColor: 'rgba(24, 28, 22, 0.55)',
               ...t.shadow.soft,

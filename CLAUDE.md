@@ -26,10 +26,12 @@ Offline-first Expo + React Native app. State lives in Zustand stores persisted t
 This is the core compute path, invoked by `HomeScreen` and `GroceryListScreen`:
 
 ```
-plan + recipes → aggregate() → applyPantry() → estimatePrices() → render
+plan + recipes → aggregate() → applyPantry() → mergeManualItems() → roundToPurchasable() → estimatePrices() → render
 ```
 
-Each step is a pure function in `src/utils/`. All three take and return plain `GroceryItem[]` (see `src/types/index.ts`). Downstream screens recompute via `useMemo` over the store inputs. When editing this pipeline, prefer adding another pure step in the chain over mutating stores.
+Each step is a pure function in `src/utils/` that takes and returns plain `GroceryItem[]` (see `src/types/index.ts`). Downstream screens recompute via `useMemo` over the store inputs. When editing this pipeline, prefer adding another pure step in the chain over mutating stores.
+
+`roundToPurchasable()` (`src/utils/purchaseRounding.ts`) rewrites each item's quantity into the unit the store actually sells it in, rounded up to a whole pack — `½ avocado → 1`, `1 cup broccoli → 1 head`, `2 cloves garlic → 1 head`, `1 oz cheddar → 1 block`. It runs **after** pantry (so owned staples are already gone) and **before** pricing (so the total reflects the real purchase). It only rounds items whose *sell unit* is a count (each/head/block/bag/bottle…); weight/volume sell units (chicken by the lb) stay continuous since you can buy a fraction. See "Purchase profiles" below.
 
 ### Name normalization is load-bearing
 
@@ -43,6 +45,10 @@ Each step is a pure function in `src/utils/`. All three take and return plain `G
 - Price: marks the entry `priceReason: 'unit-conflict'` and flags `hasPriceGap`.
 
 Count units are a special case — distinct labels (`each` vs `slice`) never convert, even though they share a family.
+
+### Purchase profiles bridge unit families (deliberately, outside `convert()`)
+
+`src/data/purchaseProfiles.json` + `src/utils/purchaseProfile.ts` model how each ingredient is *sold* (`sellUnit`, `packSize`, optional `grams`). `getProfile(name)` returns an explicit entry (exact normalized match) or a default derived from the item's `priceDatabase` row (`sellUnit = price unit, packSize 1`), so every priced ingredient has a profile. `convertMeasure(qty, from, to, profile)` is the **only** place that crosses unit families: it tries `convert()` first, then bridges via `grams` (weight↔grams is universal mass; volume/count units need a `grams` anchor). This is intentionally kept out of `convert()` so the rest of the pipeline's family isolation stays intact. Both `roundToPurchasable` and `estimatePrices` use it — the latter so a cross-family sell unit (broccoli `head` priced per `lb`) prices instead of flagging `unit-conflict`.
 
 ### Stores and hydration
 
@@ -62,10 +68,11 @@ To change the catalog: edit `mealCatalog.json`, run `npm run seed:build` (regene
 
 ### Data files as editable reference
 
-Five JSON files in `src/data/` are hot-pathed by utilities:
+Six JSON files in `src/data/` are hot-pathed by utilities:
 - `unitSynonyms.json` — aliases → canonical unit (consumed by `ingredientParser`)
 - `categoryKeywords.json` — longest-match-wins keyword → category map (consumed by `categorizer`)
-- `priceDatabase.json` — ~100 US prices, `name → { pricePerUnit, unit }` (consumed by `priceEstimator`)
+- `priceDatabase.json` — ~100 US prices, `name → { pricePerUnit, unit }` (consumed by `priceEstimator`/`priceLookup`)
+- `purchaseProfiles.json` — how each item is *sold* (`sellUnit`/`packSize`/`grams`); only cross-family/whole-pack items need an entry, the rest default from `priceDatabase` (consumed by `purchaseProfile`)
 - `mealCatalog.json` — ~88 shared meals driving auto meal-plans (`mealPlanner`); bundled offline source of truth, mirrored to `public.meals`
 - `foodPreferences.json` — canonical cuisine + dietary keys (the only valid values for a meal's `cuisine` / `dietaryTags`)
 
@@ -92,7 +99,8 @@ Only the `src/utils/` modules have tests (see `src/__tests__/`). Screens are int
 ## Things that are easy to get wrong
 
 - **Adding a new persisted store** — also wire it into `src/store/hydration.ts` and add a key to `STORAGE_KEYS`.
-- **Adding a new unit** — add aliases to `unitSynonyms.json` *and* a row to `UNIT_TABLE` in `unitConversion.ts` with the correct family and base conversion.
+- **Adding a new unit** — add aliases to `unitSynonyms.json` *and* a row to `UNIT_TABLE` in `unitConversion.ts` with the correct family and base conversion *and* a label in `UNIT_LABELS` (`formatters.ts`) or it renders raw. Retail "pack" units (`block`/`bag`/`bottle`…) are `count` family with `toBase: 1`; cross-family pricing goes through purchase-profile `grams`, never `convert()`.
+- **Adding a meal whose ingredient is sold discretely but priced by weight/volume** (e.g. an onion priced per `lb`, a spice used by `tsp`) — the default profile won't round a fractional `each`/won't price across families. Add an explicit `purchaseProfiles.json` entry with a `grams` bridge; `purchaseProfileCoverage.test.ts` fails on any catalog ingredient that rounds to a fractional count.
 - **Adding a new ingredient category** — no enum; categories are just strings. Update the `ordered` array in `GroceryListScreen.tsx` if you want section ordering, otherwise it sorts last.
 - **UUID on React Native** — `uuid` requires `react-native-get-random-values` imported *before* `uuid`. Existing stores do this; new ones that use `uuid` must too.
 - **Editing the theme** — the live palette is the `dark` key in `src/theme/tokens.ts` even though it's a light/cream theme; the `light` object is dead. Update `dark` and the hardcoded backdrop color in `App.tsx` together.

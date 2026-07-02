@@ -21,6 +21,7 @@ import {
   ParsedRecipe,
   sanitizeImageUrl,
 } from '../utils/recipeUrlParser';
+import { parseRecipeFromCaption } from '../utils/instagramCaptionParser';
 import { IngredientEditor } from '../components/IngredientEditor';
 import { ServingStepper } from '../components/ServingStepper';
 import { Ingredient, NutritionPerServing } from '../types';
@@ -42,6 +43,7 @@ import { useReducedMotion } from '../hooks/useReducedMotion';
 import { haptics } from '../utils/haptics';
 
 type ImportErrorKind = RecipeParseErrorKind | 'unknown';
+type ImportSource = 'url' | 'caption';
 
 type ImportErrorCopy = {
   title: string;
@@ -50,7 +52,38 @@ type ImportErrorCopy = {
   primaryLabel: string;
 };
 
-function buildImportErrorCopy(kind: ImportErrorKind, rawMessage: string): ImportErrorCopy {
+function buildImportErrorCopy(
+  kind: ImportErrorKind,
+  rawMessage: string,
+  source: ImportSource = 'url',
+): ImportErrorCopy {
+  if (source === 'caption') {
+    switch (kind) {
+      case 'not-found':
+        return {
+          title: "Couldn't find a recipe in that caption.",
+          body:
+            "We couldn't spot an ingredients list. Make sure you copied the full caption (including the ingredients), or switch to Manual.",
+          primaryAction: 'manual',
+          primaryLabel: 'Switch to Manual',
+        };
+      case 'malformed':
+        return {
+          title: "Couldn't read the ingredients.",
+          body:
+            "We found an ingredients section but couldn't make sense of the lines. Tidy it up here, or enter it manually.",
+          primaryAction: 'manual',
+          primaryLabel: 'Switch to Manual',
+        };
+      default:
+        return {
+          title: 'Import failed.',
+          body: 'Something unexpected went wrong reading that caption. Try again or enter manually.',
+          primaryAction: 'manual',
+          primaryLabel: 'Switch to Manual',
+        };
+    }
+  }
   switch (kind) {
     case 'cors':
       return {
@@ -96,7 +129,7 @@ function buildImportErrorCopy(kind: ImportErrorKind, rawMessage: string): Import
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Rt = RouteProp<RootStackParamList, 'AddRecipe'>;
 
-type Mode = 'url' | 'manual';
+type Mode = 'url' | 'manual' | 'instagram';
 
 export function AddRecipeScreen() {
   const t = useAppTheme();
@@ -109,8 +142,13 @@ export function AddRecipeScreen() {
 
   const [mode, setMode] = useState<Mode>(route.params?.prefilledUrl ? 'url' : 'manual');
   const [url, setUrl] = useState(route.params?.prefilledUrl ?? '');
+  const [caption, setCaption] = useState('');
   const [importing, setImporting] = useState(false);
-  const [importError, setImportError] = useState<{ kind: ImportErrorKind; message: string } | null>(null);
+  const [importError, setImportError] = useState<{
+    kind: ImportErrorKind;
+    message: string;
+    source: ImportSource;
+  } | null>(null);
 
   // Pulse the URL input border while parsing; shake on error.
   const pulse = useSharedValue(0);
@@ -184,11 +222,12 @@ export function AddRecipeScreen() {
       toast.show({ message: `Imported "${parsed.title}"`, tone: 'success' });
     } catch (err) {
       if (err instanceof RecipeParseError) {
-        setImportError({ kind: err.kind, message: err.message });
+        setImportError({ kind: err.kind, message: err.message, source: 'url' });
       } else {
         setImportError({
           kind: 'unknown',
           message: err instanceof Error ? err.message : String(err),
+          source: 'url',
         });
       }
     } finally {
@@ -196,8 +235,37 @@ export function AddRecipeScreen() {
     }
   };
 
+  // Caption parsing is pure + synchronous — no network, so no importing spinner.
+  const handleImportCaption = () => {
+    const trimmed = caption.trim();
+    if (!trimmed) return;
+    setImportError(null);
+    try {
+      const parsed = parseRecipeFromCaption(trimmed);
+      applyParsed(parsed);
+      setMode('manual');
+      haptics.success();
+      toast.show({ message: `Imported "${parsed.title}"`, tone: 'success' });
+    } catch (err) {
+      if (err instanceof RecipeParseError) {
+        setImportError({ kind: err.kind, message: err.message, source: 'caption' });
+      } else {
+        setImportError({
+          kind: 'unknown',
+          message: err instanceof Error ? err.message : String(err),
+          source: 'caption',
+        });
+      }
+    }
+  };
+
   const onUrlChange = (v: string) => {
     setUrl(v);
+    if (importError) setImportError(null);
+  };
+
+  const onCaptionChange = (v: string) => {
+    setCaption(v);
     if (importError) setImportError(null);
   };
 
@@ -244,6 +312,60 @@ export function AddRecipeScreen() {
     }
   };
 
+  // Shared by the URL and Instagram import branches — same error card, copy
+  // varies by the error's source (see buildImportErrorCopy).
+  const renderImportError = () => {
+    if (!importError) return null;
+    const copy = buildImportErrorCopy(importError.kind, importError.message, importError.source);
+    return (
+      <Surface variant="flat" pad={t.spacing.md} tint="danger" style={{ marginTop: t.spacing.md }}>
+        <View style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
+          <Icon
+            name="alert-circle-outline"
+            size={18}
+            color={t.palette.dangerSoftText}
+            style={{ marginTop: 1 }}
+          />
+          <View style={{ flex: 1 }}>
+            <Text
+              variant="body"
+              weight="semibold"
+              style={{ color: t.palette.dangerSoftText, marginBottom: 4 }}
+            >
+              {copy.title}
+            </Text>
+            <Text variant="caption" style={{ color: t.palette.dangerSoftText }}>
+              {copy.body}
+            </Text>
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'flex-end',
+                gap: t.spacing.sm,
+                marginTop: t.spacing.md,
+              }}
+            >
+              <Button label="Dismiss" variant="ghost" size="sm" onPress={() => setImportError(null)} />
+              <Button
+                label={copy.primaryLabel}
+                variant="primary"
+                size="sm"
+                onPress={() => {
+                  if (copy.primaryAction === 'manual') {
+                    setImportError(null);
+                    setMode('manual');
+                  } else {
+                    handleImport();
+                  }
+                }}
+              />
+            </View>
+          </View>
+        </View>
+      </Surface>
+    );
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: t.palette.bg }}>
       <AmbientBackground />
@@ -273,7 +395,8 @@ export function AddRecipeScreen() {
 
       <SegmentedControl
         items={[
-          { value: 'url', label: 'Paste URL', icon: 'link-variant' },
+          { value: 'url', label: 'URL', icon: 'link-variant' },
+          { value: 'instagram', label: 'Instagram', icon: 'instagram' },
           { value: 'manual', label: 'Manual', icon: 'pencil-outline' },
         ]}
         value={mode}
@@ -314,62 +437,7 @@ export function AddRecipeScreen() {
           ) : null}
 
           {importError ? (
-            <Surface
-              variant="flat"
-              pad={t.spacing.md}
-              tint="danger"
-              style={{ marginTop: t.spacing.md }}
-            >
-              <View style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
-                <Icon
-                  name="alert-circle-outline"
-                  size={18}
-                  color={t.palette.dangerSoftText}
-                  style={{ marginTop: 1 }}
-                />
-                <View style={{ flex: 1 }}>
-                  <Text
-                    variant="body"
-                    weight="semibold"
-                    style={{ color: t.palette.dangerSoftText, marginBottom: 4 }}
-                  >
-                    {buildImportErrorCopy(importError.kind, importError.message).title}
-                  </Text>
-                  <Text variant="caption" style={{ color: t.palette.dangerSoftText }}>
-                    {buildImportErrorCopy(importError.kind, importError.message).body}
-                  </Text>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      justifyContent: 'flex-end',
-                      gap: t.spacing.sm,
-                      marginTop: t.spacing.md,
-                    }}
-                  >
-                    <Button
-                      label="Dismiss"
-                      variant="ghost"
-                      size="sm"
-                      onPress={() => setImportError(null)}
-                    />
-                    <Button
-                      label={buildImportErrorCopy(importError.kind, importError.message).primaryLabel}
-                      variant="primary"
-                      size="sm"
-                      onPress={() => {
-                        const copy = buildImportErrorCopy(importError.kind, importError.message);
-                        if (copy.primaryAction === 'manual') {
-                          setImportError(null);
-                          setMode('manual');
-                        } else {
-                          handleImport();
-                        }
-                      }}
-                    />
-                  </View>
-                </View>
-              </View>
-            </Surface>
+            renderImportError()
           ) : (
             <Text variant="caption" tone="tertiary" style={{ marginTop: t.spacing.md }}>
               {Platform.OS === 'web'
@@ -377,6 +445,36 @@ export function AddRecipeScreen() {
                 : "We read the page's embedded recipe schema (JSON-LD). If the page doesn't have one, switch to Manual."}
             </Text>
           )}
+          </GlassSurface>
+        </Animated.View>
+      ) : mode === 'instagram' ? (
+        <Animated.View style={urlBoxStyle}>
+          <GlassSurface variant="hero" pad={t.spacing.lg}>
+            <Input
+              label="Instagram caption"
+              value={caption}
+              onChangeText={onCaptionChange}
+              placeholder={'Paste the full caption from a reel or post…\n\nIncludes the title, ingredients, and steps.'}
+              multiline
+              inputStyle={{ minHeight: 180, textAlignVertical: 'top' }}
+              containerStyle={{ marginBottom: t.spacing.md }}
+            />
+            <Button
+              label="Import recipe"
+              icon="download"
+              onPress={handleImportCaption}
+              disabled={!caption.trim()}
+              fullWidth
+            />
+
+            {importError ? (
+              renderImportError()
+            ) : (
+              <Text variant="caption" tone="tertiary" style={{ marginTop: t.spacing.md }}>
+                Open a recipe reel, copy the caption, and paste it here. We&apos;ll pull out the
+                title, ingredients, and steps — review them before saving.
+              </Text>
+            )}
           </GlassSurface>
         </Animated.View>
       ) : (
