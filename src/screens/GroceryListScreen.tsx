@@ -76,7 +76,24 @@ const CATEGORY_ICON: Record<string, string> = {
   Spices: 'shaker-outline',
   Beverages: 'cup',
   Other: 'dots-horizontal',
+  Checked: 'check-circle-outline',
 };
+
+function buildCategorySections(items: GroceryItem[]) {
+  const byCat = new Map<string, GroceryItem[]>();
+  for (const item of items) {
+    const arr = byCat.get(item.category) ?? [];
+    arr.push(item);
+    byCat.set(item.category, arr);
+  }
+  return [...byCat.entries()]
+    .sort((a, b) => {
+      const ai = CATEGORY_ORDER.indexOf(a[0]);
+      const bi = CATEGORY_ORDER.indexOf(b[0]);
+      return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+    })
+    .map(([title, data]) => ({ title, data }));
+}
 
 export function GroceryListScreen() {
   const t = useAppTheme();
@@ -156,21 +173,15 @@ export function GroceryListScreen() {
     toast.show({ message: 'List cleared', tone: 'neutral' });
   };
 
+  // Checked-off items sink out of their category into a single section at the
+  // bottom of the list, so what's left to grab stays at the top.
   const sections = useMemo(() => {
-    const byCat = new Map<string, GroceryItem[]>();
-    for (const item of visible.items) {
-      const arr = byCat.get(item.category) ?? [];
-      arr.push(item);
-      byCat.set(item.category, arr);
-    }
-    return [...byCat.entries()]
-      .sort((a, b) => {
-        const ai = CATEGORY_ORDER.indexOf(a[0]);
-        const bi = CATEGORY_ORDER.indexOf(b[0]);
-        return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
-      })
-      .map(([title, data]) => ({ title, data }));
-  }, [visible.items]);
+    const remaining = visible.items.filter((i) => !checked[i.name]);
+    const done = visible.items.filter((i) => checked[i.name]);
+    const secs = buildCategorySections(remaining);
+    if (done.length > 0) secs.push({ title: 'Checked', data: done });
+    return secs;
+  }, [visible.items, checked]);
 
   const checkedCount = useMemo(
     () => visible.items.reduce((acc, item) => acc + (checked[item.name] ? 1 : 0), 0),
@@ -212,7 +223,8 @@ export function GroceryListScreen() {
   const handleShare = async () => {
     haptics.tap();
     const lines: string[] = [`Grocery list — est. $${visible.total.toFixed(2)}`, ''];
-    for (const section of sections) {
+    // Share by category regardless of check state, so the exported list is stable.
+    for (const section of buildCategorySections(visible.items)) {
       lines.push(section.title.toUpperCase());
       for (const item of section.data) {
         const qty = item.entries.map((e) => formatEntry(e.quantity, e.unit)).join(' + ');
