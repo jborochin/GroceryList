@@ -9,23 +9,23 @@ import Svg, { Defs, RadialGradient, Stop, Rect } from 'react-native-svg';
 import { useReduceMotion, useReduceTransparency } from '../../hooks/useReduceEffects';
 import { useParallax } from './ParallaxContext';
 
-// Single static radial backdrop for the whole app: a light warm cream at the
-// center easing to a slightly deeper cream at the edges (8 stops to avoid
-// banding). Mounted once at the root so it never re-renders on navigation. A slow
-// scroll-driven parallax nudges the center ±8px; both the parallax and the blur
-// fall back to a solid fill under Reduce Motion / Reduce Transparency.
+// Single static radial backdrop for the whole app: a bright cool near-white at
+// the center easing to a slightly deeper green-tinged white at the edges (8 stops
+// to avoid banding). Mounted once at the root so it never re-renders on navigation.
+// A slow scroll-driven parallax nudges the center ±8px; both the parallax and the
+// blur fall back to a solid fill under Reduce Motion / Reduce Transparency.
 const OVERSCAN = 16;
-const BACKDROP = '#F2EBD9';
+const BACKDROP = '#F5F8F6';
 
 const STOPS: { offset: string; color: string }[] = [
-  { offset: '0%', color: '#FAF4E6' },
-  { offset: '12%', color: '#F7F0E0' },
-  { offset: '24%', color: '#F4ECDA' },
-  { offset: '36%', color: '#F2EBD9' },
-  { offset: '48%', color: '#EFE7D2' },
-  { offset: '62%', color: '#EBE2C9' },
-  { offset: '80%', color: '#E7DCBF' },
-  { offset: '100%', color: '#E2D6B6' },
+  { offset: '0%', color: '#FBFDFC' },
+  { offset: '12%', color: '#F9FBFA' },
+  { offset: '24%', color: '#F7F9F8' },
+  { offset: '36%', color: '#F5F8F6' },
+  { offset: '48%', color: '#F2F6F4' },
+  { offset: '62%', color: '#EFF3F1' },
+  { offset: '80%', color: '#EAF0ED' },
+  { offset: '100%', color: '#E4EBE7' },
 ];
 
 export function AmbientBackground() {
