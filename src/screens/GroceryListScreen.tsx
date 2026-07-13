@@ -18,12 +18,14 @@ import { usePantryStore } from '../store/usePantryStore';
 import { useManualItemStore } from '../store/useManualItemStore';
 import { useDismissedItemStore } from '../store/useDismissedItemStore';
 import { usePriceOverrideStore } from '../store/usePriceOverrideStore';
+import { useMealScheduleStore } from '../store/useMealScheduleStore';
 import { aggregate } from '../utils/ingredientAggregator';
 import { applyPantry } from '../utils/pantryDeduction';
 import { mergeManualItems } from '../utils/mergeManualItems';
 import { roundToPurchasable } from '../utils/purchaseRounding';
 import { estimatePrices } from '../utils/priceEstimator';
 import { normalizeName } from '../utils/normalizeName';
+import { weekLabel } from '../utils/planningWeek';
 import { formatEntry } from '../utils/formatters';
 import { confirm } from '../utils/confirm';
 import { EmptyState } from '../components/EmptyState';
@@ -390,11 +392,17 @@ function Hero({
 }: HeroProps) {
   const t = useAppTheme();
   const showRemaining = checkedCount > 0 && remaining !== total;
+  // The list is computed from the plan entries, which are projected from the
+  // week selected in the Week tab — reflect that week here.
+  const selectedWeekStart = useMealScheduleStore((s) => s.selectedWeekStart);
+  const label = weekLabel(selectedWeekStart);
+  // "This week's list" / "Next week's list", but a dated label stands alone.
+  const eyebrow = label.startsWith('Week of') ? label : `${label}'s list`;
 
   return (
     <Animated.View entering={FadeIn.duration(300)} style={{ marginBottom: 8 }}>
       <Header
-        eyebrow="This week's list"
+        eyebrow={eyebrow}
         title="Grocery"
         trailing={
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>

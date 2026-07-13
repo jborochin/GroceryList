@@ -3,6 +3,7 @@ import { ScheduleCell } from '../types';
 
 const cell = (recipeId: string, desiredServings: number, day = 0, slot: ScheduleCell['slot'] = 'dinner'): ScheduleCell => ({
   id: `${recipeId}-${day}-${slot}`,
+  weekStart: '2026-07-06',
   day,
   slot,
   recipeId,

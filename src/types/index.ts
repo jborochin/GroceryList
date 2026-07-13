@@ -34,13 +34,15 @@ export interface MealPlanEntry {
 
 export type MealSlot = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 
-// Device-local placement of a planned recipe onto a specific day + meal slot.
+// Device-local placement of a planned recipe onto a specific week + day + slot.
 // This is the "calendar" layer that sits on top of the synced MealPlanEntry list:
 // entries stay the authoritative (synced) source of plan membership + total
-// servings, while cells only describe WHERE each serving lands in the week.
+// servings — projected from ONE week at a time (the selected week, see
+// useMealScheduleStore) — while cells describe WHERE each serving lands.
 // Never synced — see useMealScheduleStore.
 export interface ScheduleCell {
   id: string;
+  weekStart: string; // week key: local ISO date of the week's Monday (see planningWeek.ts)
   day: number; // 0..6 (Mon..Sun)
   slot: MealSlot;
   recipeId: string;
