@@ -68,6 +68,9 @@
     "testMatch": [
       "**/__tests__/**/*.test.ts"
     ],
+    "modulePathIgnorePatterns": [
+      "<rootDir>/.claude/"
+    ],
     "moduleFileExtensions": [
       "ts",
       "tsx",
@@ -76,7 +79,8 @@
       "json"
     ],
     "moduleNameMapper": {
-      "^react-native-get-random-values$": "<rootDir>/jest/rngShim.js"
+      "^react-native-get-random-values$": "<rootDir>/jest/rngShim.js",
+      "^@react-native-async-storage/async-storage$": "@react-native-async-storage/async-storage/jest/async-storage-mock"
     }
   },
   "private": true

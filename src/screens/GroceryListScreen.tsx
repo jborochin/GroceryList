@@ -25,6 +25,7 @@ import { roundToPurchasable } from '../utils/purchaseRounding';
 import { estimatePrices } from '../utils/priceEstimator';
 import { normalizeName } from '../utils/normalizeName';
 import { formatEntry } from '../utils/formatters';
+import { confirm } from '../utils/confirm';
 import { EmptyState } from '../components/EmptyState';
 import { GroceryItemRow } from '../components/GroceryItemRow';
 import { AddItemSheet } from '../components/AddItemSheet';
@@ -86,8 +87,10 @@ export function GroceryListScreen() {
   const manualItems = useManualItemStore((s) => s.items);
   const addManualItem = useManualItemStore((s) => s.addItem);
   const removeManualItem = useManualItemStore((s) => s.removeItem);
+  const clearManualItems = useManualItemStore((s) => s.clearAll);
   const dismissedNames = useDismissedItemStore((s) => s.names);
   const dismiss = useDismissedItemStore((s) => s.dismiss);
+  const dismissMany = useDismissedItemStore((s) => s.dismissMany);
   const prune = useDismissedItemStore((s) => s.prune);
   const overrides = usePriceOverrideStore((s) => s.overrides);
   const setOverride = usePriceOverrideStore((s) => s.setOverride);
@@ -132,6 +135,23 @@ export function GroceryListScreen() {
     }
     dismiss(item.name);
     toast.show({ message: `Removed ${item.displayName}`, tone: 'neutral' });
+  };
+
+  // Same semantics as swiping every row away: manual items are deleted outright,
+  // recipe-derived items are dismissed (and self-heal when the plan changes).
+  const handleClearList = async () => {
+    haptics.tap();
+    const ok = await confirm({
+      title: 'Clear grocery list?',
+      message: 'All items will be removed until your plan or recipes change.',
+      confirmLabel: 'Clear',
+      destructive: true,
+    });
+    if (!ok) return;
+    dismissMany(visible.items.map((i) => i.name));
+    clearManualItems();
+    setChecked({});
+    toast.show({ message: 'List cleared', tone: 'neutral' });
   };
 
   const sections = useMemo(() => {
@@ -274,6 +294,7 @@ export function GroceryListScreen() {
                 haptics.tap();
                 setAddOpen(true);
               }}
+              onClear={handleClearList}
             />
           }
           renderSectionHeader={({ section }: { section: { title: string; data: GroceryItem[] } }) => (
@@ -353,6 +374,7 @@ interface HeroProps {
   progress: number;
   onShare: () => void;
   onAdd: () => void;
+  onClear: () => void;
 }
 
 function Hero({
@@ -364,6 +386,7 @@ function Hero({
   progress,
   onShare,
   onAdd,
+  onClear,
 }: HeroProps) {
   const t = useAppTheme();
   const showRemaining = checkedCount > 0 && remaining !== total;
@@ -377,6 +400,12 @@ function Hero({
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <IconButton icon="plus" onPress={onAdd} variant="tonal" accessibilityLabel="Add item" />
             <IconButton icon="export-variant" onPress={onShare} variant="tonal" />
+            <IconButton
+              icon="delete-sweep-outline"
+              onPress={onClear}
+              variant="tonal"
+              accessibilityLabel="Clear list"
+            />
           </View>
         }
       />
