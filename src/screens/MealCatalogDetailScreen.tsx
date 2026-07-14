@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View } from 'react-native';
 import { Image } from 'expo-image';
 import Animated, {
@@ -8,13 +8,16 @@ import Animated, {
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRecipeStore } from '../store/useRecipeStore';
+import { useFavoritesStore } from '../store/useFavoritesStore';
+import { useMealPlanStore } from '../store/useMealPlanStore';
 import { getMealCatalog } from '../lib/mealCatalogSync';
-import { mealToRecipe, recipeIdForMeal } from '../utils/commitMealPlan';
+import { ensureRecipeForMeal, recipeIdForMeal } from '../utils/commitMealPlan';
+import { scaleIngredients } from '../utils/recipeScaling';
 import { formatEntry } from '../utils/formatters';
 import { RootStackParamList } from '../navigation/types';
 import { useAppTheme } from '../theme/tokens';
 import foodPreferences from '../data/foodPreferences.json';
+import { ServingStepper } from '../components/ServingStepper';
 import {
   AmbientBackground,
   Button,
@@ -47,12 +50,20 @@ export function MealCatalogDetailScreen() {
 
   const meal = useMemo(() => getMealCatalog().find((m) => m.id === mealId), [mealId]);
 
-  // The recipe id a catalog meal maps to is deterministic, so we can tell
-  // whether it's already in the user's library and reflect that in the button.
-  const recipeId = meal ? recipeIdForMeal(meal.id) : '';
-  const alreadyAdded = useRecipeStore((s) => s.recipes.some((r) => r.id === recipeId));
-  const [justAdded, setJustAdded] = useState(false);
-  const inLibrary = alreadyAdded || justAdded;
+  // Catalog meals never enter "my recipes"; favoriting is how a user keeps one
+  // at hand (Recipes tab → Favorites).
+  const isFavorited = useFavoritesStore((s) => s.favoriteIds.includes(mealId));
+  const toggleFavorite = useFavoritesStore((s) => s.toggleFavorite);
+
+  const [servings, setServings] = useState(0);
+  useEffect(() => {
+    if (meal && servings === 0) setServings(meal.servings);
+  }, [meal, servings]);
+
+  const addEntry = useMealPlanStore((s) => s.addEntry);
+  const planEntry = useMealPlanStore((s) =>
+    s.entries.find((e) => e.recipeId === recipeIdForMeal(mealId))
+  );
 
   const scrollY = useSharedValue(0);
   const onScroll = useAnimatedScrollHandler({
@@ -78,14 +89,35 @@ export function MealCatalogDetailScreen() {
     );
   }
 
-  const handleAdd = () => {
-    // Idempotent: upsert keyed on the deterministic id never duplicates.
-    useRecipeStore.getState().upsertRecipe(mealToRecipe(meal));
-    setJustAdded(true);
-    toast.show({ message: `Added ${meal.title} to your recipes`, tone: 'success' });
+  const handleToggleFavorite = () => {
+    toggleFavorite(meal.id);
+    toast.show({
+      message: isFavorited
+        ? `Removed ${meal.title} from favorites`
+        : `Saved ${meal.title} to favorites`,
+      tone: 'success',
+    });
   };
 
   const n = meal.nutritionPerServing;
+  const ratio = servings > 0 ? servings / Math.max(1, meal.servings) : 1;
+  const scaledIngredients = scaleIngredients(meal.ingredients, ratio);
+
+  const queuedServings = planEntry?.desiredServings;
+  const alreadyQueued = queuedServings !== undefined && queuedServings === servings;
+  const addToGroceryListLabel = queuedServings === undefined ? 'Add' : alreadyQueued ? 'Added' : 'Update';
+
+  const handleAddToGroceryList = () => {
+    const recipeId = ensureRecipeForMeal(meal);
+    addEntry(recipeId, servings);
+    toast.show({
+      message:
+        queuedServings === undefined
+          ? `Added ${meal.title} (${servings} servings) to this week`
+          : `Updated ${meal.title} to ${servings} servings`,
+      tone: 'success',
+    });
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: t.palette.bg }}>
@@ -101,7 +133,7 @@ export function MealCatalogDetailScreen() {
         onScroll={onScroll}
         scrollEventThrottle={16}
       >
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: t.spacing.md }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: t.spacing.md, gap: t.spacing.sm }}>
           <IconButton
             icon="chevron-left"
             onPress={() => navigation.goBack()}
@@ -110,6 +142,13 @@ export function MealCatalogDetailScreen() {
             accessibilityLabel="Back"
           />
           <View style={{ flex: 1 }} />
+          <Button
+            label={addToGroceryListLabel}
+            icon={alreadyQueued ? 'cart-check' : 'cart-plus'}
+            size="sm"
+            variant={alreadyQueued ? 'tonal' : 'primary'}
+            onPress={alreadyQueued ? undefined : handleAddToGroceryList}
+          />
           <Pill label="Public catalog" icon="earth" tone="neutral" size="sm" />
         </View>
 
@@ -142,6 +181,18 @@ export function MealCatalogDetailScreen() {
           ))}
         </View>
 
+        <Surface variant="outlined" pad={t.spacing.lg} style={{ marginTop: t.spacing.lg }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View style={{ flex: 1 }}>
+              <Text variant="caption" tone="tertiary" style={{ marginBottom: 4 }}>
+                Servings
+              </Text>
+              <Text variant="title">{servings} servings</Text>
+            </View>
+            <ServingStepper value={servings} onChange={setServings} />
+          </View>
+        </Surface>
+
         <SectionHeader title="Nutrition" trailing={<Text variant="caption" tone="tertiary">per serving</Text>} />
         <Surface variant="outlined" pad={t.spacing.lg}>
           <View style={{ flexDirection: 'row' }}>
@@ -152,9 +203,9 @@ export function MealCatalogDetailScreen() {
           </View>
         </Surface>
 
-        <SectionHeader title="Ingredients" count={meal.ingredients.length} />
+        <SectionHeader title="Ingredients" count={scaledIngredients.length} />
         <Surface variant="outlined" pad={t.spacing.lg}>
-          {meal.ingredients.map((i, idx) => (
+          {scaledIngredients.map((i, idx) => (
             <View
               key={idx}
               style={{
@@ -162,7 +213,7 @@ export function MealCatalogDetailScreen() {
                 alignItems: 'center',
                 paddingVertical: 10,
                 gap: t.spacing.md,
-                borderBottomWidth: idx === meal.ingredients.length - 1 ? 0 : 1,
+                borderBottomWidth: idx === scaledIngredients.length - 1 ? 0 : 1,
                 borderBottomColor: t.palette.border,
               }}
             >
@@ -232,21 +283,21 @@ export function MealCatalogDetailScreen() {
           bottom: insets.bottom + t.spacing.sm,
         }}
       >
-        {inLibrary ? (
+        {isFavorited ? (
           <Button
-            label="View in my recipes"
-            icon="check"
+            label="Saved to favorites"
+            icon="heart"
             variant="secondary"
-            onPress={() => navigation.navigate('RecipeDetail', { recipeId })}
+            onPress={handleToggleFavorite}
             fullWidth
             size="lg"
             style={t.shadow.medium}
           />
         ) : (
           <Button
-            label="Add to my recipes"
-            icon="plus"
-            onPress={handleAdd}
+            label="Save to favorites"
+            icon="heart-outline"
+            onPress={handleToggleFavorite}
             fullWidth
             size="lg"
             style={t.shadow.medium}

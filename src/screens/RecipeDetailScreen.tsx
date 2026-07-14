@@ -11,6 +11,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useRecipeStore } from '../store/useRecipeStore';
+import { useMealPlanStore } from '../store/useMealPlanStore';
 import { Recipe, NutritionPerServing } from '../types';
 import { IngredientEditor } from '../components/IngredientEditor';
 import { ServingStepper } from '../components/ServingStepper';
@@ -29,6 +30,7 @@ import {
   SectionHeader,
   Surface,
   Text,
+  useToast,
 } from '../components/ui';
 import { useParallax } from '../components/ui/ParallaxContext';
 
@@ -45,6 +47,9 @@ export function RecipeDetailScreen() {
   const recipe = useRecipeStore((s) => s.getById(recipeId));
   const updateRecipe = useRecipeStore((s) => s.updateRecipe);
   const deleteRecipe = useRecipeStore((s) => s.deleteRecipe);
+  const addEntry = useMealPlanStore((s) => s.addEntry);
+  const planEntry = useMealPlanStore((s) => s.entries.find((e) => e.recipeId === recipeId));
+  const toast = useToast();
 
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<Recipe | null>(null);
@@ -78,6 +83,21 @@ export function RecipeDetailScreen() {
   const previewNutrition: NutritionPerServing | undefined = editing
     ? active.nutritionPerServing
     : scaleNutrition(recipe.nutritionPerServing, 1);
+
+  const queuedServings = planEntry?.desiredServings;
+  const alreadyQueued = queuedServings !== undefined && queuedServings === previewServings;
+  const addToGroceryListLabel = queuedServings === undefined ? 'Add' : alreadyQueued ? 'Added' : 'Update';
+
+  const handleAddToGroceryList = () => {
+    addEntry(recipe.id, previewServings);
+    toast.show({
+      message:
+        queuedServings === undefined
+          ? `Added ${recipe.title} (${previewServings} servings) to this week`
+          : `Updated ${recipe.title} to ${previewServings} servings`,
+      tone: 'success',
+    });
+  };
 
   const handleSave = () => {
     if (!draft) return;
@@ -186,7 +206,7 @@ export function RecipeDetailScreen() {
         onScroll={onScroll}
         scrollEventThrottle={16}
       >
-      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: t.spacing.md }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: t.spacing.md, gap: t.spacing.sm }}>
         <IconButton
           icon="chevron-left"
           onPress={() => navigation.goBack()}
@@ -195,6 +215,15 @@ export function RecipeDetailScreen() {
           accessibilityLabel="Back"
         />
         <View style={{ flex: 1 }} />
+        {!editing ? (
+          <Button
+            label={addToGroceryListLabel}
+            icon={alreadyQueued ? 'cart-check' : 'cart-plus'}
+            size="sm"
+            variant={alreadyQueued ? 'tonal' : 'primary'}
+            onPress={alreadyQueued ? undefined : handleAddToGroceryList}
+          />
+        ) : null}
         {!editing ? (
           <IconButton
             icon="delete-outline"
