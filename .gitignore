@@ -11,3 +11,4 @@ web-build/
 ios/
 android/
 .worktrees/
+.superpowers/
