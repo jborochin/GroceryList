@@ -10,3 +10,4 @@ web-build/
 .vscode/
 ios/
 android/
+.worktrees/
