@@ -23,15 +23,19 @@ describe('priceEstimator', () => {
     expect(p).toBeNull();
   });
 
+  // Uses 'tofu' rather than 'chicken breast' deliberately: tofu's price is a
+  // fixed hand-estimate in priceDatabase.json, while chicken breast is one of
+  // the 13 keys scripts/refreshBlsPrices.ts overwrites from live BLS data, so
+  // hardcoding an expected dollar amount against it would break every refresh.
   it('estimates price via unit conversion', () => {
-    const priced = estimatePriceForItem(item('chicken breast', 2, 'lb'));
-    expect(priced.estimatedPrice).toBeCloseTo(9.0, 1);
+    const priced = estimatePriceForItem(item('tofu', 2, 'lb'));
+    expect(priced.estimatedPrice).toBeCloseTo(6.0, 1);
     expect(priced.hasPriceGap).toBe(false);
   });
 
   it('converts oz → lb when computing', () => {
-    const priced = estimatePriceForItem(item('chicken breast', 16, 'oz'));
-    expect(priced.estimatedPrice).toBeCloseTo(4.5, 1);
+    const priced = estimatePriceForItem(item('tofu', 16, 'oz'));
+    expect(priced.estimatedPrice).toBeCloseTo(3.0, 1);
   });
 
   it('uses overrides when present', () => {
