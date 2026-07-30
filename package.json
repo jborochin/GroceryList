@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit",
     "import:mealdb": "tsx scripts/importMealDb.ts",
     "seed:build": "tsx scripts/buildSeedMeals.ts",
+    "prices:refresh-bls": "tsx scripts/refreshBlsPrices.ts",
     "brand:assets": "node scripts/generateBrandAssets.mjs"
   },
   "dependencies": {
