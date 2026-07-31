@@ -20,19 +20,32 @@ describe('mapBlsSeriesToPrice', () => {
   it('applies a factor of 1 for a direct unit match (lb -> lb)', () => {
     const series = seriesWith({ period: 'M06', value: '5.878' });
     const mapping: BlsMappingEntry = { seriesId: 'APU0000703112', blsUnit: 'lb', factor: 1 };
-    expect(mapBlsSeriesToPrice(series, mapping)).toBe(5.88);
+    const result = mapBlsSeriesToPrice(series, mapping);
+    expect(result?.price).toBe(5.88);
+    expect(result?.year).toBe('2026');
+    expect(result?.periodName).toBe('Test');
   });
 
   it('applies a fractional factor for a unit conversion (dozen -> each)', () => {
     const series = seriesWith({ period: 'M06', value: '3.60' });
     const mapping: BlsMappingEntry = { seriesId: 'APU0000708111', blsUnit: 'dozen', factor: 1 / 12 };
-    expect(mapBlsSeriesToPrice(series, mapping)).toBe(0.3);
+    expect(mapBlsSeriesToPrice(series, mapping)?.price).toBe(0.3);
   });
 
-  it('skips a non-monthly period (M13 annual average) and uses the next monthly point', () => {
+  it('picks the data point with the greatest (year, period) rather than the first monthly point in array order', () => {
+    const series = seriesWith({ period: 'M05', value: '5.60' }, { period: 'M06', value: '5.70' });
+    const mapping: BlsMappingEntry = { seriesId: 'APU0000703112', blsUnit: 'lb', factor: 1 };
+    const result = mapBlsSeriesToPrice(series, mapping);
+    expect(result?.price).toBe(5.7);
+  });
+
+  it('skips a non-monthly period (M13 annual average) and uses the newest monthly point', () => {
     const series = seriesWith({ period: 'M13', value: '5.50' }, { period: 'M05', value: '5.60' });
     const mapping: BlsMappingEntry = { seriesId: 'APU0000703112', blsUnit: 'lb', factor: 1 };
-    expect(mapBlsSeriesToPrice(series, mapping)).toBe(5.6);
+    const result = mapBlsSeriesToPrice(series, mapping);
+    expect(result?.price).toBe(5.6);
+    expect(result?.year).toBe('2026');
+    expect(result?.periodName).toBe('Test');
   });
 
   it('returns null for an empty data array', () => {

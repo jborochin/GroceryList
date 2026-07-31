@@ -51,25 +51,45 @@ function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
+// Compares two monthly data points by (year, period) and reports whether `a`
+// is strictly newer than `b`. Period codes are zero-padded (`M01`..`M12`),
+// so lexicographic comparison of equal-length strings is correct.
+function isNewer(a: BlsSeriesDataPoint, b: BlsSeriesDataPoint): boolean {
+  const yearA = Number.parseInt(a.year, 10);
+  const yearB = Number.parseInt(b.year, 10);
+  if (yearA !== yearB) return yearA > yearB;
+  return a.period > b.period;
+}
+
+export interface BlsPricePoint {
+  price: number;
+  year: string;
+  periodName: string;
+}
+
 /**
  * Extract the latest monthly value from a BLS series response and convert
- * it to the app's unit via the mapping's factor. BLS returns data points
- * newest-first, so the first monthly point with a parseable value wins.
- * Returns null when the series is missing, empty, or has no parseable
- * monthly value.
+ * it to the app's unit via the mapping's factor. Explicitly selects the
+ * data point with the greatest (year, period) rather than trusting BLS's
+ * array order -- a discontinued/frozen series or an unexpected ordering
+ * won't silently produce a stale value. The returned period lets the caller
+ * surface which month the price came from. Returns null when the series is
+ * missing, empty, or has no parseable monthly value.
  */
 export function mapBlsSeriesToPrice(
   series: BlsSeriesResponse | undefined | null,
   mapping: BlsMappingEntry
-): number | null {
+): BlsPricePoint | null {
   if (!series || !Array.isArray(series.data)) return null;
 
+  let latest: BlsSeriesDataPoint | null = null;
   for (const point of series.data) {
     if (!MONTHLY_PERIOD.test(point.period)) continue;
-    const value = Number.parseFloat(point.value);
-    if (!Number.isFinite(value)) continue;
-    return round2(value * mapping.factor);
+    if (!Number.isFinite(Number.parseFloat(point.value))) continue;
+    if (!latest || isNewer(point, latest)) latest = point;
   }
 
-  return null;
+  if (!latest) return null;
+  const value = Number.parseFloat(latest.value);
+  return { price: round2(value * mapping.factor), year: latest.year, periodName: latest.periodName };
 }

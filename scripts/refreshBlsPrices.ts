@@ -57,7 +57,7 @@ function replacePricePerUnit(text: string, key: string, newPrice: number): strin
   if (!pattern.test(text)) {
     throw new Error(`Could not locate a "pricePerUnit" field for key "${key}" in ${PRICE_DB_PATH}`);
   }
-  return text.replace(pattern, `$1${newPrice}`);
+  return text.replace(pattern, `$1${newPrice.toFixed(2)}`);
 }
 
 async function fetchBatch(
@@ -115,21 +115,35 @@ async function main(): Promise<void> {
   const rawText = readFileSync(PRICE_DB_PATH, 'utf-8');
   const priceDb = JSON.parse(rawText) as Record<string, PriceEntry>;
 
-  const updates: Array<{ key: string; oldPrice: number; newPrice: number; unit: string }> = [];
+  const updates: Array<{
+    key: string;
+    oldPrice: number;
+    newPrice: number;
+    unit: string;
+    year: string;
+    periodName: string;
+  }> = [];
   for (const [key, mapping] of entries) {
     const series = seriesById.get(mapping.seriesId);
     if (!series) {
       throw new Error(`No data returned for series "${mapping.seriesId}" (key: "${key}")`);
     }
-    const newPrice = mapBlsSeriesToPrice(series, mapping);
-    if (newPrice === null) {
+    const result = mapBlsSeriesToPrice(series, mapping);
+    if (result === null) {
       throw new Error(`Could not parse a monthly price for key "${key}" (series "${mapping.seriesId}")`);
     }
     const existing = priceDb[key];
     if (!existing) {
       throw new Error(`priceDatabase.json has no entry for key "${key}" -- mapping table is out of sync`);
     }
-    updates.push({ key, oldPrice: existing.pricePerUnit, newPrice, unit: existing.unit });
+    updates.push({
+      key,
+      oldPrice: existing.pricePerUnit,
+      newPrice: result.price,
+      unit: existing.unit,
+      year: result.year,
+      periodName: result.periodName,
+    });
   }
 
   // Only mutate the file after every series has resolved successfully above
@@ -151,8 +165,8 @@ async function main(): Promise<void> {
   writeFileSync(PRICE_DB_PATH, newText);
 
   console.log('\nUpdated prices:');
-  for (const { key, oldPrice, newPrice, unit } of updates) {
-    console.log(`  ${key}: ${oldPrice} -> ${newPrice} (${unit})`);
+  for (const { key, oldPrice, newPrice, unit, year, periodName } of updates) {
+    console.log(`  ${key}: ${oldPrice} -> ${newPrice} (${unit}) [${periodName.slice(0, 3)} ${year}]`);
   }
 }
 

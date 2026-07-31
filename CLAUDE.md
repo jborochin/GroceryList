@@ -13,6 +13,7 @@ npx jest -t "plural"     # Filter by test name pattern
 npm run typecheck        # tsc --noEmit (strict mode)
 npm run seed:build       # regenerate supabase/seed_meals.sql from src/data/mealCatalog.json
 npm run import:mealdb    # draft catalog meals from TheMealDB (writes SQL by default)
+npm run prices:refresh-bls  # refresh ~13 grocery prices from live BLS data
 ```
 
 There is no lint script. TypeScript strict is the only static check.
@@ -71,7 +72,7 @@ To change the catalog: edit `mealCatalog.json`, run `npm run seed:build` (regene
 Six JSON files in `src/data/` are hot-pathed by utilities:
 - `unitSynonyms.json` — aliases → canonical unit (consumed by `ingredientParser`)
 - `categoryKeywords.json` — longest-match-wins keyword → category map (consumed by `categorizer`)
-- `priceDatabase.json` — ~100 US prices, `name → { pricePerUnit, unit }` (consumed by `priceEstimator`/`priceLookup`)
+- `priceDatabase.json` — ~100 US prices, `name → { pricePerUnit, unit }` (consumed by `priceEstimator`/`priceLookup`); two-tier provenance: most entries are hand-estimates, but the ~13 keys listed in `scripts/lib/blsPriceMapping.ts`'s `BLS_SERIES` table are BLS-sourced and get silently overwritten by `npm run prices:refresh-bls` — don't hand-edit those without also updating (or removing) their mapping entry
 - `purchaseProfiles.json` — how each item is *sold* (`sellUnit`/`packSize`/`grams`); only cross-family/whole-pack items need an entry, the rest default from `priceDatabase` (consumed by `purchaseProfile`)
 - `mealCatalog.json` — ~88 shared meals driving auto meal-plans (`mealPlanner`); bundled offline source of truth, mirrored to `public.meals`
 - `foodPreferences.json` — canonical cuisine + dietary keys (the only valid values for a meal's `cuisine` / `dietaryTags`)
@@ -105,3 +106,4 @@ Only the `src/utils/` modules have tests (see `src/__tests__/`). Screens are int
 - **UUID on React Native** — `uuid` requires `react-native-get-random-values` imported *before* `uuid`. Existing stores do this; new ones that use `uuid` must too.
 - **Editing the theme** — the live palette is the `dark` key in `src/theme/tokens.ts` even though it's a light/near-white theme; the `light` object is dead. Update `dark`, the hardcoded backdrop color in `App.tsx`, and the gradient stops in `AmbientBackground.tsx` together.
 - **Adding a meal to `mealCatalog.json`** — every ingredient must resolve via `findPrice` *and* use a known unit or `mealCatalogPriceCoverage.test.ts` fails (usually add a row to `priceDatabase.json` + a keyword to `categoryKeywords.json`). `mealCatalog.test.ts` also enforces valid cuisine/dietary keys, calories > 0, and unique slug ids. Re-run `npm run seed:build` after edits.
+- **Hardcoding an exact dollar price in a test for a BLS-mapped ingredient** — check `BLS_SERIES` in `scripts/lib/blsPriceMapping.ts` first; those prices drift on the next `npm run prices:refresh-bls` and will break the assertion (this happened to `priceEstimator.test.ts`'s chicken-breast assertions during this feature's own implementation). Pick a non-BLS-mapped item as a test fixture instead.
