@@ -1,5 +1,5 @@
 import { Ingredient } from '../types';
-import { stripLeadingDescriptors } from './prepDescriptors';
+import { stripDescriptors } from './prepDescriptors';
 
 // CalorieNinjas' natural-language parser reads cooking *fractions* correctly but
 // catastrophically misparses *decimals* — e.g. "0.25 cup feta" returns ~7x the
@@ -84,12 +84,13 @@ export function formatQuantity(q: number): string {
 }
 
 function cleanName(raw: string): string {
-  // Drop trailing prep descriptors ("small potatoes, thinly sliced" → "small
-  // potatoes"): CalorieNinjas splits on commas, turning the descriptor into a
-  // phantom food. Take the first comma-delimited clause only.
-  const firstClause = raw.split(',')[0].trim().toLowerCase();
-  if (NAME_ALIASES[firstClause]) return NAME_ALIASES[firstClause];
-  return stripLeadingDescriptors(firstClause);
+  // Drop prep descriptors on either side of the food noun ("small potatoes,
+  // thinly sliced" → "potatoes", "boneless, skinless chicken breast" →
+  // "chicken breast"): CalorieNinjas splits on commas, turning a descriptor
+  // clause into a phantom food if left in.
+  const combined = raw.replace(/,/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+  if (NAME_ALIASES[combined]) return NAME_ALIASES[combined];
+  return stripDescriptors(combined);
 }
 
 /**

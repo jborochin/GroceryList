@@ -122,6 +122,14 @@ describe('ingredientToNutritionQuery', () => {
     );
   });
 
+  it('strips leading comma-separated descriptors, keeping the food noun', () => {
+    expect(
+      ingredientToNutritionQuery(
+        ing({ name: 'boneless, skinless chicken breast', quantity: 1.5, unit: 'lb' }),
+      ),
+    ).toBe('1 1/2 lb chicken breast');
+  });
+
   it('returns empty when there is no food name', () => {
     expect(ingredientToNutritionQuery(ing({ name: '', quantity: 1, unit: 'each' }))).toBe('');
   });

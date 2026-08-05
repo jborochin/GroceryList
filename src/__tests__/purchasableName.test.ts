@@ -27,4 +27,9 @@ describe('toPurchasableName', () => {
   it('leaves plain names untouched', () => {
     expect(toPurchasableName('flour')).toBe('flour');
   });
+
+  it('strips leading comma-separated descriptors, keeping the food noun', () => {
+    expect(toPurchasableName('boneless, skinless chicken breast')).toBe('chicken breast');
+    expect(toPurchasableName('boneless, skinless chicken cutlets')).toBe('chicken cutlets');
+  });
 });

@@ -5,6 +5,7 @@ import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useRecipeStore } from '../store/useRecipeStore';
 import { useMealPlanStore } from '../store/useMealPlanStore';
+import { useGroceryRecipeStore } from '../store/useGroceryRecipeStore';
 import { usePantryStore } from '../store/usePantryStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { usePriceOverrideStore } from '../store/usePriceOverrideStore';
@@ -36,6 +37,7 @@ export function HomeScreen() {
   const recipes = useRecipeStore((s) => s.recipes);
   const plan = useMealPlanStore((s) => s.entries);
   const planDays = useMealPlanStore((s) => s.planDays);
+  const groceryRecipes = useGroceryRecipeStore((s) => s.entries);
   const pantry = usePantryStore((s) => s.items);
   const settings = useSettingsStore((s) => s.settings);
   const overrides = usePriceOverrideStore((s) => s.overrides);
@@ -45,10 +47,14 @@ export function HomeScreen() {
     [plan, recipes, settings, planDays]
   );
   const grocery = useMemo(() => {
-    const agg = aggregate(plan, recipes);
+    // Same two sources the Grocery tab aggregates, so the preview doesn't
+    // under-report recipes added straight to the list. Nutrition and the
+    // "meals planned" count below stay plan-only — grocery-only recipes
+    // aren't planned meals.
+    const agg = aggregate([...plan, ...groceryRecipes], recipes);
     const withPantry = applyPantry(agg, pantry);
     return estimatePrices(withPantry, overrides);
-  }, [plan, recipes, pantry, overrides]);
+  }, [plan, groceryRecipes, recipes, pantry, overrides]);
 
   const totalServings = plan.reduce((acc, p) => acc + p.desiredServings, 0);
   const itemsCount = grocery.items.length;

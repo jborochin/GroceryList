@@ -27,10 +27,12 @@ Offline-first Expo + React Native app. State lives in Zustand stores persisted t
 This is the core compute path, invoked by `HomeScreen` and `GroceryListScreen`:
 
 ```
-plan + recipes → aggregate() → applyPantry() → mergeManualItems() → roundToPurchasable() → estimatePrices() → render
+plan + groceryRecipes + recipes → aggregate() → applyPantry() → mergeManualItems() → roundToPurchasable() → estimatePrices() → render
 ```
 
 Each step is a pure function in `src/utils/` that takes and returns plain `GroceryItem[]` (see `src/types/index.ts`). Downstream screens recompute via `useMemo` over the store inputs. When editing this pipeline, prefer adding another pure step in the chain over mutating stores.
+
+`aggregate()` is fed **two** entry sources concatenated: the meal plan (`useMealPlanStore`) and grocery-only recipe adds (`useGroceryRecipeStore`, the "Add to grocery list" button on the Recipe/Meal-Catalog detail screens). Grocery-only adds are additive — a recipe in both lists contributes twice (an intentional double batch) — and deliberately never reach the Week tab or the nutrition summary, which read plan entries only. They persist device-locally and are **not** synced.
 
 `roundToPurchasable()` (`src/utils/purchaseRounding.ts`) rewrites each item's quantity into the unit the store actually sells it in, rounded up to a whole pack — `½ avocado → 1`, `1 cup broccoli → 1 head`, `2 cloves garlic → 1 head`, `1 oz cheddar → 1 block`. It runs **after** pantry (so owned staples are already gone) and **before** pricing (so the total reflects the real purchase). It only rounds items whose *sell unit* is a count (each/head/block/bag/bottle…); weight/volume sell units (chicken by the lb) stay continuous since you can buy a fraction. See "Purchase profiles" below.
 
@@ -53,7 +55,7 @@ Count units are a special case — distinct labels (`each` vs `slice`) never con
 
 ### Stores and hydration
 
-Seven persisted Zustand stores under `src/store/`, each with its own AsyncStorage key (see `STORAGE_KEYS` in `storage.ts`): `useRecipeStore`, `useMealPlanStore`, `usePantryStore`, `useManualItemStore`, `useDismissedItemStore`, `useSettingsStore`, `usePriceOverrideStore`. Plus `useAuthStore` (Supabase session — initialized separately in `hydration.ts`, not in the persist array) and `useSyncStateStore` (sync metadata).
+Eight persisted Zustand stores under `src/store/`, each with its own AsyncStorage key (see `STORAGE_KEYS` in `storage.ts`): `useRecipeStore`, `useMealPlanStore`, `usePantryStore`, `useManualItemStore`, `useGroceryRecipeStore` (recipes added straight to the grocery list, off-plan), `useDismissedItemStore`, `useSettingsStore`, `usePriceOverrideStore`. Plus `useAuthStore` (Supabase session — initialized separately in `hydration.ts`, not in the persist array) and `useSyncStateStore` (sync metadata).
 
 `useHydration()` in `src/store/hydration.ts` waits for all five to rehydrate before `App.tsx` renders the navigator — prevents a flash of empty state. Any new persisted store must be added to the `stores` array there or it will silently block hydration.
 

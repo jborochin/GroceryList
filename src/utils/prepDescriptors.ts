@@ -1,9 +1,10 @@
-// Leading prep-state / quality / sourcing words that aren't the food itself.
-// Shared by nutritionQuery.ts (CalorieNinjas inflates/double-counts when these
-// precede the noun) and purchasableName.ts (grocery list should show the
-// purchasable product, not the knife cut). We only strip a *leading run* of
-// these, stopping at the first real food token, so food-defining modifiers
-// ("cherry tomatoes", "green onion", "olive oil", "ground beef") survive.
+// Prep-state / quality / sourcing words that aren't the food itself. Shared by
+// nutritionQuery.ts (CalorieNinjas inflates/double-counts when these surround
+// the noun) and purchasableName.ts (grocery list should show the purchasable
+// product, not the knife cut). We only strip *leading and trailing runs* of
+// these, stopping at the first real food token from each end, so
+// food-defining modifiers ("cherry tomatoes", "green onion", "olive oil",
+// "ground beef") survive.
 export const STRIP_LEADING = new Set([
   // prep state
   'boiled',
@@ -27,6 +28,8 @@ export const STRIP_LEADING = new Set([
   'mashed',
   'peeled',
   'cubed',
+  'boneless',
+  'skinless',
   // quality / size / sourcing
   'fresh',
   'freshly',
@@ -51,11 +54,21 @@ export const STRIP_LEADING = new Set([
   'handfuls',
 ]);
 
-export function stripLeadingDescriptors(name: string): string {
-  const tokens = name.split(/\s+/).filter(Boolean);
-  let i = 0;
-  while (i < tokens.length && STRIP_LEADING.has(tokens[i].toLowerCase())) i++;
-  // Never strip away the whole name (e.g. "crumbled" with no noun).
-  if (i >= tokens.length) return name;
-  return tokens.slice(i).join(' ');
+/**
+ * Strip leading and trailing runs of descriptor tokens, treating commas as
+ * plain word separators — handles both "noun, descriptor" (recipe sites'
+ * trailing prep note) and "descriptor, descriptor noun" (e.g. "boneless,
+ * skinless chicken breast") phrasing with one pass. Never strips to empty.
+ */
+export function stripDescriptors(name: string): string {
+  const tokens = name.replace(/,/g, ' ').split(/\s+/).filter(Boolean);
+  if (tokens.length === 0) return name;
+
+  let start = 0;
+  while (start < tokens.length - 1 && STRIP_LEADING.has(tokens[start].toLowerCase())) start++;
+
+  let end = tokens.length;
+  while (end > start + 1 && STRIP_LEADING.has(tokens[end - 1].toLowerCase())) end--;
+
+  return tokens.slice(start, end).join(' ');
 }

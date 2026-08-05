@@ -10,6 +10,7 @@ export const STORAGE_KEYS = {
   mealDisposition: 'mealprep/mealDisposition/v1',
   pantry: 'mealprep/pantry/v1',
   manualItems: 'mealprep/manualItems/v1',
+  groceryRecipes: 'mealprep/groceryRecipes/v1',
   dismissedItems: 'mealprep/dismissedItems/v1',
   settings: 'mealprep/settings/v1',
   priceOverrides: 'mealprep/priceOverrides/v1',

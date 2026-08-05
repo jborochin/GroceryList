@@ -1,6 +1,6 @@
 import priceDatabase from '../data/priceDatabase.json';
 import { normalizeName } from './normalizeName';
-import { stripLeadingDescriptors } from './prepDescriptors';
+import { stripDescriptors } from './prepDescriptors';
 
 // Some descriptor+noun phrases ARE the purchasable product ("diced tomatoes",
 // "crushed tomatoes" are canned-goods SKUs with their own price/category/
@@ -18,12 +18,12 @@ const KNOWN_PRODUCT_NAMES = new Set(
  * lists keep the original prep-word text for cooking instructions.
  */
 export function toPurchasableName(rawName: string): string {
-  const firstClause = rawName.split(',')[0].trim();
-  if (!firstClause) return rawName.trim();
+  const combined = rawName.replace(/,/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!combined) return rawName.trim();
 
-  if (KNOWN_PRODUCT_NAMES.has(normalizeName(firstClause))) {
-    return firstClause;
+  if (KNOWN_PRODUCT_NAMES.has(normalizeName(combined))) {
+    return combined;
   }
 
-  return stripLeadingDescriptors(firstClause) || firstClause;
+  return stripDescriptors(combined) || combined;
 }

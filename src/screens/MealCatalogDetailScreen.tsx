@@ -9,7 +9,7 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFavoritesStore } from '../store/useFavoritesStore';
-import { useMealPlanStore } from '../store/useMealPlanStore';
+import { useGroceryRecipeStore } from '../store/useGroceryRecipeStore';
 import { getMealCatalog } from '../lib/mealCatalogSync';
 import { ensureRecipeForMeal, recipeIdForMeal } from '../utils/commitMealPlan';
 import { scaleIngredients } from '../utils/recipeScaling';
@@ -18,6 +18,7 @@ import { RootStackParamList } from '../navigation/types';
 import { useAppTheme } from '../theme/tokens';
 import foodPreferences from '../data/foodPreferences.json';
 import { ServingStepper } from '../components/ServingStepper';
+import { AddToGroceryListSheet } from '../components/AddToGroceryListSheet';
 import {
   AmbientBackground,
   Button,
@@ -56,14 +57,20 @@ export function MealCatalogDetailScreen() {
   const toggleFavorite = useFavoritesStore((s) => s.toggleFavorite);
 
   const [servings, setServings] = useState(0);
-  useEffect(() => {
-    if (meal && servings === 0) setServings(meal.servings);
-  }, [meal, servings]);
+  const [sheetOpen, setSheetOpen] = useState(false);
 
-  const addEntry = useMealPlanStore((s) => s.addEntry);
-  const planEntry = useMealPlanStore((s) =>
-    s.entries.find((e) => e.recipeId === recipeIdForMeal(mealId))
-  );
+  // Grocery list only — adding a catalog meal here must not put it on the Week tab.
+  const addGroceryRecipe = useGroceryRecipeStore((s) => s.addEntry);
+  const removeGroceryRecipe = useGroceryRecipeStore((s) => s.removeEntry);
+
+  // The stepper is seeded from the meal's own servings and stays independent of
+  // the grocery list — adding to the list is a fire-and-forget action, so nothing
+  // on this screen reflects what's already queued.
+  useEffect(() => {
+    if (meal && servings === 0) {
+      setServings(meal.servings);
+    }
+  }, [meal, servings]);
 
   const scrollY = useSharedValue(0);
   const onScroll = useAnimatedScrollHandler({
@@ -103,19 +110,19 @@ export function MealCatalogDetailScreen() {
   const ratio = servings > 0 ? servings / Math.max(1, meal.servings) : 1;
   const scaledIngredients = scaleIngredients(meal.ingredients, ratio);
 
-  const queuedServings = planEntry?.desiredServings;
-  const alreadyQueued = queuedServings !== undefined && queuedServings === servings;
-  const addToGroceryListLabel = queuedServings === undefined ? 'Add' : alreadyQueued ? 'Added' : 'Update';
-
-  const handleAddToGroceryList = () => {
+  // The add button is deliberately stateless — it never reads back from the
+  // grocery list, so it always reads "Add" and never toggles. Undo lives on the
+  // toast instead.
+  const handleConfirmAdd = (desiredServings: number) => {
+    setSheetOpen(false);
+    // Materialize the catalog meal as a recipe clone (deterministic id) so the
+    // aggregator can resolve its ingredients. Clones stay out of "My Recipes".
     const recipeId = ensureRecipeForMeal(meal);
-    addEntry(recipeId, servings);
+    addGroceryRecipe(recipeId, desiredServings);
     toast.show({
-      message:
-        queuedServings === undefined
-          ? `Added ${meal.title} (${servings} servings) to this week`
-          : `Updated ${meal.title} to ${servings} servings`,
+      message: `Added ${meal.title} (${desiredServings} servings) to your grocery list`,
       tone: 'success',
+      action: { label: 'Undo', onPress: () => removeGroceryRecipe(recipeIdForMeal(meal.id)) },
     });
   };
 
@@ -143,11 +150,11 @@ export function MealCatalogDetailScreen() {
           />
           <View style={{ flex: 1 }} />
           <Button
-            label={addToGroceryListLabel}
-            icon={alreadyQueued ? 'cart-check' : 'cart-plus'}
+            label="Add"
+            icon="cart-plus"
             size="sm"
-            variant={alreadyQueued ? 'tonal' : 'primary'}
-            onPress={alreadyQueued ? undefined : handleAddToGroceryList}
+            variant="primary"
+            onPress={() => setSheetOpen(true)}
           />
           <Pill label="Public catalog" icon="earth" tone="neutral" size="sm" />
         </View>
@@ -304,6 +311,14 @@ export function MealCatalogDetailScreen() {
           />
         )}
       </View>
+
+      <AddToGroceryListSheet
+        visible={sheetOpen}
+        title={meal.title}
+        initialServings={servings}
+        onConfirm={handleConfirmAdd}
+        onClose={() => setSheetOpen(false)}
+      />
     </View>
   );
 }

@@ -10,10 +10,6 @@ import { IconButton } from './ui/IconButton';
 interface Props {
   meal: Meal;
   onPress?: () => void;
-  // Whether this catalog meal is already in the user's library — controls the
-  // corner affordance (add "+" vs. an "added" check).
-  added?: boolean;
-  onAdd?: () => void;
   isFavorited?: boolean;
   onFavorite?: () => void;
   // Whether this meal's recipe is already queued in the weekly plan — controls
@@ -25,14 +21,12 @@ interface Props {
   columnGap: number;
 }
 
-// Visual twin of RecipeGridCard, but bound to a catalog `Meal` and carrying an
-// add/added affordance instead of delete. Kept separate so the recipe card stays
+// Visual twin of RecipeGridCard, but bound to a catalog `Meal` — favorite and
+// queue affordances only, no delete/edit. Kept separate so the recipe card stays
 // focused on user-owned recipes (delete, edit) and types stay honest.
 export function MealCatalogCard({
   meal,
   onPress,
-  added,
-  onAdd,
   isFavorited,
   onFavorite,
   queued,
@@ -92,6 +86,19 @@ export function MealCatalogCard({
           </LinearGradient>
         )}
 
+        {/* Top scrim so the bare overlay icons stay legible over bright photos. */}
+        <LinearGradient
+          pointerEvents="none"
+          colors={['rgba(0,0,0,0.28)', 'transparent']}
+          style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            top: 0,
+            height: '30%',
+          }}
+        />
+
         <LinearGradient
           colors={['transparent', 'rgba(0,0,0,0.72)']}
           style={{
@@ -124,64 +131,25 @@ export function MealCatalogCard({
         <View style={{ position: 'absolute', top: t.spacing.xs, left: t.spacing.xs }}>
           <IconButton
             icon={isFavorited ? 'heart' : 'heart-outline'}
-            variant="soft"
-            size={18}
-            color={isFavorited ? t.palette.primary : t.palette.textInverse}
+            variant="overlay"
+            size={20}
+            color={isFavorited ? t.palette.primary : '#FFFFFF'}
             onPress={onFavorite}
             accessibilityLabel={isFavorited ? `Unfavorite ${meal.title}` : `Favorite ${meal.title}`}
-            style={{
-              backgroundColor: 'rgba(24, 28, 22, 0.55)',
-              ...t.shadow.soft,
-            }}
           />
         </View>
       ) : null}
-
-      {/* Add / added — top-right. */}
-      <View style={{ position: 'absolute', top: t.spacing.xs, right: t.spacing.xs }}>
-        {added ? (
-          <IconButton
-            icon="check"
-            variant="soft"
-            size={18}
-            color={t.palette.success}
-            haptic={false}
-            accessibilityLabel={`${meal.title} is in your recipes`}
-            style={{
-              backgroundColor: 'rgba(24, 28, 22, 0.55)',
-              ...t.shadow.soft,
-            }}
-          />
-        ) : (
-          <IconButton
-            icon="plus"
-            variant="soft"
-            size={18}
-            color={t.palette.textInverse}
-            onPress={onAdd}
-            accessibilityLabel={`Add ${meal.title} to my recipes`}
-            style={{
-              backgroundColor: 'rgba(24, 28, 22, 0.55)',
-              ...t.shadow.soft,
-            }}
-          />
-        )}
-      </View>
 
       {onQueue != null ? (
         <View style={{ position: 'absolute', bottom: t.spacing.xs, right: t.spacing.xs }}>
           <IconButton
             icon={queued ? 'calendar-check' : 'calendar-plus'}
-            variant="soft"
-            size={18}
-            color={queued ? t.palette.success : t.palette.textInverse}
+            variant="overlay"
+            size={20}
+            color={queued ? t.palette.primary : '#FFFFFF'}
             onPress={queued ? undefined : onQueue}
             haptic={!queued}
             accessibilityLabel={queued ? `${meal.title} is queued for this week` : `Add ${meal.title} to this week`}
-            style={{
-              backgroundColor: 'rgba(24, 28, 22, 0.55)',
-              ...t.shadow.soft,
-            }}
           />
         </View>
       ) : null}

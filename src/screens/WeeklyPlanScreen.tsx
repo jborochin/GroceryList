@@ -19,6 +19,7 @@ import { EmptyState } from '../components/EmptyState';
 import { MealPickerSheet } from '../components/MealPickerSheet';
 import { computeNutritionSummary } from '../utils/nutritionSummary';
 import { ensureRecipeForMeal } from '../utils/commitMealPlan';
+import { catalogCloneIdSet } from '../utils/deterministicId';
 import { getWeekStart, parseWeekStart, shiftWeek, weekLabel, weekRangeLabel } from '../utils/planningWeek';
 import {
   getMealCatalog,
@@ -109,6 +110,13 @@ export function WeeklyPlanScreen() {
   const isCurrentWeek = selectedWeekStart === getWeekStart();
 
   const recipeById = useMemo(() => new Map(recipes.map((r) => [r.id, r])), [recipes]);
+
+  // The picker's "My recipes" tab shows only user-authored recipes — catalog
+  // clones (materialized for the pipeline) live under its "Browse catalog" tab.
+  const myRecipes = useMemo(() => {
+    const cloneIds = catalogCloneIdSet(catalog.map((m) => m.id));
+    return recipes.filter((r) => !cloneIds.has(r.id));
+  }, [recipes, catalog]);
 
   // Only the selected week's placements are shown (and drive the counts below);
   // other weeks' cells stay in the store untouched.
@@ -547,7 +555,7 @@ export function WeeklyPlanScreen() {
       <MealPickerSheet
         visible={picker !== null}
         destinationLabel={destinationLabel}
-        recipes={recipes}
+        recipes={myRecipes}
         catalog={catalog}
         onSelectRecipe={handleSelectRecipe}
         onSelectMeal={handleSelectMeal}

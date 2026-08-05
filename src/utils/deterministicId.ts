@@ -12,6 +12,13 @@ export function deterministicRecipeId(slug: string): string {
   return uuidv5(slug, RECIPE_ID_NAMESPACE);
 }
 
+// The recipe ids a set of catalog meals clone to (see commitMealPlan.mealToRecipe).
+// Used to tell catalog clones apart from user-authored recipes without a schema
+// flag — the id itself is the marker, so it survives sync round-trips.
+export function catalogCloneIdSet(catalogMealIds: string[]): Set<string> {
+  return new Set(catalogMealIds.map(deterministicRecipeId));
+}
+
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function isUuid(id: string): boolean {

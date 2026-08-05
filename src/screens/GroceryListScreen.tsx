@@ -16,6 +16,7 @@ import { useRecipeStore } from '../store/useRecipeStore';
 import { useMealPlanStore } from '../store/useMealPlanStore';
 import { usePantryStore } from '../store/usePantryStore';
 import { useManualItemStore } from '../store/useManualItemStore';
+import { useGroceryRecipeStore } from '../store/useGroceryRecipeStore';
 import { useDismissedItemStore } from '../store/useDismissedItemStore';
 import { usePriceOverrideStore } from '../store/usePriceOverrideStore';
 import { useMealScheduleStore } from '../store/useMealScheduleStore';
@@ -107,6 +108,10 @@ export function GroceryListScreen() {
   const addManualItem = useManualItemStore((s) => s.addItem);
   const removeManualItem = useManualItemStore((s) => s.removeItem);
   const clearManualItems = useManualItemStore((s) => s.clearAll);
+  // Recipes added straight to the list from a detail screen — a second source
+  // alongside the plan, never shown on the Week tab.
+  const groceryRecipes = useGroceryRecipeStore((s) => s.entries);
+  const clearGroceryRecipes = useGroceryRecipeStore((s) => s.clearAll);
   const dismissedNames = useDismissedItemStore((s) => s.names);
   const dismiss = useDismissedItemStore((s) => s.dismiss);
   const dismissMany = useDismissedItemStore((s) => s.dismissMany);
@@ -122,14 +127,16 @@ export function GroceryListScreen() {
   const completedRef = React.useRef(false);
 
   const priced = useMemo(() => {
-    const agg = aggregate(plan, recipes);
+    // Both sources feed the aggregator. A recipe in both the plan and the
+    // grocery-only list contributes twice — an intentional double batch.
+    const agg = aggregate([...plan, ...groceryRecipes], recipes);
     const withPantry = applyPantry(agg, pantry);
     const withManual = mergeManualItems(withPantry, manualItems);
     // Round each item to what the store actually sells (whole avocados, a head of broccoli)
     // before pricing, so the total reflects the real purchase.
     const purchasable = roundToPurchasable(withManual);
     return estimatePrices(purchasable, overrides);
-  }, [plan, recipes, pantry, manualItems, overrides]);
+  }, [plan, groceryRecipes, recipes, pantry, manualItems, overrides]);
 
   // Items the user has swiped away are filtered out of the computed list, and the
   // displayed totals are re-derived from what remains.
@@ -157,7 +164,9 @@ export function GroceryListScreen() {
   };
 
   // Same semantics as swiping every row away: manual items are deleted outright,
-  // recipe-derived items are dismissed (and self-heal when the plan changes).
+  // plan-derived items are dismissed (and self-heal when the plan changes).
+  // Grocery-only recipes are dropped outright too — the list is their only home,
+  // so a dismissal would leave them stranded.
   const handleClearList = async () => {
     haptics.tap();
     const ok = await confirm({
@@ -169,6 +178,7 @@ export function GroceryListScreen() {
     if (!ok) return;
     dismissMany(visible.items.map((i) => i.name));
     clearManualItems();
+    clearGroceryRecipes();
     setChecked({});
     toast.show({ message: 'List cleared', tone: 'neutral' });
   };
@@ -247,6 +257,8 @@ export function GroceryListScreen() {
     : priceTarget?.entries[0]?.unit ?? 'each';
 
   const empty = visible.items.length === 0;
+  // Nothing feeding the list at all, vs. a list the pantry happens to cover.
+  const noSources = plan.length === 0 && groceryRecipes.length === 0;
   const itemCount = visible.items.length;
   const progress = itemCount === 0 ? 0 : checkedCount / itemCount;
 
@@ -263,12 +275,12 @@ export function GroceryListScreen() {
       {empty ? (
         <View style={{ flex: 1, paddingTop: insets.top, paddingBottom: TAB_BAR_SPACE }}>
           <EmptyState
-            icon={plan.length === 0 ? 'cart-outline' : 'cart-check'}
-            title={plan.length === 0 ? 'Nothing to buy yet' : "You're all set"}
+            icon={noSources ? 'cart-outline' : 'cart-check'}
+            title={noSources ? 'Nothing to buy yet' : "You're all set"}
             subtitle={
-              plan.length === 0
-                ? 'Add recipes to this week in the Week tab, or add a grocery item manually.'
-                : "Your pantry already covers everything in this week's plan. Need something else? Add it manually."
+              noSources
+                ? 'Add recipes to this week in the Week tab, add one straight to your list from a recipe, or add a grocery item manually.'
+                : 'Your pantry already covers everything on your list. Need something else? Add it manually.'
             }
           >
             <Button

@@ -20,7 +20,8 @@ import {
   loadMealCatalogCache,
   refreshMealCatalogCache,
 } from '../lib/mealCatalogSync';
-import { ensureRecipeForMeal, mealToRecipe, recipeIdForMeal } from '../utils/commitMealPlan';
+import { ensureRecipeForMeal, recipeIdForMeal } from '../utils/commitMealPlan';
+import { catalogCloneIdSet } from '../utils/deterministicId';
 import { useAppTheme } from '../theme/tokens';
 import { confirm } from '../utils/confirm';
 import foodPreferences from '../data/foodPreferences.json';
@@ -99,9 +100,15 @@ export function RecipeLibraryScreen() {
   // O(1) favorite membership test — recomputed only when favoriteIds changes.
   const favoriteSet = useMemo(() => new Set(favoriteIds), [favoriteIds]);
 
-  // Recipe ids already in the library, to flag catalog meals as added. Catalog
-  // meals map to a deterministic recipe id, so this is a simple membership test.
-  const libraryIds = useMemo(() => new Set(recipes.map((r) => r.id)), [recipes]);
+  // Catalog meals placed on the calendar are cloned into the recipe store (the
+  // grocery/nutrition pipeline resolves plan entries there), but they are NOT the
+  // user's own recipes — hide them from "My Recipes". Favorites is how a user
+  // keeps a catalog meal at hand.
+  const cloneIds = useMemo(() => catalogCloneIdSet(catalog.map((m) => m.id)), [catalog]);
+  const myRecipes = useMemo(
+    () => recipes.filter((r) => !cloneIds.has(r.id)),
+    [recipes, cloneIds]
+  );
 
   // Recipe ids already queued in the weekly plan (scheduled or not), to flag
   // cards as queued regardless of which screen added them.
@@ -131,20 +138,15 @@ export function RecipeLibraryScreen() {
     }
   };
 
-  const handleAddMeal = (meal: Meal) => {
-    useRecipeStore.getState().upsertRecipe(mealToRecipe(meal));
-    toast.show({ message: `Added ${meal.title} to your recipes`, tone: 'success' });
-  };
-
   const filteredRecipes = useMemo(() => {
-    if (!query.trim()) return recipes;
+    if (!query.trim()) return myRecipes;
     const q = query.trim().toLowerCase();
-    return recipes.filter(
+    return myRecipes.filter(
       (r) =>
         r.title.toLowerCase().includes(q) ||
         r.ingredients.some((i) => i.name.toLowerCase().includes(q))
     );
-  }, [recipes, query]);
+  }, [myRecipes, query]);
 
   // Only offer filter values that actually occur in the catalog.
   const availableCuisines = useMemo(
@@ -173,18 +175,16 @@ export function RecipeLibraryScreen() {
   }, [catalog, query, cuisine, dietary, slot]);
 
   const favoritedRecipes = useMemo(
-    () => recipes.filter((r) => favoriteSet.has(r.id)),
-    [recipes, favoriteSet]
+    () => myRecipes.filter((r) => favoriteSet.has(r.id)),
+    [myRecipes, favoriteSet]
   );
-  const favoritedRecipeIds = useMemo(
-    () => new Set(favoritedRecipes.map((r) => r.id)),
-    [favoritedRecipes]
-  );
+  // A favorite recorded under a clone's recipe id (legacy behavior) surfaces as
+  // its catalog meal, so old favorites keep working now that clones are hidden.
   const favoritedMeals = useMemo(
     () => catalog.filter(
-      (m) => favoriteSet.has(m.id) && !favoritedRecipeIds.has(recipeIdForMeal(m.id))
+      (m) => favoriteSet.has(m.id) || favoriteSet.has(recipeIdForMeal(m.id))
     ),
-    [catalog, favoriteSet, favoritedRecipeIds]
+    [catalog, favoriteSet]
   );
 
   const scrollY = useSharedValue(0);
@@ -208,9 +208,9 @@ export function RecipeLibraryScreen() {
     ? `${favoritedRecipes.length + favoritedMeals.length} favorited`
     : browsing
       ? `${catalog.length} meals to explore`
-      : recipes.length === 0
+      : myRecipes.length === 0
         ? 'Build your library to start planning.'
-        : `${recipes.length} saved`;
+        : `${myRecipes.length} saved`;
 
   return (
     <View style={{ flex: 1, backgroundColor: t.palette.bg }}>
@@ -245,7 +245,7 @@ export function RecipeLibraryScreen() {
                 ]}
               />
             </View>
-            {!showingFavorites && (browsing || recipes.length > 0) && (
+            {!showingFavorites && (browsing || myRecipes.length > 0) && (
               <View style={{ marginBottom: t.spacing.md }}>
                 <Input
                   placeholder={browsing ? 'Search the catalog' : 'Search recipes or ingredients'}
@@ -290,8 +290,6 @@ export function RecipeLibraryScreen() {
             return (
               <MealCatalogCard
                 meal={item}
-                added={libraryIds.has(recipeIdForMeal(item.id))}
-                onAdd={() => handleAddMeal(item)}
                 queued={queuedIds.has(recipeIdForMeal(item.id))}
                 onQueue={() => handleQueueMeal(item)}
                 onPress={() => navigation.navigate('MealCatalogDetail', { mealId: item.id })}
@@ -333,9 +331,9 @@ export function RecipeLibraryScreen() {
             ) : (
               <EmptyState
                 icon="silverware-fork-knife"
-                title={recipes.length === 0 ? 'Your library is empty' : 'No matches'}
+                title={myRecipes.length === 0 ? 'Your library is empty' : 'No matches'}
                 subtitle={
-                  recipes.length === 0
+                  myRecipes.length === 0
                     ? 'Add your own recipe below, or switch to Browse to add from the public catalog.'
                     : 'Try another search term.'
                 }

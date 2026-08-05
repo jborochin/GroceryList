@@ -92,6 +92,19 @@ export function RecipeGridCard({
           </LinearGradient>
         )}
 
+        {/* Top scrim so the bare overlay icons stay legible over bright photos. */}
+        <LinearGradient
+          pointerEvents="none"
+          colors={['rgba(0,0,0,0.28)', 'transparent']}
+          style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            top: 0,
+            height: '30%',
+          }}
+        />
+
         {/* Bottom scrim so the title/macros stay legible over any photo. */}
         <LinearGradient
           colors={['transparent', 'rgba(0,0,0,0.72)']}
@@ -125,15 +138,11 @@ export function RecipeGridCard({
         <View style={{ position: 'absolute', top: t.spacing.xs, left: t.spacing.xs }}>
           <IconButton
             icon={isFavorited ? 'heart' : 'heart-outline'}
-            variant="soft"
-            size={18}
-            color={isFavorited ? t.palette.primary : t.palette.textInverse}
+            variant="overlay"
+            size={20}
+            color={isFavorited ? t.palette.primary : '#FFFFFF'}
             onPress={onFavorite}
             accessibilityLabel={isFavorited ? `Unfavorite ${recipe.title}` : `Favorite ${recipe.title}`}
-            style={{
-              backgroundColor: 'rgba(24, 28, 22, 0.55)',
-              ...t.shadow.soft,
-            }}
           />
         </View>
       ) : null}
@@ -142,15 +151,10 @@ export function RecipeGridCard({
         <View style={{ position: 'absolute', top: t.spacing.xs, right: t.spacing.xs }}>
           <IconButton
             icon="delete-outline"
-            variant="danger"
-            size={18}
-            color={t.palette.textInverse}
+            variant="overlay"
+            size={20}
             onPress={onDelete}
             accessibilityLabel={`Delete ${recipe.title}`}
-            style={{
-              backgroundColor: 'rgba(24, 28, 22, 0.55)',
-              ...t.shadow.soft,
-            }}
           />
         </View>
       ) : null}
@@ -159,16 +163,12 @@ export function RecipeGridCard({
         <View style={{ position: 'absolute', bottom: t.spacing.xs, right: t.spacing.xs }}>
           <IconButton
             icon={queued ? 'calendar-check' : 'calendar-plus'}
-            variant="soft"
-            size={18}
-            color={queued ? t.palette.success : t.palette.textInverse}
+            variant="overlay"
+            size={20}
+            color={queued ? t.palette.primary : '#FFFFFF'}
             onPress={queued ? undefined : onQueue}
             haptic={!queued}
             accessibilityLabel={queued ? `${recipe.title} is queued for this week` : `Add ${recipe.title} to this week`}
-            style={{
-              backgroundColor: 'rgba(24, 28, 22, 0.55)',
-              ...t.shadow.soft,
-            }}
           />
         </View>
       ) : null}

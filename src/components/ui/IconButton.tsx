@@ -1,13 +1,21 @@
 import React from 'react';
-import { Pressable, ViewStyle } from 'react-native';
+import { Pressable, TextStyle, ViewStyle } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useAppTheme } from '../../theme/tokens';
 import { haptics } from '../../utils/haptics';
 
+// `overlay` renders a bare glyph (no chip) meant to float over imagery; the
+// text shadow keeps it legible on bright photos.
+const OVERLAY_GLYPH_SHADOW: TextStyle = {
+  textShadowColor: 'rgba(0,0,0,0.45)',
+  textShadowOffset: { width: 0, height: 1 },
+  textShadowRadius: 6,
+};
+
 interface Props {
   icon: string;
   onPress?: () => void;
-  variant?: 'plain' | 'tonal' | 'outlined' | 'soft' | 'danger';
+  variant?: 'plain' | 'tonal' | 'outlined' | 'soft' | 'danger' | 'overlay';
   size?: number;
   color?: string;
   disabled?: boolean;
@@ -45,6 +53,8 @@ export function IconButton({
   } else if (variant === 'danger') {
     bg = t.palette.dangerSoft;
     fg = color ?? t.palette.dangerSoftText;
+  } else if (variant === 'overlay') {
+    fg = color ?? t.palette.textInverse;
   }
 
   const dim = size + 20;
@@ -78,7 +88,12 @@ export function IconButton({
         style,
       ]}
     >
-      <Icon name={icon} size={size} color={fg} />
+      <Icon
+        name={icon}
+        size={size}
+        color={fg}
+        style={variant === 'overlay' ? OVERLAY_GLYPH_SHADOW : undefined}
+      />
     </Pressable>
   );
 }

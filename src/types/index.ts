@@ -32,6 +32,18 @@ export interface MealPlanEntry {
   desiredServings: number;
 }
 
+// A recipe whose ingredients should land on the grocery list WITHOUT being
+// planned — "add to grocery list" from a recipe/catalog detail screen. Kept out
+// of MealPlanEntry on purpose: plan entries are synced, are reconciled from
+// schedule cells, feed the nutrition summary, and render on the Week tab (any
+// entry with no cell shows up in its "unscheduled" strip). Same shape as
+// MealPlanEntry so both can be fed to aggregate() together — a recipe in both
+// lists contributes twice, which is the intended "double batch".
+export interface GroceryRecipeEntry {
+  recipeId: string;
+  desiredServings: number;
+}
+
 export type MealSlot = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 
 // Device-local placement of a planned recipe onto a specific week + day + slot.

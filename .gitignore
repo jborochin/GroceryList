@@ -12,3 +12,5 @@ ios/
 android/
 .worktrees/
 .superpowers/
+.playwright-mcp/
+supabase/.temp/
