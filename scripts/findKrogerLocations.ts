@@ -19,7 +19,7 @@ import { loadEnv } from './lib/loadEnv';
  * transport spokes, unused slots. They carry no shelf prices, so using one as a
  * reference store would quietly contribute nothing to the median.
  */
-const NON_RETAIL = /\b(?:spoke|forecast|shed|trans|unused|warehouse|distribution|dc)\b/i;
+const NON_RETAIL = /\b(?:spoke|forecast|shed|trans|unused|warehouse|distribution|dc|fuel)\b/i;
 
 async function main(): Promise<void> {
   loadEnv();

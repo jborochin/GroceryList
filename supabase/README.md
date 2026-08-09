@@ -55,22 +55,25 @@ These mirror bundled JSON so content can change without an app release. All thre
    ```
    KROGER_CLIENT_ID=...
    KROGER_CLIENT_SECRET=...
-   KROGER_LOCATION_IDS=...
    SUPABASE_SERVICE_ROLE_KEY=...
    ```
 
    `SUPABASE_URL` falls back to the `EXPO_PUBLIC_SUPABASE_URL` already in `.env`. The service-role key gets no such fallback on purpose — it must never live under an `EXPO_PUBLIC_` name, which would bundle it into the app.
 
-3. Pick reference stores — prices are location-scoped, so the job queries a few and takes the median:
+3. Reference stores need no setup — `KROGER_REFERENCE_LOCATIONS` in `scripts/lib/krogerClient.ts` already lists 12, one per Kroger division (Kroger, Ralphs, King Soopers, Fry's, Harris Teeter, Fred Meyer, Smith's, QFC). They're committed rather than configured because *which* stores compose the median is a substantive choice worth reviewing in a diff. `KROGER_LOCATION_IDS` overrides them.
+
+   To find replacements or add more:
 
    ```bash
    npm run prices:find-locations 45202 30303 98101
    ```
 
-   Logistics pseudo-locations (forecast sheds, transport spokes) are filtered out — they carry no shelf prices.
+   Logistics pseudo-locations (forecast sheds, transport spokes, fuel stations) are filtered out — they carry no shelf prices.
+
+   Not every store stocks every SKU: banner-specific private labels (a Kroger-brand item at Ralphs) return no price, so a given ingredient's median is typically taken over 7–11 of the 12. `median()` skips the misses, which is why the store list can be widened freely.
 
 4. Seed the enrollment table: run `npm run prices:seed-sources`, then apply `seed_price_sources.sql` in the SQL editor.
-5. Add repository secrets for `.github/workflows/refresh-prices.yml`: `KROGER_CLIENT_ID`, `KROGER_CLIENT_SECRET`, `KROGER_LOCATION_IDS`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`.
+5. Add repository secrets for `.github/workflows/refresh-prices.yml`: `KROGER_CLIENT_ID`, `KROGER_CLIENT_SECRET`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` (`KROGER_LOCATION_IDS` is optional).
 
 The workflow runs weekly and on manual dispatch (with a dry-run option). Dry-run locally first:
 

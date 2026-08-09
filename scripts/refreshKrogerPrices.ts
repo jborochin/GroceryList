@@ -31,7 +31,7 @@
  *   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY      service role — never ships in the app
  */
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { KrogerClient, extractPrice } from './lib/krogerClient';
+import { KROGER_REFERENCE_LOCATIONS, KrogerClient, extractPrice } from './lib/krogerClient';
 import { loadEnv } from './lib/loadEnv';
 import {
   MIN_CONFIDENCE,
@@ -306,19 +306,27 @@ async function main(): Promise<void> {
   loadEnv();
   const dryRun = process.argv.includes('--dry-run');
 
-  const locationIds = requireEnv('KROGER_LOCATION_IDS')
+  // Defaults to the committed division spread; the env var is an escape hatch
+  // for testing a different set without editing code.
+  const overrideRaw: string = process.env.KROGER_LOCATION_IDS ?? '';
+  const override = overrideRaw
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean);
-  if (locationIds.length === 0) {
-    throw new Error('KROGER_LOCATION_IDS must list at least one store id.');
-  }
+  const locationIds =
+    override.length > 0 ? override : KROGER_REFERENCE_LOCATIONS.map((l) => l.id);
+  console.log(
+    override.length > 0
+      ? `Using ${locationIds.length} override store(s) from KROGER_LOCATION_IDS.`
+      : `Using ${locationIds.length} committed reference stores.`
+  );
 
   // The project URL is the same value the app already keeps in .env under its
   // Expo-public name, so fall back to it rather than making you duplicate it.
   // The service-role key has no such fallback on purpose — it must never live
   // under an EXPO_PUBLIC_ name, which would bundle it into the app.
-  const supabaseUrl = process.env.SUPABASE_URL || process.env.EXPO_PUBLIC_SUPABASE_URL;
+  const supabaseUrl: string | undefined =
+    process.env.SUPABASE_URL || process.env.EXPO_PUBLIC_SUPABASE_URL;
   if (!supabaseUrl) throw new Error('SUPABASE_URL (or EXPO_PUBLIC_SUPABASE_URL) is not set.');
 
   const supabase = createClient(supabaseUrl, requireEnv('SUPABASE_SERVICE_ROLE_KEY'), {

@@ -10,8 +10,12 @@
 #
 # Required repository secrets:
 #   KROGER_CLIENT_ID, KROGER_CLIENT_SECRET   Kroger developer app credentials
-#   KROGER_LOCATION_IDS                      comma-separated reference store ids
 #   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY  service role (never ships in the app)
+#
+# Optional:
+#   KROGER_LOCATION_IDS   overrides KROGER_REFERENCE_LOCATIONS in
+#                         scripts/lib/krogerClient.ts, which is the committed
+#                         default spread of one store per Kroger division.
 name: Refresh prices
 
 on:

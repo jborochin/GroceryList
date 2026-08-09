@@ -19,6 +19,33 @@ const TOKEN_URL = 'https://api.kroger.com/v1/connect/oauth2/token';
 const API_BASE = 'https://api.kroger.com/v1';
 const SCOPE = 'product.compact';
 
+/**
+ * Reference stores the national median is taken across — one per Kroger
+ * division/banner, spread over the ~35 states they operate in.
+ *
+ * These are deliberately committed rather than configured as a secret: they are
+ * not sensitive, and which stores compose the median is a substantive choice
+ * that should be reviewable and diffable. `KROGER_LOCATION_IDS` overrides them.
+ *
+ * Cost is ~172 ingredients x (N + 1) calls per run, so 12 stores is ~2,200
+ * calls/week against a 10,000/day quota. Adding more is cheap; the reason to
+ * stop is diminishing returns on the median, not budget.
+ */
+export const KROGER_REFERENCE_LOCATIONS: ReadonlyArray<{ id: string; label: string }> = [
+  { id: '01400513', label: 'Kroger — Cincinnati, OH' },
+  { id: '01100695', label: 'Kroger — Atlanta, GA' },
+  { id: '03400355', label: 'Kroger — Houston, TX' },
+  { id: '01800443', label: 'Kroger — Detroit, MI' },
+  { id: '02900504', label: 'Kroger — Richmond, VA' },
+  { id: '70300032', label: 'Ralphs — Los Angeles, CA' },
+  { id: '62000115', label: 'King Soopers — Denver, CO' },
+  { id: '66000088', label: "Fry's — Phoenix, AZ" },
+  { id: '09700205', label: 'Harris Teeter — Charlotte, NC' },
+  { id: '70100135', label: 'Fred Meyer — Portland, OR' },
+  { id: '70600077', label: "Smith's — Salt Lake City, UT" },
+  { id: '70500847', label: 'QFC — Seattle, WA' },
+];
+
 const REQUEST_TIMEOUT_MS = 15_000;
 const MAX_ATTEMPTS = 3;
 
