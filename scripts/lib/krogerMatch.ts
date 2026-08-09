@@ -12,6 +12,7 @@
  * Kept free of network and filesystem access so it can be unit-tested directly,
  * same as scripts/lib/blsPriceMapping.ts.
  */
+import { normalizeName } from '../../src/utils/normalizeName';
 
 /** Minimum scoreMatch() result an UNREVIEWED candidate must clear to publish. */
 export const MIN_CONFIDENCE = 0.6;
@@ -71,6 +72,17 @@ const SIZE_UNIT_ALIASES: Record<string, string> = {
 const AMBIGUOUS_SIZE = /\b(?:pack of|case|bulk|assorted|varies|approx)\b/;
 
 /**
+ * Composite "count / measure" sizes, which retail uses for BOTH meanings:
+ *
+ *   "8 ct / 30.4 ounce"   8 patties totalling 30.4 oz   -> measure is the TOTAL
+ *   "6 ct / 5.3 fl oz"    6 yogurt cups of 5.3 fl oz    -> measure is PER UNIT
+ *
+ * Nothing in the string distinguishes them, and guessing wrong is a 6-8x price
+ * error. These are refused so the ingredient falls back to its bundled estimate.
+ */
+const COMPOSITE_SIZE = /\d\s*(?:ct|count|sticks?|pk)\b.*\//;
+
+/**
  * Parse a retail size string into a canonical quantity + unit.
  *
  * Handles the common shapes: "16 oz", "1 lb", "12 ct", "64 fl oz", "0.5 gal",
@@ -86,7 +98,7 @@ export function parseSize(size: string | null | undefined): ParsedSize | null {
     .replace(/[()]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
-  if (!s || AMBIGUOUS_SIZE.test(s)) return null;
+  if (!s || AMBIGUOUS_SIZE.test(s) || COMPOSITE_SIZE.test(s)) return null;
 
   // "1 dozen" / "dozen" — a count shorthand no numeric+unit rule would catch.
   const dozen = s.match(/^(?:([\d.]+)\s*)?dozen$/);
@@ -155,12 +167,48 @@ const TRAP_TOKENS = [
   'flavoured',
   'scented',
   'toy',
+  // Prepared forms of a whole ingredient. These match the search term perfectly
+  // ("Chicken Breast Deli Thin Sliced" for "chicken breast") and price close
+  // enough to clear the sanity band, so only an explicit veto catches them.
+  'deli',
+  'smoothie',
+  'jerky',
+  'nugget',
+  'patty',
+  'sandwich',
+  'pizza',
+  'burrito',
 ];
 
 const WORD_SPLIT = /[^a-z0-9]+/;
 
+/**
+ * Tokens are singularized with the app's own normalizeName so the matcher sees
+ * names the same way the price database does — without this, a search for
+ * "tortilla" cannot match a SKU described as "Tortillas".
+ */
 function tokenize(value: string): string[] {
-  return value.toLowerCase().split(WORD_SPLIT).filter(Boolean);
+  return value
+    .toLowerCase()
+    .split(WORD_SPLIT)
+    .filter(Boolean)
+    .map((t) => normalizeName(t))
+    .filter(Boolean);
+}
+
+/**
+ * How many words a SKU description carries. Used only as a tie-breaker between
+ * candidates that match equally well: retail search happily returns
+ * "Oscar Mayer Deli Fresh Rotisserie Seasoned Chicken Breast" for "chicken
+ * breast", and the plainer "Boneless Skinless Chicken Breast" is nearly always
+ * the better stand-in for a recipe ingredient.
+ *
+ * This is a tie-breaker rather than part of the score on purpose — folding it
+ * into the score would punish single-word terms, whose best matches are often
+ * verbose ("Kroger Grade A Large White Eggs" is a perfect match for "eggs").
+ */
+export function descriptionSpecificity(description: string | null | undefined): number {
+  return description ? tokenize(description).length : Number.MAX_SAFE_INTEGER;
 }
 
 /**

@@ -50,14 +50,27 @@ These mirror bundled JSON so content can change without an app release. All thre
 **One-time setup:**
 
 1. Register an app at [developer.kroger.com](https://developer.kroger.com) to get a client id/secret (Products API: 10,000 calls/day).
-2. Pick reference stores — prices are location-scoped, so the job queries a few and takes the median:
+2. Put the credentials in the repo-root `.env` (gitignored). The price scripts load it via `scripts/lib/loadEnv.ts` — plain `tsx` does not read `.env` the way Expo/Metro does. Real environment variables always win, so CI is unaffected:
 
-   ```bash
-   KROGER_CLIENT_ID=... KROGER_CLIENT_SECRET=... npm run prices:find-locations 45202 30303 98101
+   ```
+   KROGER_CLIENT_ID=...
+   KROGER_CLIENT_SECRET=...
+   KROGER_LOCATION_IDS=...
+   SUPABASE_SERVICE_ROLE_KEY=...
    ```
 
-3. Seed the enrollment table: run `npm run prices:seed-sources`, then apply `seed_price_sources.sql` in the SQL editor.
-4. Add repository secrets for `.github/workflows/refresh-prices.yml`: `KROGER_CLIENT_ID`, `KROGER_CLIENT_SECRET`, `KROGER_LOCATION_IDS`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`.
+   `SUPABASE_URL` falls back to the `EXPO_PUBLIC_SUPABASE_URL` already in `.env`. The service-role key gets no such fallback on purpose — it must never live under an `EXPO_PUBLIC_` name, which would bundle it into the app.
+
+3. Pick reference stores — prices are location-scoped, so the job queries a few and takes the median:
+
+   ```bash
+   npm run prices:find-locations 45202 30303 98101
+   ```
+
+   Logistics pseudo-locations (forecast sheds, transport spokes) are filtered out — they carry no shelf prices.
+
+4. Seed the enrollment table: run `npm run prices:seed-sources`, then apply `seed_price_sources.sql` in the SQL editor.
+5. Add repository secrets for `.github/workflows/refresh-prices.yml`: `KROGER_CLIENT_ID`, `KROGER_CLIENT_SECRET`, `KROGER_LOCATION_IDS`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`.
 
 The workflow runs weekly and on manual dispatch (with a dry-run option). Dry-run locally first:
 

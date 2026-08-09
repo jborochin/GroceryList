@@ -6,12 +6,24 @@
  * them in KROGER_LOCATION_IDS — the job takes the median across them so one
  * store's promo or stockout can't move the national estimate.
  *
+ * Credentials come from the environment or the repo-root `.env`.
+ *
  * Usage:
  *   npm run prices:find-locations 45202 30303 98101
  */
 import { KrogerClient } from './lib/krogerClient';
+import { loadEnv } from './lib/loadEnv';
+
+/**
+ * The Locations API also returns logistics pseudo-locations — forecast sheds,
+ * transport spokes, unused slots. They carry no shelf prices, so using one as a
+ * reference store would quietly contribute nothing to the median.
+ */
+const NON_RETAIL = /\b(?:spoke|forecast|shed|trans|unused|warehouse|distribution|dc)\b/i;
 
 async function main(): Promise<void> {
+  loadEnv();
+
   const zips = process.argv.slice(2).filter((a) => /^\d{5}$/.test(a));
   if (zips.length === 0) {
     console.error('Usage: npm run prices:find-locations <zip> [zip...]');
@@ -28,10 +40,11 @@ async function main(): Promise<void> {
   const kroger = new KrogerClient(clientId, clientSecret);
 
   for (const zip of zips) {
-    const locations = await kroger.findLocations(zip, 5);
+    const found = await kroger.findLocations(zip, 10);
+    const locations = found.filter((l) => !NON_RETAIL.test(`${l.name ?? ''} ${l.chain ?? ''}`));
     console.log(`\n${zip}:`);
     if (locations.length === 0) {
-      console.log('  (no Kroger-family stores found near this ZIP)');
+      console.log('  (no retail Kroger-family stores found near this ZIP)');
       continue;
     }
     for (const l of locations) {

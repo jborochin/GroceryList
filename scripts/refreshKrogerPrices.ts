@@ -32,7 +32,15 @@
  */
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { KrogerClient, extractPrice } from './lib/krogerClient';
-import { MIN_CONFIDENCE, median, parseSize, sanityBand, scoreMatch } from './lib/krogerMatch';
+import { loadEnv } from './lib/loadEnv';
+import {
+  MIN_CONFIDENCE,
+  descriptionSpecificity,
+  median,
+  parseSize,
+  sanityBand,
+  scoreMatch,
+} from './lib/krogerMatch';
 import { convertMeasure, getProfile } from '../src/utils/purchaseProfile';
 
 const SOURCE = 'kroger';
@@ -111,10 +119,15 @@ async function resolveOne(
 
   if (!productId) {
     const candidates = await kroger.searchProducts(row.search_term, locationIds[0]);
-    let best: { product: (typeof candidates)[number]; score: number } | null = null;
+    let best: { product: (typeof candidates)[number]; score: number; specificity: number } | null = null;
     for (const product of candidates) {
       const score = scoreMatch(row.search_term, product.description);
-      if (score > 0 && (!best || score > best.score)) best = { product, score };
+      if (score === 0) continue;
+      const specificity = descriptionSpecificity(product.description);
+      // Highest score wins; among equal scores prefer the plainest description,
+      // which keeps prepared/deli SKUs from beating the whole ingredient.
+      const better = !best || score > best.score || (score === best.score && specificity < best.specificity);
+      if (better) best = { product, score, specificity };
     }
     if (!best) return { ...base, status: 'rejected:no-candidate' };
 
@@ -290,6 +303,7 @@ function requireEnv(name: string): string {
 }
 
 async function main(): Promise<void> {
+  loadEnv();
   const dryRun = process.argv.includes('--dry-run');
 
   const locationIds = requireEnv('KROGER_LOCATION_IDS')
@@ -300,11 +314,16 @@ async function main(): Promise<void> {
     throw new Error('KROGER_LOCATION_IDS must list at least one store id.');
   }
 
-  const supabase = createClient(
-    requireEnv('SUPABASE_URL'),
-    requireEnv('SUPABASE_SERVICE_ROLE_KEY'),
-    { auth: { persistSession: false, autoRefreshToken: false } }
-  );
+  // The project URL is the same value the app already keeps in .env under its
+  // Expo-public name, so fall back to it rather than making you duplicate it.
+  // The service-role key has no such fallback on purpose — it must never live
+  // under an EXPO_PUBLIC_ name, which would bundle it into the app.
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.EXPO_PUBLIC_SUPABASE_URL;
+  if (!supabaseUrl) throw new Error('SUPABASE_URL (or EXPO_PUBLIC_SUPABASE_URL) is not set.');
+
+  const supabase = createClient(supabaseUrl, requireEnv('SUPABASE_SERVICE_ROLE_KEY'), {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
   const kroger = new KrogerClient(
     requireEnv('KROGER_CLIENT_ID'),
     requireEnv('KROGER_CLIENT_SECRET')

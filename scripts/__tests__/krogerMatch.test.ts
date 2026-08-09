@@ -1,5 +1,6 @@
 import {
   MIN_CONFIDENCE,
+  descriptionSpecificity,
   median,
   parseSize,
   sanityBand,
@@ -57,6 +58,20 @@ describe('parseSize', () => {
   it('rejects unit tokens the app has no canonical unit for', () => {
     expect(parseSize('3 sleeve')).toBeNull();
   });
+
+  it('accepts a pluralized unit token', () => {
+    // Observed live: Gold Medal flour reports "5 lbs".
+    expect(parseSize('5 lbs')).toEqual({ qty: 5, unit: 'lb' });
+  });
+
+  // Retail uses "count / measure" for both "N items totalling M" and "N items
+  // of M each". Nothing in the string distinguishes them and guessing wrong is
+  // a 6-8x error, so these are refused. All three shapes are live-observed.
+  it('refuses composite count/measure sizes', () => {
+    expect(parseSize('8 ct / 30.4 ounce')).toBeNull();
+    expect(parseSize('4 sticks / 16 oz')).toBeNull();
+    expect(parseSize('10 ct / 17.5 oz')).toBeNull();
+  });
 });
 
 describe('scoreMatch', () => {
@@ -91,6 +106,39 @@ describe('scoreMatch', () => {
     expect(scoreMatch('rice', '')).toBe(0);
     expect(scoreMatch('rice', null)).toBe(0);
     expect(scoreMatch('', 'Kroger Rice')).toBe(0);
+  });
+
+  // Live regression: without singularization "tortilla" found no candidate at
+  // all, because every SKU is described as "Tortillas".
+  it('matches across singular/plural', () => {
+    expect(scoreMatch('tortilla', 'Kroger® Soft Taco Size Flour Tortillas')).toBe(1);
+    expect(scoreMatch('banana', 'Fresh Bunch of Bananas')).toBe(1);
+  });
+
+  // Live regression: these match the search term perfectly and price inside the
+  // sanity band, so only an explicit veto keeps them out.
+  it('rejects prepared forms of a whole ingredient', () => {
+    expect(scoreMatch('chicken breast', 'Kroger® Chicken Breast Deli Thin Sliced')).toBe(0);
+    expect(scoreMatch('banana', 'Naked Boosted Smoothie Strawberry Banana Machine')).toBe(0);
+    expect(scoreMatch('ground beef', 'Kroger® 80/20 Ground Beef Patties')).toBe(0);
+  });
+
+  it('still accepts the plain form of those ingredients', () => {
+    expect(scoreMatch('chicken breast', 'Heritage Farm® Boneless Skinless Chicken Breast')).toBe(1);
+  });
+});
+
+describe('descriptionSpecificity', () => {
+  // Tie-breaker only: among equally-scoring candidates the plainer description
+  // is the better stand-in for a recipe ingredient.
+  it('ranks a plain description below a padded one', () => {
+    expect(descriptionSpecificity('Broccoli Crown')).toBeLessThan(
+      descriptionSpecificity('Private Selection® Premium Steamed Broccoli Florets Blend')
+    );
+  });
+
+  it('sorts missing descriptions last', () => {
+    expect(descriptionSpecificity(null)).toBeGreaterThan(descriptionSpecificity('Garlic'));
   });
 });
 

@@ -18,6 +18,7 @@
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { BLS_SERIES, mapBlsSeriesToPrice, BlsSeriesResponse } from './lib/blsPriceMapping';
+import { loadEnv } from './lib/loadEnv';
 
 const BLS_ENDPOINT = 'https://api.bls.gov/publicAPI/v2/timeseries/data/';
 const UNREGISTERED_BATCH_SIZE = 25;
@@ -101,6 +102,7 @@ async function fetchAllSeries(
 }
 
 async function main(): Promise<void> {
+  loadEnv();
   const apiKey = process.env.BLS_API_KEY;
   console.log(
     apiKey
