@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { FlatList, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useNavigation } from '@react-navigation/native';
 import { usePantryStore } from '../store/usePantryStore';
 import { EmptyState } from '../components/EmptyState';
 import { formatEntry } from '../utils/formatters';
@@ -22,6 +23,7 @@ import { haptics } from '../utils/haptics';
 export function PantryScreen() {
   const t = useAppTheme();
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation();
   const toast = useToast();
   const items = usePantryStore((s) => s.items);
   const addItem = usePantryStore((s) => s.addItem);
@@ -63,6 +65,8 @@ export function PantryScreen() {
             <Header
               title="Pantry"
               subtitle="Mark what you already have so it's left out of grocery lists."
+              leftIcon="arrow-left"
+              onLeftPress={() => navigation.goBack()}
             />
 
             <GlassSurface variant="hero" pad={t.spacing.lg} style={{ marginBottom: t.spacing.lg }}>

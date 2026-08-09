@@ -1,6 +1,6 @@
 import { Meal, MealSlot, NutritionPerServing, Recipe } from '../types';
 import { Disposition } from '../store/useMealDispositionStore';
-import { deterministicRecipeId } from './deterministicId';
+import { catalogCloneIdSet } from './deterministicId';
 import { mealFitScore, PlannerTargets } from './mealPlanner';
 
 // A single swipeable cookbook page. `id` is the placement key: a catalog meal
@@ -60,7 +60,7 @@ export function buildMealDeck(
   dispositions: Record<string, Disposition>,
   targets: PlannerTargets
 ): DeckCard[] {
-  const catalogCloneIds = new Set(catalog.map((m) => deterministicRecipeId(m.id)));
+  const catalogCloneIds = catalogCloneIdSet(catalog.map((m) => m.id));
 
   const cards: DeckCard[] = [
     ...catalog.map(catalogCard),

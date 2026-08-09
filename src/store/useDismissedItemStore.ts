@@ -5,6 +5,7 @@ import { zustandStorage, STORAGE_KEYS } from './storage';
 interface DismissedState {
   names: string[];
   dismiss: (name: string) => void;
+  dismissMany: (names: string[]) => void;
   restore: (name: string) => void;
   prune: (validNames: string[]) => void;
   clearAll: () => void;
@@ -16,6 +17,13 @@ export const useDismissedItemStore = create<DismissedState>()(
       names: [],
       dismiss: (name) => {
         set((s) => (s.names.includes(name) ? s : { names: [...s.names, name] }));
+      },
+      dismissMany: (names) => {
+        set((s) => {
+          const existing = new Set(s.names);
+          const added = names.filter((n) => !existing.has(n));
+          return added.length === 0 ? s : { names: [...s.names, ...added] };
+        });
       },
       restore: (name) => {
         set((s) => ({ names: s.names.filter((n) => n !== name) }));

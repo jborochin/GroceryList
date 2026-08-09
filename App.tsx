@@ -7,11 +7,11 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import {
   useFonts,
-  Geist_400Regular,
-  Geist_500Medium,
-  Geist_600SemiBold,
-  Geist_700Bold,
-} from '@expo-google-fonts/geist';
+  Montserrat_400Regular,
+  Montserrat_500Medium,
+  Montserrat_600SemiBold,
+  Montserrat_700Bold,
+} from '@expo-google-fonts/montserrat';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { darkTheme } from './src/theme/theme';
 import { AmbientBackground } from './src/components/ui/AmbientBackground';
@@ -25,16 +25,16 @@ import { drainOutbox, migrateLocalToAccount, pullAll, subscribeStores, unsubscri
 import { supabaseConfigured } from './src/lib/supabase';
 
 export default function App() {
-  // Single Liquid Glass aesthetic: cream field + dark status bar.
+  // Single Liquid Glass aesthetic: near-white MealFlow field + dark status bar.
   const theme = darkTheme;
   const hydrated = useHydration();
   const userId = useAuthStore((s) => s.user?.id ?? null);
   const [seeded, setSeeded] = useState(false);
   const [fontsLoaded] = useFonts({
-    Geist_400Regular,
-    Geist_500Medium,
-    Geist_600SemiBold,
-    Geist_700Bold,
+    Montserrat_400Regular,
+    Montserrat_500Medium,
+    Montserrat_600SemiBold,
+    Montserrat_700Bold,
   });
 
   useEffect(() => {
@@ -97,7 +97,7 @@ export default function App() {
       <SafeAreaProvider>
         <PaperProvider theme={theme}>
           <ParallaxProvider>
-            <View style={{ flex: 1, backgroundColor: '#F2EBD9' }}>
+            <View style={{ flex: 1, backgroundColor: '#F5F8F6' }}>
               {/* Radial backdrop rendered once, behind the whole navigator. */}
               <AmbientBackground />
               <NavigationContainer theme={{

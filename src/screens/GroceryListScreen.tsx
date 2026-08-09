@@ -16,18 +16,26 @@ import { useRecipeStore } from '../store/useRecipeStore';
 import { useMealPlanStore } from '../store/useMealPlanStore';
 import { usePantryStore } from '../store/usePantryStore';
 import { useManualItemStore } from '../store/useManualItemStore';
+import { useGroceryRecipeStore } from '../store/useGroceryRecipeStore';
 import { useDismissedItemStore } from '../store/useDismissedItemStore';
 import { usePriceOverrideStore } from '../store/usePriceOverrideStore';
+import { useItemOverrideStore } from '../store/useItemOverrideStore';
+import { useMealScheduleStore } from '../store/useMealScheduleStore';
 import { aggregate } from '../utils/ingredientAggregator';
 import { applyPantry } from '../utils/pantryDeduction';
 import { mergeManualItems } from '../utils/mergeManualItems';
+import { roundToPurchasable } from '../utils/purchaseRounding';
+import { applyItemOverrides } from '../utils/applyItemOverrides';
 import { estimatePrices } from '../utils/priceEstimator';
 import { normalizeName } from '../utils/normalizeName';
+import { weekLabel } from '../utils/planningWeek';
 import { formatEntry } from '../utils/formatters';
+import { confirm } from '../utils/confirm';
 import { EmptyState } from '../components/EmptyState';
 import { GroceryItemRow } from '../components/GroceryItemRow';
 import { AddItemSheet } from '../components/AddItemSheet';
 import { PriceOverrideSheet } from '../components/PriceOverrideSheet';
+import { EditItemSheet } from '../components/EditItemSheet';
 import { CompletionBurst } from '../components/animations/CompletionBurst';
 import { useToast } from '../components/ui';
 import { GroceryItem } from '../types';
@@ -47,32 +55,23 @@ import {
 } from '../components/ui';
 import { useParallax } from '../components/ui/ParallaxContext';
 import { haptics } from '../utils/haptics';
+import { CATEGORY_ORDER, CATEGORY_ICON } from '../utils/groceryCategories';
 
-const CATEGORY_ORDER = [
-  'Produce',
-  'Protein',
-  'Dairy',
-  'Bakery',
-  'Frozen',
-  'Pantry',
-  'Condiments/Oils',
-  'Spices',
-  'Beverages',
-  'Other',
-];
-
-const CATEGORY_ICON: Record<string, string> = {
-  Produce: 'leaf',
-  Protein: 'food-steak',
-  Dairy: 'cheese',
-  Bakery: 'bread-slice',
-  Frozen: 'snowflake',
-  Pantry: 'silo',
-  'Condiments/Oils': 'bottle-tonic',
-  Spices: 'shaker-outline',
-  Beverages: 'cup',
-  Other: 'dots-horizontal',
-};
+function buildCategorySections(items: GroceryItem[]) {
+  const byCat = new Map<string, GroceryItem[]>();
+  for (const item of items) {
+    const arr = byCat.get(item.category) ?? [];
+    arr.push(item);
+    byCat.set(item.category, arr);
+  }
+  return [...byCat.entries()]
+    .sort((a, b) => {
+      const ai = CATEGORY_ORDER.indexOf(a[0]);
+      const bi = CATEGORY_ORDER.indexOf(b[0]);
+      return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+    })
+    .map(([title, data]) => ({ title, data }));
+}
 
 export function GroceryListScreen() {
   const t = useAppTheme();
@@ -85,25 +84,44 @@ export function GroceryListScreen() {
   const manualItems = useManualItemStore((s) => s.items);
   const addManualItem = useManualItemStore((s) => s.addItem);
   const removeManualItem = useManualItemStore((s) => s.removeItem);
+  const clearManualItems = useManualItemStore((s) => s.clearAll);
+  // Recipes added straight to the list from a detail screen — a second source
+  // alongside the plan, never shown on the Week tab.
+  const groceryRecipes = useGroceryRecipeStore((s) => s.entries);
+  const clearGroceryRecipes = useGroceryRecipeStore((s) => s.clearAll);
   const dismissedNames = useDismissedItemStore((s) => s.names);
   const dismiss = useDismissedItemStore((s) => s.dismiss);
+  const dismissMany = useDismissedItemStore((s) => s.dismissMany);
   const prune = useDismissedItemStore((s) => s.prune);
   const overrides = usePriceOverrideStore((s) => s.overrides);
   const setOverride = usePriceOverrideStore((s) => s.setOverride);
   const removeOverride = usePriceOverrideStore((s) => s.removeOverride);
+  const itemOverrides = useItemOverrideStore((s) => s.overrides);
+  const setItemOverride = useItemOverrideStore((s) => s.setOverride);
+  const removeItemOverride = useItemOverrideStore((s) => s.removeOverride);
 
   const [checked, setChecked] = useState<Record<string, boolean>>({});
   const [priceTarget, setPriceTarget] = useState<GroceryItem | null>(null);
+  const [editTarget, setEditTarget] = useState<GroceryItem | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [burstAt, setBurstAt] = useState(0);
   const completedRef = React.useRef(false);
 
   const priced = useMemo(() => {
-    const agg = aggregate(plan, recipes);
+    // Both sources feed the aggregator. A recipe in both the plan and the
+    // grocery-only list contributes twice — an intentional double batch.
+    const agg = aggregate([...plan, ...groceryRecipes], recipes);
     const withPantry = applyPantry(agg, pantry);
     const withManual = mergeManualItems(withPantry, manualItems);
-    return estimatePrices(withManual, overrides);
-  }, [plan, recipes, pantry, manualItems, overrides]);
+    // Round each item to what the store actually sells (whole avocados, a head of broccoli)
+    // before pricing, so the total reflects the real purchase.
+    const purchasable = roundToPurchasable(withManual);
+    // User-edited name/quantity/unit/category, applied after rounding (a typed
+    // quantity shouldn't be re-rounded to a pack size) and before pricing (so
+    // the edited quantity/unit gets priced).
+    const overridden = applyItemOverrides(purchasable, itemOverrides);
+    return estimatePrices(overridden, overrides);
+  }, [plan, groceryRecipes, recipes, pantry, manualItems, itemOverrides, overrides]);
 
   // Items the user has swiped away are filtered out of the computed list, and the
   // displayed totals are re-derived from what remains.
@@ -130,21 +148,35 @@ export function GroceryListScreen() {
     toast.show({ message: `Removed ${item.displayName}`, tone: 'neutral' });
   };
 
+  // Same semantics as swiping every row away: manual items are deleted outright,
+  // plan-derived items are dismissed (and self-heal when the plan changes).
+  // Grocery-only recipes are dropped outright too — the list is their only home,
+  // so a dismissal would leave them stranded.
+  const handleClearList = async () => {
+    haptics.tap();
+    const ok = await confirm({
+      title: 'Clear grocery list?',
+      message: 'All items will be removed until your plan or recipes change.',
+      confirmLabel: 'Clear',
+      destructive: true,
+    });
+    if (!ok) return;
+    dismissMany(visible.items.map((i) => i.name));
+    clearManualItems();
+    clearGroceryRecipes();
+    setChecked({});
+    toast.show({ message: 'List cleared', tone: 'neutral' });
+  };
+
+  // Checked-off items sink out of their category into a single section at the
+  // bottom of the list, so what's left to grab stays at the top.
   const sections = useMemo(() => {
-    const byCat = new Map<string, GroceryItem[]>();
-    for (const item of visible.items) {
-      const arr = byCat.get(item.category) ?? [];
-      arr.push(item);
-      byCat.set(item.category, arr);
-    }
-    return [...byCat.entries()]
-      .sort((a, b) => {
-        const ai = CATEGORY_ORDER.indexOf(a[0]);
-        const bi = CATEGORY_ORDER.indexOf(b[0]);
-        return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
-      })
-      .map(([title, data]) => ({ title, data }));
-  }, [visible.items]);
+    const remaining = visible.items.filter((i) => !checked[i.name]);
+    const done = visible.items.filter((i) => checked[i.name]);
+    const secs = buildCategorySections(remaining);
+    if (done.length > 0) secs.push({ title: 'Checked', data: done });
+    return secs;
+  }, [visible.items, checked]);
 
   const checkedCount = useMemo(
     () => visible.items.reduce((acc, item) => acc + (checked[item.name] ? 1 : 0), 0),
@@ -186,7 +218,8 @@ export function GroceryListScreen() {
   const handleShare = async () => {
     haptics.tap();
     const lines: string[] = [`Grocery list — est. $${visible.total.toFixed(2)}`, ''];
-    for (const section of sections) {
+    // Share by category regardless of check state, so the exported list is stable.
+    for (const section of buildCategorySections(visible.items)) {
       lines.push(section.title.toUpperCase());
       for (const item of section.data) {
         const qty = item.entries.map((e) => formatEntry(e.quantity, e.unit)).join(' + ');
@@ -208,7 +241,25 @@ export function GroceryListScreen() {
     ? overrideForTarget.unit
     : priceTarget?.entries[0]?.unit ?? 'each';
 
+  const itemOverrideForTarget = editTarget ? itemOverrides[editTarget.name] : undefined;
+  const initialEditName = itemOverrideForTarget?.displayName ?? editTarget?.displayName ?? '';
+  const initialEditCategory = itemOverrideForTarget?.category ?? editTarget?.category ?? 'Other';
+  const editEntriesSameUnit =
+    !!editTarget &&
+    editTarget.entries.length > 0 &&
+    editTarget.entries.every((e) => e.unit === editTarget.entries[0].unit);
+  const initialEditQuantity = itemOverrideForTarget
+    ? String(itemOverrideForTarget.quantity)
+    : editTarget && editTarget.entries.length === 1
+    ? String(editTarget.entries[0].quantity)
+    : editTarget && editEntriesSameUnit
+    ? String(editTarget.entries.reduce((s, e) => s + e.quantity, 0))
+    : '';
+  const initialEditUnit = itemOverrideForTarget?.unit ?? editTarget?.entries[0]?.unit ?? 'each';
+
   const empty = visible.items.length === 0;
+  // Nothing feeding the list at all, vs. a list the pantry happens to cover.
+  const noSources = plan.length === 0 && groceryRecipes.length === 0;
   const itemCount = visible.items.length;
   const progress = itemCount === 0 ? 0 : checkedCount / itemCount;
 
@@ -225,12 +276,12 @@ export function GroceryListScreen() {
       {empty ? (
         <View style={{ flex: 1, paddingTop: insets.top, paddingBottom: TAB_BAR_SPACE }}>
           <EmptyState
-            icon={plan.length === 0 ? 'cart-outline' : 'cart-check'}
-            title={plan.length === 0 ? 'Nothing to buy yet' : "You're all set"}
+            icon={noSources ? 'cart-outline' : 'cart-check'}
+            title={noSources ? 'Nothing to buy yet' : "You're all set"}
             subtitle={
-              plan.length === 0
-                ? 'Add recipes to this week in the Week tab, or add a grocery item manually.'
-                : "Your pantry already covers everything in this week's plan. Need something else? Add it manually."
+              noSources
+                ? 'Add recipes to this week in the Week tab, add one straight to your list from a recipe, or add a grocery item manually.'
+                : 'Your pantry already covers everything on your list. Need something else? Add it manually.'
             }
           >
             <Button
@@ -270,6 +321,7 @@ export function GroceryListScreen() {
                 haptics.tap();
                 setAddOpen(true);
               }}
+              onClear={handleClearList}
             />
           }
           renderSectionHeader={({ section }: { section: { title: string; data: GroceryItem[] } }) => (
@@ -285,6 +337,10 @@ export function GroceryListScreen() {
                 onEditPrice={() => {
                   haptics.tap();
                   setPriceTarget(item);
+                }}
+                onEdit={() => {
+                  haptics.tap();
+                  setEditTarget(item);
                 }}
               />
             </SwipeRow>
@@ -327,6 +383,25 @@ export function GroceryListScreen() {
         onClose={() => setPriceTarget(null)}
       />
 
+      <EditItemSheet
+        item={editTarget}
+        initialDisplayName={initialEditName}
+        initialQuantity={initialEditQuantity}
+        initialUnit={initialEditUnit}
+        initialCategory={initialEditCategory}
+        onSave={(displayName, quantity, unit, category) => {
+          if (!editTarget) return;
+          setItemOverride(editTarget.name, displayName, quantity, unit, category);
+          setEditTarget(null);
+        }}
+        onClear={() => {
+          if (!editTarget) return;
+          removeItemOverride(editTarget.name);
+          setEditTarget(null);
+        }}
+        onClose={() => setEditTarget(null)}
+      />
+
       <AddItemSheet
         visible={addOpen}
         onAdd={(name, quantity, unit) => {
@@ -349,6 +424,7 @@ interface HeroProps {
   progress: number;
   onShare: () => void;
   onAdd: () => void;
+  onClear: () => void;
 }
 
 function Hero({
@@ -360,19 +436,32 @@ function Hero({
   progress,
   onShare,
   onAdd,
+  onClear,
 }: HeroProps) {
   const t = useAppTheme();
   const showRemaining = checkedCount > 0 && remaining !== total;
+  // The list is computed from the plan entries, which are projected from the
+  // week selected in the Week tab — reflect that week here.
+  const selectedWeekStart = useMealScheduleStore((s) => s.selectedWeekStart);
+  const label = weekLabel(selectedWeekStart);
+  // "This week's list" / "Next week's list", but a dated label stands alone.
+  const eyebrow = label.startsWith('Week of') ? label : `${label}'s list`;
 
   return (
     <Animated.View entering={FadeIn.duration(300)} style={{ marginBottom: 8 }}>
       <Header
-        eyebrow="This week's list"
+        eyebrow={eyebrow}
         title="Grocery"
         trailing={
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <IconButton icon="plus" onPress={onAdd} variant="tonal" accessibilityLabel="Add item" />
             <IconButton icon="export-variant" onPress={onShare} variant="tonal" />
+            <IconButton
+              icon="delete-sweep-outline"
+              onPress={onClear}
+              variant="tonal"
+              accessibilityLabel="Clear list"
+            />
           </View>
         }
       />

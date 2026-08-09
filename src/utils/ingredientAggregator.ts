@@ -3,6 +3,7 @@ import { scaleIngredients } from './recipeScaling';
 import { convert, getFamily, prettyUnit } from './unitConversion';
 import { categorize } from './categorizer';
 import { normalizeName } from './normalizeName';
+import { toPurchasableName } from './purchasableName';
 
 export function aggregate(plan: MealPlanEntry[], recipes: Recipe[]): GroceryItem[] {
   const recipesById = new Map(recipes.map((r) => [r.id, r]));
@@ -15,9 +16,10 @@ export function aggregate(plan: MealPlanEntry[], recipes: Recipe[]): GroceryItem
     const ratio = entry.desiredServings / Math.max(1, recipe.servings);
     const scaled = scaleIngredients(recipe.ingredients, ratio);
     for (const ing of scaled) {
-      const normalized = normalizeName(ing.name);
+      const purchasable = toPurchasableName(ing.name);
+      const normalized = normalizeName(purchasable);
       if (!normalized) continue;
-      all.push({ normalized, display: ing.name, ing });
+      all.push({ normalized, display: purchasable, ing });
     }
   }
 

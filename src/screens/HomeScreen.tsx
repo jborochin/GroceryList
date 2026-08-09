@@ -1,10 +1,11 @@
 import React, { useMemo } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useRecipeStore } from '../store/useRecipeStore';
 import { useMealPlanStore } from '../store/useMealPlanStore';
+import { useGroceryRecipeStore } from '../store/useGroceryRecipeStore';
 import { usePantryStore } from '../store/usePantryStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { usePriceOverrideStore } from '../store/usePriceOverrideStore';
@@ -36,6 +37,7 @@ export function HomeScreen() {
   const recipes = useRecipeStore((s) => s.recipes);
   const plan = useMealPlanStore((s) => s.entries);
   const planDays = useMealPlanStore((s) => s.planDays);
+  const groceryRecipes = useGroceryRecipeStore((s) => s.entries);
   const pantry = usePantryStore((s) => s.items);
   const settings = useSettingsStore((s) => s.settings);
   const overrides = usePriceOverrideStore((s) => s.overrides);
@@ -45,10 +47,14 @@ export function HomeScreen() {
     [plan, recipes, settings, planDays]
   );
   const grocery = useMemo(() => {
-    const agg = aggregate(plan, recipes);
+    // Same two sources the Grocery tab aggregates, so the preview doesn't
+    // under-report recipes added straight to the list. Nutrition and the
+    // "meals planned" count below stay plan-only — grocery-only recipes
+    // aren't planned meals.
+    const agg = aggregate([...plan, ...groceryRecipes], recipes);
     const withPantry = applyPantry(agg, pantry);
     return estimatePrices(withPantry, overrides);
-  }, [plan, recipes, pantry, overrides]);
+  }, [plan, groceryRecipes, recipes, pantry, overrides]);
 
   const totalServings = plan.reduce((acc, p) => acc + p.desiredServings, 0);
   const itemsCount = grocery.items.length;
@@ -61,7 +67,16 @@ export function HomeScreen() {
 
   return (
     <Screen scroll glass headerTitle="Kitchen">
-      <Header eyebrow={today} title="Kitchen" subtitle="Plan smart, shop once, eat well." />
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.md }}>
+        <Image
+          source={require('../../assets/icon.png')}
+          style={{ width: 56, height: 56 }}
+          accessibilityLabel="MealFlow"
+        />
+        <View style={{ flex: 1 }}>
+          <Header eyebrow={today} title="Kitchen" subtitle="Plan smart, shop once, eat well." />
+        </View>
+      </View>
 
       {/* Hero stats - bento style (glass) */}
       <View style={{ flexDirection: 'row', gap: t.spacing.md, marginBottom: t.spacing.md }}>

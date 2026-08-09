@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Pressable } from 'react-native';
+import { Alert, View, Pressable } from 'react-native';
 import Animated, {
   useAnimatedScrollHandler,
   useSharedValue,
@@ -19,6 +19,8 @@ import { EmptyState } from '../components/EmptyState';
 import { MealPickerSheet } from '../components/MealPickerSheet';
 import { computeNutritionSummary } from '../utils/nutritionSummary';
 import { ensureRecipeForMeal } from '../utils/commitMealPlan';
+import { catalogCloneIdSet } from '../utils/deterministicId';
+import { getWeekStart, parseWeekStart, shiftWeek, weekLabel, weekRangeLabel } from '../utils/planningWeek';
 import {
   getMealCatalog,
   loadMealCatalogCache,
@@ -62,18 +64,17 @@ const SLOT_ICON: Record<MealSlot, string> = {
 
 const WEEKDAY_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-// 0 = Monday. The calendar is anchored to the current local week purely so the
-// day headers read like a real week ("Mon 23" + today highlighted); the schedule
-// itself keys off the day index, not a date.
-function buildWeek() {
-  const now = new Date();
-  const todayIndex = (now.getDay() + 6) % 7;
-  const monday = new Date(now);
-  monday.setDate(now.getDate() - todayIndex);
+// 0 = Monday. Day headers carry the real dates of the selected week ("Mon 23",
+// today highlighted only when that week contains today); the schedule keys off
+// weekStart + day index.
+function buildWeek(weekStart: string) {
+  const monday = parseWeekStart(weekStart);
+  const isCurrentWeek = weekStart === getWeekStart();
+  const todayIndex = (new Date().getDay() + 6) % 7;
   return WEEKDAY_SHORT.map((label, i) => {
     const d = new Date(monday);
     d.setDate(monday.getDate() + i);
-    return { index: i, label, date: d.getDate(), isToday: i === todayIndex };
+    return { index: i, label, date: d.getDate(), isToday: isCurrentWeek && i === todayIndex };
   });
 }
 
@@ -84,14 +85,20 @@ export function WeeklyPlanScreen() {
   const recipes = useRecipeStore((s) => s.recipes);
   const plan = useMealPlanStore((s) => s.entries);
   const planDays = useMealPlanStore((s) => s.planDays);
+  const addEntry = useMealPlanStore((s) => s.addEntry);
   const removeEntry = useMealPlanStore((s) => s.removeEntry);
   const cells = useMealScheduleStore((s) => s.cells);
+  const selectedWeekStart = useMealScheduleStore((s) => s.selectedWeekStart);
+  const setSelectedWeek = useMealScheduleStore((s) => s.setSelectedWeek);
   const assign = useMealScheduleStore((s) => s.assign);
   const removeCell = useMealScheduleStore((s) => s.removeCell);
   const updateCellServings = useMealScheduleStore((s) => s.updateCellServings);
+  const clearSchedule = useMealScheduleStore((s) => s.clearSchedule);
+  const clearPlan = useMealPlanStore((s) => s.clearPlan);
   const settings = useSettingsStore((s) => s.settings);
 
-  const [picker, setPicker] = useState<{ day: number; slot: MealSlot } | null>(null);
+  type PickerTarget = { mode: 'slot'; day: number; slot: MealSlot } | { mode: 'loose' };
+  const [picker, setPicker] = useState<PickerTarget | null>(null);
 
   // Pull the freshest shared catalog so "Browse catalog" matches Auto Meal Prep.
   useEffect(() => {
@@ -99,30 +106,44 @@ export function WeeklyPlanScreen() {
   }, []);
   const catalog = getMealCatalog();
 
-  const week = useMemo(buildWeek, []);
+  const week = useMemo(() => buildWeek(selectedWeekStart), [selectedWeekStart]);
+  const isCurrentWeek = selectedWeekStart === getWeekStart();
 
   const recipeById = useMemo(() => new Map(recipes.map((r) => [r.id, r])), [recipes]);
+
+  // The picker's "My recipes" tab shows only user-authored recipes — catalog
+  // clones (materialized for the pipeline) live under its "Browse catalog" tab.
+  const myRecipes = useMemo(() => {
+    const cloneIds = catalogCloneIdSet(catalog.map((m) => m.id));
+    return recipes.filter((r) => !cloneIds.has(r.id));
+  }, [recipes, catalog]);
+
+  // Only the selected week's placements are shown (and drive the counts below);
+  // other weeks' cells stay in the store untouched.
+  const weekCells = useMemo(
+    () => cells.filter((c) => c.weekStart === selectedWeekStart),
+    [cells, selectedWeekStart]
+  );
 
   // Group cells by `${day}:${slot}` so each calendar cell can render its meals.
   const cellsByKey = useMemo(() => {
     const map = new Map<string, ScheduleCell[]>();
-    for (const cell of cells) {
+    for (const cell of weekCells) {
       const key = `${cell.day}:${cell.slot}`;
       const arr = map.get(key) ?? [];
       arr.push(cell);
       map.set(key, arr);
     }
     return map;
-  }, [cells]);
+  }, [weekCells]);
 
-  // Plan recipes that haven't been placed on the calendar yet (e.g. a plan that
-  // arrived via sync from another device, or pre-dates the calendar feature).
+  // Plan recipes queued for the week that haven't been placed on the calendar yet.
   const unscheduled = useMemo(() => {
-    const scheduled = new Set(cells.map((c) => c.recipeId));
+    const scheduled = new Set(weekCells.map((c) => c.recipeId));
     return plan
       .filter((e) => !scheduled.has(e.recipeId) && recipeById.has(e.recipeId))
       .map((e) => ({ entry: e, recipe: recipeById.get(e.recipeId)! }));
-  }, [plan, cells, recipeById]);
+  }, [plan, weekCells, recipeById]);
 
   const nutrition = useMemo(
     () => computeNutritionSummary(plan, recipes, settings, planDays),
@@ -130,7 +151,7 @@ export function WeeklyPlanScreen() {
   );
 
   const totalServings = plan.reduce((acc, p) => acc + p.desiredServings, 0);
-  const hasPlan = cells.length > 0 || plan.length > 0;
+  const hasPlan = weekCells.length > 0 || plan.length > 0;
 
   const scrollY = useSharedValue(0);
   const onScroll = useAnimatedScrollHandler({
@@ -139,17 +160,37 @@ export function WeeklyPlanScreen() {
     },
   });
 
-  const openPicker = (day: number, slot: MealSlot) => setPicker({ day, slot });
+  const handleClearWeek = () => {
+    Alert.alert(
+      'Clear this week?',
+      `All meals for ${weekRangeLabel(selectedWeekStart)} will be removed from the calendar and grocery list.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear',
+          style: 'destructive',
+          onPress: () => { clearSchedule(); clearPlan(); },
+        },
+      ]
+    );
+  };
+
+  const openPicker = (day: number, slot: MealSlot) => setPicker({ mode: 'slot', day, slot });
+  const openLoosePicker = () => setPicker({ mode: 'loose' });
 
   const handleSelectRecipe = (recipeId: string, defaultServings: number) => {
-    if (picker) assign(picker.day, picker.slot, recipeId, defaultServings);
+    if (picker?.mode === 'slot') assign(picker.day, picker.slot, recipeId, defaultServings);
+    else if (picker?.mode === 'loose') addEntry(recipeId, defaultServings);
     setPicker(null);
   };
 
   const handleSelectMeal = (meal: Meal) => {
-    if (picker) {
+    if (picker?.mode === 'slot') {
       const recipeId = ensureRecipeForMeal(meal);
       assign(picker.day, picker.slot, recipeId, meal.servings);
+    } else if (picker?.mode === 'loose') {
+      const recipeId = ensureRecipeForMeal(meal);
+      addEntry(recipeId, meal.servings);
     }
     setPicker(null);
   };
@@ -187,9 +228,11 @@ export function WeeklyPlanScreen() {
     );
   }
 
-  const destinationLabel = picker
-    ? `${week[picker.day].label} · ${SLOT_LABEL[picker.slot]}`
-    : '';
+  const headerTitle = weekLabel(selectedWeekStart);
+  const destinationLabel =
+    picker?.mode === 'slot'
+      ? `${week[picker.day].label} · ${SLOT_LABEL[picker.slot]}`
+      : headerTitle;
 
   return (
     <View style={{ flex: 1, backgroundColor: t.palette.bg }}>
@@ -205,15 +248,75 @@ export function WeeklyPlanScreen() {
         scrollEventThrottle={16}
       >
         <Header
-          title="This week"
+          title={headerTitle}
           subtitle={
-            cells.length === 0
+            weekCells.length === 0
               ? 'Tap a meal slot to plan it, or auto-build a week.'
-              : `${cells.length} ${cells.length === 1 ? 'meal' : 'meals'} planned · ${totalServings} servings`
+              : `${weekCells.length} ${weekCells.length === 1 ? 'meal' : 'meals'} planned · ${totalServings} servings`
           }
-          rightIcon="auto-fix"
-          onRightPress={() => navigation.navigate('AutoMealPrep')}
+          trailing={
+            <View style={{ flexDirection: 'row', gap: t.spacing.xs }}>
+              {hasPlan ? (
+                <IconButton
+                  icon="trash-can-outline"
+                  onPress={handleClearWeek}
+                  variant="tonal"
+                  size={20}
+                  accessibilityLabel="Clear all meals"
+                />
+              ) : null}
+              <IconButton
+                icon="auto-fix"
+                onPress={() => navigation.navigate('AutoMealPrep')}
+                variant="tonal"
+                size={20}
+                accessibilityLabel="Auto meal prep"
+              />
+            </View>
+          }
         />
+
+        {/* Week switcher — every planning action on this screen targets the
+            selected week, and the grocery list follows it. */}
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: t.spacing.sm,
+            marginBottom: t.spacing.md,
+          }}
+        >
+          <IconButton
+            icon="chevron-left"
+            onPress={() => setSelectedWeek(shiftWeek(selectedWeekStart, -1))}
+            variant="tonal"
+            size={20}
+            accessibilityLabel="Previous week"
+          />
+          <Pressable
+            style={{ flex: 1, alignItems: 'center' }}
+            disabled={isCurrentWeek}
+            onPress={() => setSelectedWeek(getWeekStart())}
+            accessibilityRole="button"
+            accessibilityLabel={isCurrentWeek ? weekRangeLabel(selectedWeekStart) : 'Back to this week'}
+          >
+            <Text variant="body" weight="semibold" tabularNums>
+              {weekRangeLabel(selectedWeekStart)}
+            </Text>
+            {!isCurrentWeek ? (
+              <Text variant="micro" style={{ color: t.palette.primary }}>
+                Back to this week
+              </Text>
+            ) : null}
+          </Pressable>
+          <IconButton
+            icon="chevron-right"
+            onPress={() => setSelectedWeek(shiftWeek(selectedWeekStart, 1))}
+            variant="tonal"
+            size={20}
+            accessibilityLabel="Next week"
+          />
+        </View>
 
         <View style={{ gap: t.spacing.sm }}>
           {week.map((day) => (
@@ -340,47 +443,54 @@ export function WeeklyPlanScreen() {
           ))}
         </View>
 
+        <SectionHeader
+          title="Queued to cook"
+          count={unscheduled.length}
+          trailing={
+            <Button label="Add recipe" icon="plus" variant="tonal" size="sm" onPress={openLoosePicker} />
+          }
+        />
         {unscheduled.length > 0 ? (
-          <>
-            <SectionHeader
-              title="Unscheduled"
-              count={unscheduled.length}
-              trailing={<Pill label="Not on calendar" tone="warning" size="sm" />}
-            />
-            <View style={{ gap: t.spacing.sm }}>
-              {unscheduled.map(({ entry, recipe }) => (
-                <Surface key={recipe.id} variant="outlined" pad={t.spacing.md}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.md }}>
-                    <View style={{ flex: 1 }}>
-                      <Text variant="bodyLg" weight="semibold" numberOfLines={1}>
-                        {recipe.title}
-                      </Text>
-                      <Text variant="caption" tone="secondary" style={{ marginTop: 2 }}>
-                        {entry.desiredServings} servings
-                      </Text>
-                    </View>
-                    <Button
-                      label="Place"
-                      icon="calendar-plus"
-                      variant="tonal"
-                      size="sm"
-                      onPress={() => placeUnscheduled(recipe.id, entry.desiredServings)}
-                    />
-                    <IconButton
-                      icon="close"
-                      onPress={() => removeEntry(recipe.id)}
-                      variant="tonal"
-                      size={16}
-                      accessibilityLabel="Remove from plan"
-                    />
+          <View style={{ gap: t.spacing.sm }}>
+            {unscheduled.map(({ entry, recipe }) => (
+              <Surface key={recipe.id} variant="outlined" pad={t.spacing.md}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.spacing.md }}>
+                  <View style={{ flex: 1 }}>
+                    <Text variant="bodyLg" weight="semibold" numberOfLines={1}>
+                      {recipe.title}
+                    </Text>
+                    <Text variant="caption" tone="secondary" style={{ marginTop: 2 }}>
+                      {entry.desiredServings} servings
+                    </Text>
                   </View>
-                </Surface>
-              ))}
-            </View>
-          </>
-        ) : null}
+                  <Button
+                    label="Place"
+                    icon="calendar-plus"
+                    variant="tonal"
+                    size="sm"
+                    onPress={() => placeUnscheduled(recipe.id, entry.desiredServings)}
+                  />
+                  <IconButton
+                    icon="close"
+                    onPress={() => removeEntry(recipe.id)}
+                    variant="tonal"
+                    size={16}
+                    accessibilityLabel="Remove from plan"
+                  />
+                </View>
+              </Surface>
+            ))}
+          </View>
+        ) : (
+          <Surface variant="outlined" pad={t.spacing.lg} style={{ alignItems: 'center', gap: t.spacing.sm }}>
+            <Text variant="body" tone="secondary" style={{ textAlign: 'center' }}>
+              Add recipes you plan to cook this week — you can decide which day later.
+            </Text>
+            <Button label="Add recipe" icon="plus" variant="tonal" size="sm" onPress={openLoosePicker} />
+          </Surface>
+        )}
 
-        {cells.length > 0 || unscheduled.length > 0 ? (
+        {weekCells.length > 0 || unscheduled.length > 0 ? (
           <>
             <SectionHeader
               title="Nutrition preview"
@@ -420,7 +530,7 @@ export function WeeklyPlanScreen() {
           </>
         ) : null}
       </Animated.ScrollView>
-      <CollapsingHeader title="This week" scrollY={scrollY} />
+      <CollapsingHeader title={headerTitle} scrollY={scrollY} />
 
       {hasPlan ? (
         <View
@@ -445,7 +555,7 @@ export function WeeklyPlanScreen() {
       <MealPickerSheet
         visible={picker !== null}
         destinationLabel={destinationLabel}
-        recipes={recipes}
+        recipes={myRecipes}
         catalog={catalog}
         onSelectRecipe={handleSelectRecipe}
         onSelectMeal={handleSelectMeal}

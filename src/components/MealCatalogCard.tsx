@@ -10,19 +10,30 @@ import { IconButton } from './ui/IconButton';
 interface Props {
   meal: Meal;
   onPress?: () => void;
-  // Whether this catalog meal is already in the user's library — controls the
-  // corner affordance (add "+" vs. an "added" check).
-  added?: boolean;
-  onAdd?: () => void;
+  isFavorited?: boolean;
+  onFavorite?: () => void;
+  // Whether this meal's recipe is already queued in the weekly plan — controls
+  // the bottom-right affordance (add vs. queued).
+  queued?: boolean;
+  onQueue?: () => void;
   // Horizontal padding + column gap the parent grid applies (see RecipeGridCard).
   horizontalPadding: number;
   columnGap: number;
 }
 
-// Visual twin of RecipeGridCard, but bound to a catalog `Meal` and carrying an
-// add/added affordance instead of delete. Kept separate so the recipe card stays
+// Visual twin of RecipeGridCard, but bound to a catalog `Meal` — favorite and
+// queue affordances only, no delete/edit. Kept separate so the recipe card stays
 // focused on user-owned recipes (delete, edit) and types stay honest.
-export function MealCatalogCard({ meal, onPress, added, onAdd, horizontalPadding, columnGap }: Props) {
+export function MealCatalogCard({
+  meal,
+  onPress,
+  isFavorited,
+  onFavorite,
+  queued,
+  onQueue,
+  horizontalPadding,
+  columnGap,
+}: Props) {
   const t = useAppTheme();
   const { width: screenWidth } = useWindowDimensions();
   const cardWidth = (screenWidth - horizontalPadding * 2 - columnGap) / 2;
@@ -75,6 +86,19 @@ export function MealCatalogCard({ meal, onPress, added, onAdd, horizontalPadding
           </LinearGradient>
         )}
 
+        {/* Top scrim so the bare overlay icons stay legible over bright photos. */}
+        <LinearGradient
+          pointerEvents="none"
+          colors={['rgba(0,0,0,0.28)', 'transparent']}
+          style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            top: 0,
+            height: '30%',
+          }}
+        />
+
         <LinearGradient
           colors={['transparent', 'rgba(0,0,0,0.72)']}
           style={{
@@ -102,26 +126,33 @@ export function MealCatalogCard({ meal, onPress, added, onAdd, horizontalPadding
         </LinearGradient>
       </Pressable>
 
-      <View style={{ position: 'absolute', top: t.spacing.xs, right: t.spacing.xs }}>
-        {added ? (
+      {/* Heart — top-left. */}
+      {onFavorite != null ? (
+        <View style={{ position: 'absolute', top: t.spacing.xs, left: t.spacing.xs }}>
           <IconButton
-            icon="check"
-            variant="soft"
-            size={18}
-            color={t.palette.success}
-            haptic={false}
-            accessibilityLabel={`${meal.title} is in your recipes`}
+            icon={isFavorited ? 'heart' : 'heart-outline'}
+            variant="overlay"
+            size={20}
+            color={isFavorited ? t.palette.primary : '#FFFFFF'}
+            onPress={onFavorite}
+            accessibilityLabel={isFavorited ? `Unfavorite ${meal.title}` : `Favorite ${meal.title}`}
           />
-        ) : (
+        </View>
+      ) : null}
+
+      {onQueue != null ? (
+        <View style={{ position: 'absolute', bottom: t.spacing.xs, right: t.spacing.xs }}>
           <IconButton
-            icon="plus"
-            variant="soft"
-            size={18}
-            onPress={onAdd}
-            accessibilityLabel={`Add ${meal.title} to my recipes`}
+            icon={queued ? 'calendar-check' : 'calendar-plus'}
+            variant="overlay"
+            size={20}
+            color={queued ? t.palette.primary : '#FFFFFF'}
+            onPress={queued ? undefined : onQueue}
+            haptic={!queued}
+            accessibilityLabel={queued ? `${meal.title} is queued for this week` : `Add ${meal.title} to this week`}
           />
-        )}
-      </View>
+        </View>
+      ) : null}
     </View>
   );
 }

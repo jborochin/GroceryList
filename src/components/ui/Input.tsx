@@ -1,5 +1,13 @@
 import React, { useState } from 'react';
-import { Pressable, TextInput, TextInputProps, View, ViewStyle } from 'react-native';
+import {
+  Pressable,
+  StyleProp,
+  TextInput,
+  TextInputProps,
+  TextStyle,
+  View,
+  ViewStyle,
+} from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useAppTheme } from '../../theme/tokens';
 import { Text } from './Text';
@@ -13,6 +21,7 @@ interface Props extends Omit<TextInputProps, 'style'> {
   onRightPress?: () => void;
   multiline?: boolean;
   containerStyle?: ViewStyle;
+  inputStyle?: StyleProp<TextStyle>;
 }
 
 export function Input({
@@ -24,6 +33,7 @@ export function Input({
   onRightPress,
   multiline,
   containerStyle,
+  inputStyle,
   ...rest
 }: Props) {
   const t = useAppTheme();
@@ -75,14 +85,17 @@ export function Input({
             rest.onBlur?.(e);
           }}
           placeholderTextColor={t.palette.textTertiary}
-          style={{
-            flex: 1,
-            color: t.palette.textPrimary,
-            fontFamily: t.font.regular,
-            fontSize: t.fontSize.body,
-            paddingVertical: multiline ? 4 : 12,
-            textAlignVertical: multiline ? 'top' : 'center',
-          }}
+          style={[
+            {
+              flex: 1,
+              color: t.palette.textPrimary,
+              fontFamily: t.font.regular,
+              fontSize: t.fontSize.body,
+              paddingVertical: multiline ? 4 : 12,
+              textAlignVertical: multiline ? 'top' : 'center',
+            },
+            inputStyle,
+          ]}
         />
         {rightIcon ? (
           <Pressable onPress={onRightPress} hitSlop={8}>

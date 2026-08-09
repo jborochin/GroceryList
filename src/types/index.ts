@@ -32,15 +32,29 @@ export interface MealPlanEntry {
   desiredServings: number;
 }
 
+// A recipe whose ingredients should land on the grocery list WITHOUT being
+// planned — "add to grocery list" from a recipe/catalog detail screen. Kept out
+// of MealPlanEntry on purpose: plan entries are synced, are reconciled from
+// schedule cells, feed the nutrition summary, and render on the Week tab (any
+// entry with no cell shows up in its "unscheduled" strip). Same shape as
+// MealPlanEntry so both can be fed to aggregate() together — a recipe in both
+// lists contributes twice, which is the intended "double batch".
+export interface GroceryRecipeEntry {
+  recipeId: string;
+  desiredServings: number;
+}
+
 export type MealSlot = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 
-// Device-local placement of a planned recipe onto a specific day + meal slot.
+// Device-local placement of a planned recipe onto a specific week + day + slot.
 // This is the "calendar" layer that sits on top of the synced MealPlanEntry list:
 // entries stay the authoritative (synced) source of plan membership + total
-// servings, while cells only describe WHERE each serving lands in the week.
+// servings — projected from ONE week at a time (the selected week, see
+// useMealScheduleStore) — while cells describe WHERE each serving lands.
 // Never synced — see useMealScheduleStore.
 export interface ScheduleCell {
   id: string;
+  weekStart: string; // week key: local ISO date of the week's Monday (see planningWeek.ts)
   day: number; // 0..6 (Mon..Sun)
   slot: MealSlot;
   recipeId: string;
@@ -117,6 +131,18 @@ export interface PriceOverride {
   name: string;
   pricePerUnit: number;
   unit: string;
+}
+
+// User-edited displayName/quantity/unit/category for a grocery item, keyed by
+// its normalized `name` (matches GroceryItem.name). Always a full snapshot —
+// the edit sheet seeds all four fields before saving, so there's no partial
+// override to merge.
+export interface ItemOverride {
+  name: string;
+  displayName: string;
+  quantity: number;
+  unit: string;
+  category: string;
 }
 
 export type PriceReason = 'no-match' | 'unit-conflict';

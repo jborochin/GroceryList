@@ -11,9 +11,11 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useRecipeStore } from '../store/useRecipeStore';
+import { useGroceryRecipeStore } from '../store/useGroceryRecipeStore';
 import { Recipe, NutritionPerServing } from '../types';
 import { IngredientEditor } from '../components/IngredientEditor';
 import { ServingStepper } from '../components/ServingStepper';
+import { AddToGroceryListSheet } from '../components/AddToGroceryListSheet';
 import { scaleIngredients, scaleNutrition } from '../utils/recipeScaling';
 import { ingredientToNutritionQuery } from '../utils/nutritionQuery';
 import { computeMissingMacros } from '../utils/computeNutrition';
@@ -29,6 +31,7 @@ import {
   SectionHeader,
   Surface,
   Text,
+  useToast,
 } from '../components/ui';
 import { useParallax } from '../components/ui/ParallaxContext';
 
@@ -45,14 +48,25 @@ export function RecipeDetailScreen() {
   const recipe = useRecipeStore((s) => s.getById(recipeId));
   const updateRecipe = useRecipeStore((s) => s.updateRecipe);
   const deleteRecipe = useRecipeStore((s) => s.deleteRecipe);
+  // Adds land on the grocery list only — never the meal plan, so the recipe
+  // doesn't turn up on the Week tab. See useGroceryRecipeStore.
+  const addGroceryRecipe = useGroceryRecipeStore((s) => s.addEntry);
+  const removeGroceryRecipe = useGroceryRecipeStore((s) => s.removeEntry);
+  const toast = useToast();
 
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<Recipe | null>(null);
   const [previewServings, setPreviewServings] = useState(0);
   const [recomputing, setRecomputing] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
 
+  // The preview is seeded from the recipe's own servings and stays independent of
+  // the grocery list — adding to the list is a fire-and-forget action, so nothing
+  // on this screen reflects what's already queued.
   useEffect(() => {
-    if (recipe && previewServings === 0) setPreviewServings(recipe.servings);
+    if (recipe && previewServings === 0) {
+      setPreviewServings(recipe.servings);
+    }
   }, [recipe, previewServings]);
 
   if (!recipe) {
@@ -78,6 +92,19 @@ export function RecipeDetailScreen() {
   const previewNutrition: NutritionPerServing | undefined = editing
     ? active.nutritionPerServing
     : scaleNutrition(recipe.nutritionPerServing, 1);
+
+  // The add button is deliberately stateless — it never reads back from the
+  // grocery list, so it always reads "Add" and never toggles. Undo lives on the
+  // toast instead.
+  const handleConfirmAdd = (servings: number) => {
+    setSheetOpen(false);
+    addGroceryRecipe(recipe.id, servings);
+    toast.show({
+      message: `Added ${recipe.title} (${servings} servings) to your grocery list`,
+      tone: 'success',
+      action: { label: 'Undo', onPress: () => removeGroceryRecipe(recipe.id) },
+    });
+  };
 
   const handleSave = () => {
     if (!draft) return;
@@ -186,7 +213,7 @@ export function RecipeDetailScreen() {
         onScroll={onScroll}
         scrollEventThrottle={16}
       >
-      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: t.spacing.md }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: t.spacing.md, gap: t.spacing.sm }}>
         <IconButton
           icon="chevron-left"
           onPress={() => navigation.goBack()}
@@ -195,6 +222,15 @@ export function RecipeDetailScreen() {
           accessibilityLabel="Back"
         />
         <View style={{ flex: 1 }} />
+        {!editing ? (
+          <Button
+            label="Add"
+            icon="cart-plus"
+            size="sm"
+            variant="primary"
+            onPress={() => setSheetOpen(true)}
+          />
+        ) : null}
         {!editing ? (
           <IconButton
             icon="delete-outline"
@@ -466,6 +502,13 @@ export function RecipeDetailScreen() {
       </View>
       </Animated.ScrollView>
       <CollapsingHeader title={recipe.title} scrollY={scrollY} threshold={64} />
+      <AddToGroceryListSheet
+        visible={sheetOpen}
+        title={recipe.title}
+        initialServings={previewServings}
+        onConfirm={handleConfirmAdd}
+        onClose={() => setSheetOpen(false)}
+      />
     </View>
   );
 }

@@ -10,7 +10,11 @@
       "Bash(python *)",
       "Bash(dir *)",
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\vorte\\\\OneDrive\\\\Desktop\\\\Projects\\\\GroceryList\" -Recurse -Directory)",
-      "Bash(Select-Object -ExpandProperty FullName)"
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(git commit -m ' *)"
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "supabase"
+  ]
 }

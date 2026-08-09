@@ -358,8 +358,8 @@ export function SettingsScreen() {
           style={{ textAlign: 'center', marginTop: t.spacing.xxl }}
         >
           {authUser
-            ? 'MealPrep · Synced to your account · Edits work offline.'
-            : 'MealPrep · Offline-first · Sign in to sync across devices.'}
+            ? 'MealFlow · Synced to your account · Edits work offline.'
+            : 'MealFlow · Offline-first · Sign in to sync across devices.'}
         </Text>
       </Animated.ScrollView>
       <CollapsingHeader title="You" scrollY={scrollY} />

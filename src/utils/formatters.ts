@@ -24,6 +24,12 @@ const UNIT_LABELS: Record<string, { singular: string; plural?: string }> = {
   head: { singular: 'head', plural: 'heads' },
   dash: { singular: 'dash', plural: 'dashes' },
   pinch: { singular: 'pinch', plural: 'pinches' },
+  scoop: { singular: 'scoop', plural: 'scoops' },
+  block: { singular: 'block', plural: 'blocks' },
+  bag: { singular: 'bag', plural: 'bags' },
+  box: { singular: 'box', plural: 'boxes' },
+  loaf: { singular: 'loaf', plural: 'loaves' },
+  stick: { singular: 'stick', plural: 'sticks' },
 };
 
 export function formatQuantity(qty: number): string {

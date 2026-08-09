@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Platform, Pressable, StyleSheet, View, ViewStyle, useWindowDimensions } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View, ViewStyle, useWindowDimensions } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -40,7 +40,6 @@ const ICON_FOCUSED: Record<string, string> = {
   Settings: 'tune-variant',
 };
 
-// Labels are not drawn (icon-only bar) but are still announced to screen readers.
 const LABEL_BY_ROUTE: Record<string, string> = {
   Home: 'Home',
   Library: 'Recipes',
@@ -191,9 +190,18 @@ export function AppTabBar({ state, navigation }: BottomTabBarProps) {
               >
                 <Icon
                   name={iconName}
-                  size={22}
+                  size={20}
                   color={focused ? t.palette.primaryContrast : t.palette.textSecondary}
                 />
+                <Text
+                  numberOfLines={1}
+                  style={[
+                    styles.label,
+                    { color: focused ? t.palette.primaryContrast : t.palette.textSecondary },
+                  ]}
+                >
+                  {label}
+                </Text>
               </Pressable>
             );
           })}
@@ -223,5 +231,11 @@ const styles = StyleSheet.create({
   tab: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  label: {
+    fontSize: 10,
+    lineHeight: 12,
+    fontWeight: '600',
+    marginTop: 2,
   },
 });

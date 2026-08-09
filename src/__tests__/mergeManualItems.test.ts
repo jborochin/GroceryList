@@ -41,6 +41,14 @@ describe('mergeManualItems', () => {
     expect(out[0].entries[0].quantity).toBeCloseTo(2, 5);
   });
 
+  it('strips a prep descriptor so a manual item merges with the matching recipe item', () => {
+    const items = [item('onion', 'onion', [{ quantity: 1, unit: 'each' }], 'Produce')];
+    const out = mergeManualItems(items, [manual('1', 'chopped onion', 2, 'each')]);
+    expect(out).toHaveLength(1);
+    expect(out[0].displayName).toBe('onion');
+    expect(out[0].entries).toEqual([{ quantity: 3, unit: 'each' }]);
+  });
+
   it('ignores manual items with a blank name', () => {
     const out = mergeManualItems([], [manual('1', '   ', 1, 'each')]);
     expect(out).toHaveLength(0);

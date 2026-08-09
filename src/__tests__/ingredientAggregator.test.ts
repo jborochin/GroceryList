@@ -68,6 +68,42 @@ describe('ingredientAggregator', () => {
     expect(out[0].entries).toHaveLength(2);
   });
 
+  it('strips prep descriptors so differently-cut ingredients merge into one purchasable item', () => {
+    const recipes = [
+      recipe('a', 1, [{ name: 'diced red bell pepper', quantity: 1, unit: 'each' }]),
+      recipe('b', 1, [{ name: 'sliced red bell pepper', quantity: 2, unit: 'each' }]),
+    ];
+    const out = aggregate(
+      [
+        { recipeId: 'a', desiredServings: 1 },
+        { recipeId: 'b', desiredServings: 1 },
+      ],
+      recipes
+    );
+    expect(out).toHaveLength(1);
+    expect(out[0].name).toBe('red bell pepper');
+    expect(out[0].displayName).toBe('red bell pepper');
+    expect(out[0].entries[0].quantity).toBeCloseTo(3, 5);
+  });
+
+  // The grocery list feeds aggregate() the meal plan and the grocery-only
+  // recipes (useGroceryRecipeStore) concatenated. A recipe sitting in both must
+  // contribute twice — a double batch — rather than being deduped by recipeId.
+  it('sums duplicate entries for the same recipe (plan + grocery-only add)', () => {
+    const recipes = [recipe('a', 2, [{ name: 'flour', quantity: 1, unit: 'cup' }])];
+    const out = aggregate(
+      [
+        { recipeId: 'a', desiredServings: 2 }, // planned: 1 cup
+        { recipeId: 'a', desiredServings: 4 }, // added straight to the list: 2 cups
+      ],
+      recipes
+    );
+    expect(out).toHaveLength(1);
+    expect(out[0].entries).toHaveLength(1);
+    expect(out[0].entries[0].unit).toBe('cup');
+    expect(out[0].entries[0].quantity).toBeCloseTo(3, 5);
+  });
+
   it('converts within family when merging', () => {
     const recipes = [
       recipe('a', 1, [{ name: 'milk', quantity: 1, unit: 'cup' }]),

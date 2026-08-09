@@ -8,13 +8,15 @@ interface Props {
   eyebrow?: string;
   title: string;
   subtitle?: string;
+  leftIcon?: string;
+  onLeftPress?: () => void;
   rightIcon?: string;
   onRightPress?: () => void;
   rightLabel?: string;
   trailing?: React.ReactNode;
 }
 
-export function Header({ eyebrow, title, subtitle, rightIcon, onRightPress, trailing }: Props) {
+export function Header({ eyebrow, title, subtitle, leftIcon, onLeftPress, rightIcon, onRightPress, trailing }: Props) {
   const t = useAppTheme();
   return (
     <View style={{ marginTop: t.spacing.sm, marginBottom: t.spacing.lg }}>
@@ -24,6 +26,15 @@ export function Header({ eyebrow, title, subtitle, rightIcon, onRightPress, trai
         </Text>
       ) : null}
       <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+        {leftIcon ? (
+          <IconButton
+            icon={leftIcon}
+            onPress={onLeftPress}
+            variant="tonal"
+            size={20}
+            style={{ marginRight: t.spacing.sm, marginTop: 2 }}
+          />
+        ) : null}
         <View style={{ flex: 1, paddingRight: t.spacing.md }}>
           <Text variant="hero">{title}</Text>
           {subtitle ? (

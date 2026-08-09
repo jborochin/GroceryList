@@ -34,6 +34,16 @@ const UNIT_TABLE: Record<string, UnitDef> = {
   dash: { family: 'count', toBase: 1 },
   pinch: { family: 'count', toBase: 1 },
   scoop: { family: 'count', toBase: 1 },
+
+  // Retail "pack" units — how a store sells discrete quantities. Count family so
+  // purchase-rounding treats them as whole, indivisible buys. Cross-family pricing
+  // (e.g. a cheese `block` priced per `lb`) is bridged via purchase-profile grams,
+  // never through convert(), so toBase stays 1 like every other count unit.
+  block: { family: 'count', toBase: 1 },
+  bag: { family: 'count', toBase: 1 },
+  box: { family: 'count', toBase: 1 },
+  loaf: { family: 'count', toBase: 1 },
+  stick: { family: 'count', toBase: 1 },
 };
 
 export function getFamily(unit: string): UnitFamily | null {
