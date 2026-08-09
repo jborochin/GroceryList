@@ -133,6 +133,18 @@ export interface PriceOverride {
   unit: string;
 }
 
+// User-edited displayName/quantity/unit/category for a grocery item, keyed by
+// its normalized `name` (matches GroceryItem.name). Always a full snapshot —
+// the edit sheet seeds all four fields before saving, so there's no partial
+// override to merge.
+export interface ItemOverride {
+  name: string;
+  displayName: string;
+  quantity: number;
+  unit: string;
+  category: string;
+}
+
 export type PriceReason = 'no-match' | 'unit-conflict';
 
 export interface GroceryEntry {

@@ -19,11 +19,13 @@ import { useManualItemStore } from '../store/useManualItemStore';
 import { useGroceryRecipeStore } from '../store/useGroceryRecipeStore';
 import { useDismissedItemStore } from '../store/useDismissedItemStore';
 import { usePriceOverrideStore } from '../store/usePriceOverrideStore';
+import { useItemOverrideStore } from '../store/useItemOverrideStore';
 import { useMealScheduleStore } from '../store/useMealScheduleStore';
 import { aggregate } from '../utils/ingredientAggregator';
 import { applyPantry } from '../utils/pantryDeduction';
 import { mergeManualItems } from '../utils/mergeManualItems';
 import { roundToPurchasable } from '../utils/purchaseRounding';
+import { applyItemOverrides } from '../utils/applyItemOverrides';
 import { estimatePrices } from '../utils/priceEstimator';
 import { normalizeName } from '../utils/normalizeName';
 import { weekLabel } from '../utils/planningWeek';
@@ -33,6 +35,7 @@ import { EmptyState } from '../components/EmptyState';
 import { GroceryItemRow } from '../components/GroceryItemRow';
 import { AddItemSheet } from '../components/AddItemSheet';
 import { PriceOverrideSheet } from '../components/PriceOverrideSheet';
+import { EditItemSheet } from '../components/EditItemSheet';
 import { CompletionBurst } from '../components/animations/CompletionBurst';
 import { useToast } from '../components/ui';
 import { GroceryItem } from '../types';
@@ -52,33 +55,7 @@ import {
 } from '../components/ui';
 import { useParallax } from '../components/ui/ParallaxContext';
 import { haptics } from '../utils/haptics';
-
-const CATEGORY_ORDER = [
-  'Produce',
-  'Protein',
-  'Dairy',
-  'Bakery',
-  'Frozen',
-  'Pantry',
-  'Condiments/Oils',
-  'Spices',
-  'Beverages',
-  'Other',
-];
-
-const CATEGORY_ICON: Record<string, string> = {
-  Produce: 'leaf',
-  Protein: 'food-steak',
-  Dairy: 'cheese',
-  Bakery: 'bread-slice',
-  Frozen: 'snowflake',
-  Pantry: 'silo',
-  'Condiments/Oils': 'bottle-tonic',
-  Spices: 'shaker-outline',
-  Beverages: 'cup',
-  Other: 'dots-horizontal',
-  Checked: 'check-circle-outline',
-};
+import { CATEGORY_ORDER, CATEGORY_ICON } from '../utils/groceryCategories';
 
 function buildCategorySections(items: GroceryItem[]) {
   const byCat = new Map<string, GroceryItem[]>();
@@ -119,9 +96,13 @@ export function GroceryListScreen() {
   const overrides = usePriceOverrideStore((s) => s.overrides);
   const setOverride = usePriceOverrideStore((s) => s.setOverride);
   const removeOverride = usePriceOverrideStore((s) => s.removeOverride);
+  const itemOverrides = useItemOverrideStore((s) => s.overrides);
+  const setItemOverride = useItemOverrideStore((s) => s.setOverride);
+  const removeItemOverride = useItemOverrideStore((s) => s.removeOverride);
 
   const [checked, setChecked] = useState<Record<string, boolean>>({});
   const [priceTarget, setPriceTarget] = useState<GroceryItem | null>(null);
+  const [editTarget, setEditTarget] = useState<GroceryItem | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [burstAt, setBurstAt] = useState(0);
   const completedRef = React.useRef(false);
@@ -135,8 +116,12 @@ export function GroceryListScreen() {
     // Round each item to what the store actually sells (whole avocados, a head of broccoli)
     // before pricing, so the total reflects the real purchase.
     const purchasable = roundToPurchasable(withManual);
-    return estimatePrices(purchasable, overrides);
-  }, [plan, groceryRecipes, recipes, pantry, manualItems, overrides]);
+    // User-edited name/quantity/unit/category, applied after rounding (a typed
+    // quantity shouldn't be re-rounded to a pack size) and before pricing (so
+    // the edited quantity/unit gets priced).
+    const overridden = applyItemOverrides(purchasable, itemOverrides);
+    return estimatePrices(overridden, overrides);
+  }, [plan, groceryRecipes, recipes, pantry, manualItems, itemOverrides, overrides]);
 
   // Items the user has swiped away are filtered out of the computed list, and the
   // displayed totals are re-derived from what remains.
@@ -256,6 +241,22 @@ export function GroceryListScreen() {
     ? overrideForTarget.unit
     : priceTarget?.entries[0]?.unit ?? 'each';
 
+  const itemOverrideForTarget = editTarget ? itemOverrides[editTarget.name] : undefined;
+  const initialEditName = itemOverrideForTarget?.displayName ?? editTarget?.displayName ?? '';
+  const initialEditCategory = itemOverrideForTarget?.category ?? editTarget?.category ?? 'Other';
+  const editEntriesSameUnit =
+    !!editTarget &&
+    editTarget.entries.length > 0 &&
+    editTarget.entries.every((e) => e.unit === editTarget.entries[0].unit);
+  const initialEditQuantity = itemOverrideForTarget
+    ? String(itemOverrideForTarget.quantity)
+    : editTarget && editTarget.entries.length === 1
+    ? String(editTarget.entries[0].quantity)
+    : editTarget && editEntriesSameUnit
+    ? String(editTarget.entries.reduce((s, e) => s + e.quantity, 0))
+    : '';
+  const initialEditUnit = itemOverrideForTarget?.unit ?? editTarget?.entries[0]?.unit ?? 'each';
+
   const empty = visible.items.length === 0;
   // Nothing feeding the list at all, vs. a list the pantry happens to cover.
   const noSources = plan.length === 0 && groceryRecipes.length === 0;
@@ -337,6 +338,10 @@ export function GroceryListScreen() {
                   haptics.tap();
                   setPriceTarget(item);
                 }}
+                onEdit={() => {
+                  haptics.tap();
+                  setEditTarget(item);
+                }}
               />
             </SwipeRow>
           )}
@@ -376,6 +381,25 @@ export function GroceryListScreen() {
           setPriceTarget(null);
         }}
         onClose={() => setPriceTarget(null)}
+      />
+
+      <EditItemSheet
+        item={editTarget}
+        initialDisplayName={initialEditName}
+        initialQuantity={initialEditQuantity}
+        initialUnit={initialEditUnit}
+        initialCategory={initialEditCategory}
+        onSave={(displayName, quantity, unit, category) => {
+          if (!editTarget) return;
+          setItemOverride(editTarget.name, displayName, quantity, unit, category);
+          setEditTarget(null);
+        }}
+        onClear={() => {
+          if (!editTarget) return;
+          removeItemOverride(editTarget.name);
+          setEditTarget(null);
+        }}
+        onClose={() => setEditTarget(null)}
       />
 
       <AddItemSheet

@@ -14,6 +14,7 @@ export const STORAGE_KEYS = {
   dismissedItems: 'mealprep/dismissedItems/v1',
   settings: 'mealprep/settings/v1',
   priceOverrides: 'mealprep/priceOverrides/v1',
+  itemOverrides: 'mealprep/itemOverrides/v1',
   seeded: 'mealprep/seeded/v1',
   lastSyncedAt: 'mealprep/sync/lastSyncedAt/v1',
   outbox: 'mealprep/sync/outbox/v1',

@@ -12,6 +12,7 @@ import Animated, {
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useAppTheme, tokens } from '../theme/tokens';
 import { Text } from './ui/Text';
+import { IconButton } from './ui/IconButton';
 import { GroceryItem } from '../types';
 import { formatEntry, formatPrice } from '../utils/formatters';
 
@@ -21,9 +22,10 @@ interface Props {
   checked: boolean;
   onToggle: () => void;
   onEditPrice: () => void;
+  onEdit: () => void;
 }
 
-export function GroceryItemRow({ item, index, checked, onToggle, onEditPrice }: Props) {
+export function GroceryItemRow({ item, index, checked, onToggle, onEditPrice, onEdit }: Props) {
   const t = useAppTheme();
   const progress = useSharedValue(checked ? 1 : 0);
   const [labelWidth, setLabelWidth] = useState(0);
@@ -108,6 +110,15 @@ export function GroceryItemRow({ item, index, checked, onToggle, onEditPrice }: 
                 {qtyStr}
               </Text>
             </View>
+
+            <IconButton
+              icon="pencil-outline"
+              onPress={onEdit}
+              variant="plain"
+              size={18}
+              haptic={false}
+              accessibilityLabel="Edit item"
+            />
 
             <Pressable onPress={onEditPrice} hitSlop={8}>
               <View

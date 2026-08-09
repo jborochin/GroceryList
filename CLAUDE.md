@@ -27,7 +27,7 @@ Offline-first Expo + React Native app. State lives in Zustand stores persisted t
 This is the core compute path, invoked by `HomeScreen` and `GroceryListScreen`:
 
 ```
-plan + groceryRecipes + recipes → aggregate() → applyPantry() → mergeManualItems() → roundToPurchasable() → estimatePrices() → render
+plan + groceryRecipes + recipes → aggregate() → applyPantry() → mergeManualItems() → roundToPurchasable() → applyItemOverrides() → estimatePrices() → render
 ```
 
 Each step is a pure function in `src/utils/` that takes and returns plain `GroceryItem[]` (see `src/types/index.ts`). Downstream screens recompute via `useMemo` over the store inputs. When editing this pipeline, prefer adding another pure step in the chain over mutating stores.
@@ -35,6 +35,8 @@ Each step is a pure function in `src/utils/` that takes and returns plain `Groce
 `aggregate()` is fed **two** entry sources concatenated: the meal plan (`useMealPlanStore`) and grocery-only recipe adds (`useGroceryRecipeStore`, the "Add to grocery list" button on the Recipe/Meal-Catalog detail screens). Grocery-only adds are additive — a recipe in both lists contributes twice (an intentional double batch) — and deliberately never reach the Week tab or the nutrition summary, which read plan entries only. They persist device-locally and are **not** synced.
 
 `roundToPurchasable()` (`src/utils/purchaseRounding.ts`) rewrites each item's quantity into the unit the store actually sells it in, rounded up to a whole pack — `½ avocado → 1`, `1 cup broccoli → 1 head`, `2 cloves garlic → 1 head`, `1 oz cheddar → 1 block`. It runs **after** pantry (so owned staples are already gone) and **before** pricing (so the total reflects the real purchase). It only rounds items whose *sell unit* is a count (each/head/block/bag/bottle…); weight/volume sell units (chicken by the lb) stay continuous since you can buy a fraction. See "Purchase profiles" below.
+
+`applyItemOverrides()` (`src/utils/applyItemOverrides.ts`) applies user edits to an item's displayName/quantity/unit/category, made via the pencil icon on a grocery row (`EditItemSheet`) and persisted in `useItemOverrideStore`, keyed by the item's normalized `name` — same keying convention as `usePriceOverrideStore`. It runs **after** rounding (a typed quantity shouldn't be re-rounded to a pack size) and **before** pricing (so the edited quantity/unit gets priced). It never rewrites `name` itself, only `displayName` — renaming is cosmetic, not a re-key.
 
 ### Name normalization is load-bearing
 
@@ -55,7 +57,7 @@ Count units are a special case — distinct labels (`each` vs `slice`) never con
 
 ### Stores and hydration
 
-Eight persisted Zustand stores under `src/store/`, each with its own AsyncStorage key (see `STORAGE_KEYS` in `storage.ts`): `useRecipeStore`, `useMealPlanStore`, `usePantryStore`, `useManualItemStore`, `useGroceryRecipeStore` (recipes added straight to the grocery list, off-plan), `useDismissedItemStore`, `useSettingsStore`, `usePriceOverrideStore`. Plus `useAuthStore` (Supabase session — initialized separately in `hydration.ts`, not in the persist array) and `useSyncStateStore` (sync metadata).
+Nine persisted Zustand stores under `src/store/`, each with its own AsyncStorage key (see `STORAGE_KEYS` in `storage.ts`): `useRecipeStore`, `useMealPlanStore`, `usePantryStore`, `useManualItemStore`, `useGroceryRecipeStore` (recipes added straight to the grocery list, off-plan), `useDismissedItemStore`, `useSettingsStore`, `usePriceOverrideStore`, `useItemOverrideStore` (name/quantity/unit/category edits from the grocery-row pencil icon). Plus `useAuthStore` (Supabase session — initialized separately in `hydration.ts`, not in the persist array) and `useSyncStateStore` (sync metadata).
 
 `useHydration()` in `src/store/hydration.ts` waits for all five to rehydrate before `App.tsx` renders the navigator — prevents a flash of empty state. Any new persisted store must be added to the `stores` array there or it will silently block hydration.
 
@@ -67,7 +69,7 @@ Eight persisted Zustand stores under `src/store/`, each with its own AsyncStorag
 
 The catalog is two-tier: bundled `src/data/mealCatalog.json` is the offline source of truth; `public.meals` is its updatable mirror, pulled fire-and-forget by `refreshMealCatalogCache()` in `src/lib/mealCatalogSync.ts` (falls back to the bundled JSON). `mealPlanner.ts` consumes it — filters hard on `dietaryTags`, weights protein 3×, bonuses preferred `cuisine`.
 
-To change the catalog: edit `mealCatalog.json`, run `npm run seed:build` (regenerates `supabase/seed_meals.sql` — idempotent upsert incl. `image_url`/`instructions`), then apply that SQL via the Supabase SQL editor / service role (or the Supabase MCP). Branch previews need the Pro plan.
+To change the catalog, see the `update-meal-catalog` skill.
 
 ### Data files as editable reference
 
