@@ -1,0 +1,58 @@
+# Weekly live ingredient price refresh.
+#
+# Resolves every row of public.price_sources against the Kroger Products API and
+# publishes the results to public.prices, which the app reads as an overlay on
+# top of its bundled prices (see src/lib/priceCatalogSync.ts).
+#
+# Rejections are safe: an ingredient that fails the confidence gate keeps its
+# previously published price, or falls through to the bundled hand-estimate.
+# The run summary lists newly enrolled matches to review and everything rejected.
+#
+# Required repository secrets:
+#   KROGER_CLIENT_ID, KROGER_CLIENT_SECRET   Kroger developer app credentials
+#   KROGER_LOCATION_IDS                      comma-separated reference store ids
+#   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY  service role (never ships in the app)
+name: Refresh prices
+
+on:
+  schedule:
+    # Mondays 09:00 UTC.
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Resolve and report without writing to the database'
+        type: boolean
+        default: false
+
+concurrency:
+  group: refresh-prices
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Refresh prices
+        env:
+          KROGER_CLIENT_ID: ${{ secrets.KROGER_CLIENT_ID }}
+          KROGER_CLIENT_SECRET: ${{ secrets.KROGER_CLIENT_SECRET }}
+          KROGER_LOCATION_IDS: ${{ secrets.KROGER_LOCATION_IDS }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            npm run prices:refresh-kroger -- --dry-run
+          else
+            npm run prices:refresh-kroger
+          fi

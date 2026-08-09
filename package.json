@@ -12,6 +12,9 @@
     "import:mealdb": "tsx scripts/importMealDb.ts",
     "seed:build": "tsx scripts/buildSeedMeals.ts",
     "prices:refresh-bls": "tsx scripts/refreshBlsPrices.ts",
+    "prices:seed-sources": "tsx scripts/buildPriceSourcesSeed.ts",
+    "prices:find-locations": "tsx scripts/findKrogerLocations.ts",
+    "prices:refresh-kroger": "tsx scripts/refreshKrogerPrices.ts",
     "brand:assets": "node scripts/generateBrandAssets.mjs"
   },
   "dependencies": {

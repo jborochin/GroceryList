@@ -270,3 +270,75 @@ alter table public.meals enable row level security;
 
 drop policy if exists "meals_public_read" on public.meals;
 create policy "meals_public_read" on public.meals for select using (true);
+
+-- =====================================================================
+-- Live ingredient prices (public read, NO user_id, NOT per-user synced)
+--
+-- Refreshed weekly from a retail price API by scripts/refreshKrogerPrices.ts
+-- (run from CI with the service-role key). The bundled src/data/priceDatabase.json
+-- stays the offline floor and the test-enforced source of truth; this table is an
+-- OVERLAY that findPrice() consults on exact normalized match only.
+--
+-- INVARIANT: `unit` must equal the bundled priceDatabase.json row's unit for the
+-- same key. getProfile() derives its default sell unit from the price entry's unit
+-- (src/utils/purchaseProfile.ts), and roundToPurchasable() branches on that unit's
+-- family -- publishing a different unit here would silently change rounding
+-- behavior. The refresh script rejects any conversion it can't land in the
+-- baseline unit, and the client re-checks on ingest.
+--
+-- Kill switch: `truncate public.prices` reverts every device to the bundled
+-- prices on its next refresh.
+-- =====================================================================
+create table if not exists public.prices (
+  normalized_name text primary key,
+  price_per_unit numeric not null check (price_per_unit > 0),
+  unit text not null,
+  source text not null,
+  confidence numeric,
+  as_of timestamptz not null,
+  updated_at timestamptz not null default now()
+);
+
+drop trigger if exists prices_touch on public.prices;
+create trigger prices_touch before update on public.prices
+  for each row execute function public.touch_updated_at();
+
+alter table public.prices enable row level security;
+
+drop policy if exists "prices_public_read" on public.prices;
+create policy "prices_public_read" on public.prices for select using (true);
+
+-- =====================================================================
+-- Ingredient -> retail SKU mapping and review state (INTERNAL).
+--
+-- RLS is enabled with NO policies at all, so no anon/authenticated client can
+-- read or write it -- only the service role (which bypasses RLS) touches this.
+-- Seeded from priceDatabase.json keys by scripts/buildPriceSourcesSeed.ts.
+--
+-- `reviewed` marks a mapping a human has vetted: reviewed rows pin their
+-- kroger_product_id and are never re-searched, so review work is permanent.
+-- Unreviewed rows are re-resolved on every run, which also self-heals
+-- discontinued SKUs. baseline_* mirrors the bundled JSON and is the anchor the
+-- sanity band compares candidate prices against.
+-- =====================================================================
+create table if not exists public.price_sources (
+  normalized_name text primary key,
+  search_term text not null,
+  kroger_product_id text,
+  kroger_description text,
+  reviewed boolean not null default false,
+  confidence numeric,
+  baseline_price_per_unit numeric not null,
+  baseline_unit text not null,
+  last_resolved_at timestamptz,
+  last_status text,
+  notes text,
+  updated_at timestamptz not null default now()
+);
+
+drop trigger if exists price_sources_touch on public.price_sources;
+create trigger price_sources_touch before update on public.price_sources
+  for each row execute function public.touch_updated_at();
+
+-- Enabled with zero policies on purpose: service-role access only.
+alter table public.price_sources enable row level security;

@@ -31,6 +31,42 @@ A trigger (`on_auth_user_created`) inserts default `profiles` and `user_settings
 
 Soft-deletes (`deleted_at`) propagate row removals to other devices on next pull.
 
+### Shared tables (no `user_id`, not per-user synced)
+
+These mirror bundled JSON so content can change without an app release. All three have RLS enabled and **no client write policy** — only the service role can write them.
+
+| Table | Purpose | Bundled floor | Client reader |
+| --- | --- | --- | --- |
+| `meals` | Curated meal catalog driving auto meal-plans | `src/data/mealCatalog.json` | `src/lib/mealCatalogSync.ts` |
+| `prices` | Weekly live ingredient prices (national averages) | `src/data/priceDatabase.json` | `src/lib/priceCatalogSync.ts` |
+| `price_sources` | Ingredient → retail SKU mapping and review state | — | none (internal) |
+
+`price_sources` goes further: RLS is enabled with **zero policies**, so no anon or authenticated client can read it at all.
+
+## Live price refresh
+
+`public.prices` is an overlay `findPrice()` consults ahead of the bundled prices. `truncate public.prices` reverts every device on its next refresh, and rows older than 60 days are ignored client-side, so a dead refresh job decays back to bundled prices instead of freezing.
+
+**One-time setup:**
+
+1. Register an app at [developer.kroger.com](https://developer.kroger.com) to get a client id/secret (Products API: 10,000 calls/day).
+2. Pick reference stores — prices are location-scoped, so the job queries a few and takes the median:
+
+   ```bash
+   KROGER_CLIENT_ID=... KROGER_CLIENT_SECRET=... npm run prices:find-locations 45202 30303 98101
+   ```
+
+3. Seed the enrollment table: run `npm run prices:seed-sources`, then apply `seed_price_sources.sql` in the SQL editor.
+4. Add repository secrets for `.github/workflows/refresh-prices.yml`: `KROGER_CLIENT_ID`, `KROGER_CLIENT_SECRET`, `KROGER_LOCATION_IDS`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`.
+
+The workflow runs weekly and on manual dispatch (with a dry-run option). Dry-run locally first:
+
+```bash
+npm run prices:refresh-kroger -- --dry-run
+```
+
+The run summary lists newly enrolled matches to review and everything rejected. Rejections are safe — those ingredients keep their previous or bundled price. To pin a match you've vetted, set `reviewed = true` on its `price_sources` row; reviewed rows are never re-searched.
+
 ## Edge Functions
 
 ### `fetch-recipe`

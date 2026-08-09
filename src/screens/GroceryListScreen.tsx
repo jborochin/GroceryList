@@ -21,6 +21,7 @@ import { useDismissedItemStore } from '../store/useDismissedItemStore';
 import { usePriceOverrideStore } from '../store/usePriceOverrideStore';
 import { useItemOverrideStore } from '../store/useItemOverrideStore';
 import { useMealScheduleStore } from '../store/useMealScheduleStore';
+import { usePriceCatalogStore } from '../store/usePriceCatalogStore';
 import { aggregate } from '../utils/ingredientAggregator';
 import { applyPantry } from '../utils/pantryDeduction';
 import { mergeManualItems } from '../utils/mergeManualItems';
@@ -99,6 +100,7 @@ export function GroceryListScreen() {
   const itemOverrides = useItemOverrideStore((s) => s.overrides);
   const setItemOverride = useItemOverrideStore((s) => s.setOverride);
   const removeItemOverride = useItemOverrideStore((s) => s.removeOverride);
+  const priceCatalogVersion = usePriceCatalogStore((s) => s.version);
 
   const [checked, setChecked] = useState<Record<string, boolean>>({});
   const [priceTarget, setPriceTarget] = useState<GroceryItem | null>(null);
@@ -121,7 +123,9 @@ export function GroceryListScreen() {
     // the edited quantity/unit gets priced).
     const overridden = applyItemOverrides(purchasable, itemOverrides);
     return estimatePrices(overridden, overrides);
-  }, [plan, groceryRecipes, recipes, pantry, manualItems, itemOverrides, overrides]);
+    // priceCatalogVersion ticks when a live price refresh lands; findPrice reads
+    // the overlay through a module-level cache that React can't otherwise see.
+  }, [plan, groceryRecipes, recipes, pantry, manualItems, itemOverrides, overrides, priceCatalogVersion]);
 
   // Items the user has swiped away are filtered out of the computed list, and the
   // displayed totals are re-derived from what remains.

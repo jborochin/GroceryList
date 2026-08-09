@@ -14,6 +14,9 @@ npm run typecheck        # tsc --noEmit (strict mode)
 npm run seed:build       # regenerate supabase/seed_meals.sql from src/data/mealCatalog.json
 npm run import:mealdb    # draft catalog meals from TheMealDB (writes SQL by default)
 npm run prices:refresh-bls  # refresh ~13 grocery prices from live BLS data
+npm run prices:seed-sources # regenerate supabase/seed_price_sources.sql from priceDatabase.json
+npm run prices:find-locations 45202  # one-off: discover Kroger store ids for KROGER_LOCATION_IDS
+npm run prices:refresh-kroger -- --dry-run  # resolve live prices and report, writing nothing
 ```
 
 There is no lint script. TypeScript strict is the only static check.
@@ -55,6 +58,22 @@ Count units are a special case — distinct labels (`each` vs `slice`) never con
 
 `src/data/purchaseProfiles.json` + `src/utils/purchaseProfile.ts` model how each ingredient is *sold* (`sellUnit`, `packSize`, optional `grams`). `getProfile(name)` returns an explicit entry (exact normalized match) or a default derived from the item's `priceDatabase` row (`sellUnit = price unit, packSize 1`), so every priced ingredient has a profile. `convertMeasure(qty, from, to, profile)` is the **only** place that crosses unit families: it tries `convert()` first, then bridges via `grams` (weight↔grams is universal mass; volume/count units need a `grams` anchor). This is intentionally kept out of `convert()` so the rest of the pipeline's family isolation stays intact. Both `roundToPurchasable` and `estimatePrices` use it — the latter so a cross-family sell unit (broccoli `head` priced per `lb`) prices instead of flagging `unit-conflict`.
 
+### Live prices overlay the bundled ones
+
+`findPrice()` resolves in five steps: **user override → live overlay → bundled exact → substring → fuzzy**.
+
+The live overlay is `public.prices`, refreshed weekly by `.github/workflows/refresh-prices.yml` running `scripts/refreshKrogerPrices.ts` (Kroger Products API, national averages, service-role write from CI). The app reads it through `src/lib/priceCatalogSync.ts`, a direct analogue of `mealCatalogSync.ts` — synchronous accessor over a module-level cache, AsyncStorage-backed, fire-and-forget refresh fired once from `App.tsx`.
+
+Three properties hold this together:
+
+- **The bundled `priceDatabase.json` is still the floor and still the test-enforced source of truth.** An empty, stale, or missing overlay means exactly today's behavior. `truncate public.prices` is the kill switch.
+- **The overlay may restate a price but never its unit.** `getProfile()` derives its sell unit from the price entry (`purchaseProfile.ts:38`) and `roundToPurchasable()` branches on that unit's family, so a unit change would silently alter rounding. Enforced twice: the refresh script rejects conversions it can't land in `baseline_unit`, and `ingestRows()` drops mismatched rows client-side.
+- **The overlay is consulted on exact normalized match only.** Substring and fuzzy stay on the bundled DB, so unknown-name behavior is unchanged.
+
+Rows older than 60 days are dropped on read, so a dead refresh job decays back to bundled prices rather than freezing. Because `findPrice` reads a module-level cache React can't see, `usePriceCatalogStore` (non-persisted — do **not** add it to `hydration.ts`) carries a version counter that both pricing `useMemo`s depend on.
+
+`public.price_sources` is the internal mapping/review table (RLS on, **zero policies** — service role only). New ingredients enroll themselves: add the `priceDatabase.json` row, run `npm run prices:seed-sources`, apply the SQL, and the next weekly run auto-matches it. An unreviewed match only publishes if it clears `scoreMatch` ≥ 0.6 and a 0.25×–4× sanity band against the bundled price; rejections fall through to the hand-estimate and land in the run's review report.
+
 ### Stores and hydration
 
 Nine persisted Zustand stores under `src/store/`, each with its own AsyncStorage key (see `STORAGE_KEYS` in `storage.ts`): `useRecipeStore`, `useMealPlanStore`, `usePantryStore`, `useManualItemStore`, `useGroceryRecipeStore` (recipes added straight to the grocery list, off-plan), `useDismissedItemStore`, `useSettingsStore`, `usePriceOverrideStore`, `useItemOverrideStore` (name/quantity/unit/category edits from the grocery-row pencil icon). Plus `useAuthStore` (Supabase session — initialized separately in `hydration.ts`, not in the persist array) and `useSyncStateStore` (sync metadata).
@@ -76,7 +95,7 @@ To change the catalog, see the `update-meal-catalog` skill.
 Six JSON files in `src/data/` are hot-pathed by utilities:
 - `unitSynonyms.json` — aliases → canonical unit (consumed by `ingredientParser`)
 - `categoryKeywords.json` — longest-match-wins keyword → category map (consumed by `categorizer`)
-- `priceDatabase.json` — ~100 US prices, `name → { pricePerUnit, unit }` (consumed by `priceEstimator`/`priceLookup`); two-tier provenance: most entries are hand-estimates, but the ~13 keys listed in `scripts/lib/blsPriceMapping.ts`'s `BLS_SERIES` table are BLS-sourced and get silently overwritten by `npm run prices:refresh-bls` — don't hand-edit those without also updating (or removing) their mapping entry
+- `priceDatabase.json` — 172 US prices, `name → { pricePerUnit, unit }` (consumed by `priceEstimator`/`priceLookup`); two-tier provenance: most entries are hand-estimates, but the ~13 keys listed in `scripts/lib/blsPriceMapping.ts`'s `BLS_SERIES` table are BLS-sourced and get silently overwritten by `npm run prices:refresh-bls` — don't hand-edit those without also updating (or removing) their mapping entry. Every key is also the enrollment list for live pricing (see "Live prices overlay the bundled ones"), so a new key needs `npm run prices:seed-sources` re-run
 - `purchaseProfiles.json` — how each item is *sold* (`sellUnit`/`packSize`/`grams`); only cross-family/whole-pack items need an entry, the rest default from `priceDatabase` (consumed by `purchaseProfile`)
 - `mealCatalog.json` — ~88 shared meals driving auto meal-plans (`mealPlanner`); bundled offline source of truth, mirrored to `public.meals`
 - `foodPreferences.json` — canonical cuisine + dietary keys (the only valid values for a meal's `cuisine` / `dietaryTags`)
@@ -110,4 +129,5 @@ Only the `src/utils/` modules have tests (see `src/__tests__/`). Screens are int
 - **UUID on React Native** — `uuid` requires `react-native-get-random-values` imported *before* `uuid`. Existing stores do this; new ones that use `uuid` must too.
 - **Editing the theme** — the live palette is the `dark` key in `src/theme/tokens.ts` even though it's a light/near-white theme; the `light` object is dead. Update `dark`, the hardcoded backdrop color in `App.tsx`, and the gradient stops in `AmbientBackground.tsx` together.
 - **Adding a meal to `mealCatalog.json`** — every ingredient must resolve via `findPrice` *and* use a known unit or `mealCatalogPriceCoverage.test.ts` fails (usually add a row to `priceDatabase.json` + a keyword to `categoryKeywords.json`). `mealCatalog.test.ts` also enforces valid cuisine/dietary keys, calories > 0, and unique slug ids. Re-run `npm run seed:build` after edits.
-- **Hardcoding an exact dollar price in a test for a BLS-mapped ingredient** — check `BLS_SERIES` in `scripts/lib/blsPriceMapping.ts` first; those prices drift on the next `npm run prices:refresh-bls` and will break the assertion (this happened to `priceEstimator.test.ts`'s chicken-breast assertions during this feature's own implementation). Pick a non-BLS-mapped item as a test fixture instead.
+- **Hardcoding an exact dollar price in a test** — two independent sources of drift now. `BLS_SERIES` in `scripts/lib/blsPriceMapping.ts` rewrites ~13 bundled prices on `npm run prices:refresh-bls` (this broke `priceEstimator.test.ts`'s chicken-breast assertions once already). Separately, *any* ingredient can be overlaid by the weekly live refresh. Tests never see the overlay unless they seed it (the module cache starts empty), so bundled-price assertions are safe — but assert against a non-BLS-mapped fixture like `tofu`, and seed live prices explicitly via `loadPriceCache()` rather than expecting them.
+- **Adding a persisted store vs. `usePriceCatalogStore`** — that one is deliberately *not* persisted and must stay out of `hydration.ts`; adding it there would block hydration forever waiting for a rehydrate that never fires.
