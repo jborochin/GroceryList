@@ -83,6 +83,8 @@ npm run prices:refresh-kroger -- --dry-run
 
 The run summary lists newly enrolled matches to review and everything rejected. Rejections are safe — those ingredients keep their previous or bundled price. To pin a match you've vetted, set `reviewed = true` on its `price_sources` row; reviewed rows are never re-searched.
 
+**Which SKU gets picked:** the mid-priced one among qualifying candidates, not the cheapest. Retail search spans store brand to premium; taking the floor biases grocery totals ~30% low against the bundled baseline. The summary's `Pool` column is how many priceable candidates the median was drawn from — a pool of 1–2 means "mid-range" had nothing to choose from and the pick deserves a look.
+
 ## Edge Functions
 
 ### `fetch-recipe`

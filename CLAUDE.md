@@ -74,6 +74,8 @@ Rows older than 60 days are dropped on read, so a dead refresh job decays back t
 
 `public.price_sources` is the internal mapping/review table (RLS on, **zero policies** — service role only). New ingredients enroll themselves: add the `priceDatabase.json` row, run `npm run prices:seed-sources`, apply the SQL, and the next weekly run auto-matches it. An unreviewed match only publishes if it clears `scoreMatch` ≥ 0.6 and a 0.25×–4× sanity band against the bundled price; rejections fall through to the hand-estimate and land in the run's review report.
 
+**Candidate selection targets the mid-priced SKU, not the cheapest** (`pickMedianBy`). Retail search spans store brand to premium, and taking the bottom of that spread biases totals ~30% low against the bundled/BLS baseline — BLS averages all brands and cuts, whereas a store brand is the floor. Measured live over 10 ingredients: cheapest = −31% vs bundled, median = −3%. Two levels of median run: across candidate SKUs at the primary store (free — the search response already carries price and size), then across the 12 reference stores in `KROGER_REFERENCE_LOCATIONS` for the chosen SKU.
+
 ### Stores and hydration
 
 Nine persisted Zustand stores under `src/store/`, each with its own AsyncStorage key (see `STORAGE_KEYS` in `storage.ts`): `useRecipeStore`, `useMealPlanStore`, `usePantryStore`, `useManualItemStore`, `useGroceryRecipeStore` (recipes added straight to the grocery list, off-plan), `useDismissedItemStore`, `useSettingsStore`, `usePriceOverrideStore`, `useItemOverrideStore` (name/quantity/unit/category edits from the grocery-row pencil icon). Plus `useAuthStore` (Supabase session — initialized separately in `hydration.ts`, not in the persist array) and `useSyncStateStore` (sync metadata).

@@ -3,6 +3,7 @@ import {
   descriptionSpecificity,
   median,
   parseSize,
+  pickMedianBy,
   sanityBand,
   scoreMatch,
 } from '../lib/krogerMatch';
@@ -170,6 +171,45 @@ describe('sanityBand', () => {
     expect(sanityBand(-1, 4.18, false)).toBe(false);
     expect(sanityBand(Number.NaN, 4.18, false)).toBe(false);
     expect(sanityBand(4.18, 0, false)).toBe(false);
+  });
+});
+
+describe('pickMedianBy', () => {
+  const pool = (...prices: number[]) => prices.map((p, i) => ({ p, len: i }));
+  const pick = (items: { p: number; len: number }[]) =>
+    pickMedianBy(items, (c) => c.p, (c) => c.len)?.p;
+
+  it('picks the middle price for odd pools', () => {
+    expect(pick(pool(5, 1, 3))).toBe(3);
+  });
+
+  // Leaning to the lower middle keeps the estimate conservative rather than premium.
+  it('picks the lower middle for even pools', () => {
+    expect(pick(pool(1, 2, 3, 4))).toBe(2);
+  });
+
+  it('does not pick the cheapest or the most expensive', () => {
+    const chosen = pick(pool(2.89, 3.49, 4.99, 6.29, 9.99));
+    expect(chosen).toBe(4.99);
+  });
+
+  it('breaks price ties on the secondary value', () => {
+    const items = [
+      { p: 3, len: 9, id: 'verbose' },
+      { p: 3, len: 2, id: 'plain' },
+    ];
+    expect(pickMedianBy(items, (c) => c.p, (c) => c.len)?.id).toBe('plain');
+  });
+
+  it('handles single-candidate pools and empty pools', () => {
+    expect(pick(pool(4.25))).toBe(4.25);
+    expect(pickMedianBy([], () => 0, () => 0)).toBeNull();
+  });
+
+  it('does not mutate the input', () => {
+    const items = pool(5, 1, 3);
+    pick(items);
+    expect(items.map((i) => i.p)).toEqual([5, 1, 3]);
   });
 });
 

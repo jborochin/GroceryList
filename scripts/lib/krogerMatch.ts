@@ -265,6 +265,32 @@ export function sanityBand(
   return ratio >= band.min && ratio <= band.max;
 }
 
+/**
+ * Pick the mid-priced element of a candidate list.
+ *
+ * Retail search returns a spread for any ingredient — the store brand at the
+ * bottom, organic/premium at the top. Taking the cheapest (which "plainest
+ * description" effectively did) biases grocery totals low: Kroger's store-brand
+ * chicken breast is $2.89/lb against a $4.18 BLS national average, because BLS
+ * averages all brands and cuts. Taking the median candidate lands on what a
+ * typical shopper actually puts in the cart.
+ *
+ * Ties break on the secondary value (description length), and even-sized pools
+ * take the LOWER middle, so the estimate leans conservative rather than
+ * premium. Returns null for an empty pool.
+ */
+export function pickMedianBy<T>(
+  items: T[],
+  primary: (item: T) => number,
+  secondary: (item: T) => number
+): T | null {
+  if (items.length === 0) return null;
+  const sorted = [...items].sort(
+    (a, b) => primary(a) - primary(b) || secondary(a) - secondary(b)
+  );
+  return sorted[Math.floor((sorted.length - 1) / 2)];
+}
+
 /** Median of a non-empty numeric list; null when there's nothing to average. */
 export function median(values: number[]): number | null {
   const sorted = values.filter((v) => Number.isFinite(v) && v > 0).sort((a, b) => a - b);

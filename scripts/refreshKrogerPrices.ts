@@ -38,9 +38,14 @@ import {
   descriptionSpecificity,
   median,
   parseSize,
+  pickMedianBy,
   sanityBand,
   scoreMatch,
 } from './lib/krogerMatch';
+
+/** Candidate pool per ingredient. Wide enough to span the store-brand-to-premium
+ *  spread so the median is meaningful, narrow enough to stay relevant. */
+const SEARCH_LIMIT = 12;
 import { convertMeasure, getProfile } from '../src/utils/purchaseProfile';
 
 const SOURCE = 'kroger';
@@ -63,6 +68,7 @@ interface Resolution {
   description?: string;
   size?: string;
   confidence?: number;
+  poolSize?: number; // priceable candidates the median was chosen from
   pricePerUnit?: number;
   baseline: number;
   unit: string;
@@ -116,34 +122,60 @@ async function resolveOne(
   let productId = row.reviewed ? row.kroger_product_id : null;
   let description: string | undefined;
   let confidence: number | undefined;
+  let poolSize: number | undefined;
 
   if (!productId) {
-    const candidates = await kroger.searchProducts(row.search_term, locationIds[0]);
-    let best: { product: (typeof candidates)[number]; score: number; specificity: number } | null = null;
-    for (const product of candidates) {
-      const score = scoreMatch(row.search_term, product.description);
-      if (score === 0) continue;
-      const specificity = descriptionSpecificity(product.description);
-      // Highest score wins; among equal scores prefer the plainest description,
-      // which keeps prepared/deli SKUs from beating the whole ingredient.
-      const better = !best || score > best.score || (score === best.score && specificity < best.specificity);
-      if (better) best = { product, score, specificity };
-    }
-    if (!best) return { ...base, status: 'rejected:no-candidate' };
+    const candidates = await kroger.searchProducts(row.search_term, locationIds[0], SEARCH_LIMIT);
 
-    productId = best.product.productId;
-    description = best.product.description;
-    confidence = best.score;
+    // Score every candidate first, so a pool that is entirely below the
+    // confidence bar can be reported as low-confidence rather than no-candidate.
+    const scored = candidates
+      .map((product) => ({ product, score: scoreMatch(row.search_term, product.description) }))
+      .filter((c) => c.score > 0);
+    if (scored.length === 0) return { ...base, status: 'rejected:no-candidate' };
 
-    if (!row.reviewed && best.score < MIN_CONFIDENCE) {
+    const qualified = scored.filter((c) => row.reviewed || c.score >= MIN_CONFIDENCE);
+    if (qualified.length === 0) {
+      const bestScore = Math.max(...scored.map((c) => c.score));
+      const best = scored.find((c) => c.score === bestScore)!;
       return {
         ...base,
-        productId,
-        description,
-        confidence,
-        status: `rejected:low-confidence(${best.score.toFixed(2)})`,
+        productId: best.product.productId,
+        description: best.product.description,
+        confidence: best.score,
+        status: `rejected:low-confidence(${bestScore.toFixed(2)})`,
       };
     }
+
+    // The search response already carries price and size per candidate at this
+    // location, so ranking the pool by unit price costs no extra API calls.
+    const priced = qualified.flatMap((c) => {
+      const extracted = extractPrice(c.product);
+      const size = extracted ? parseSize(extracted.size) : null;
+      if (!extracted || !size) return [];
+      const unitPrice = toPricePerBaselineUnit(
+        extracted.price,
+        size,
+        row.normalized_name,
+        row.baseline_unit
+      );
+      if (unitPrice === null) return [];
+      return [{ ...c, unitPrice }];
+    });
+    if (priced.length === 0) return { ...base, status: 'rejected:no-priceable-candidate' };
+
+    // Mid-priced candidate rather than cheapest: the store brand at the bottom
+    // of the spread undershoots what a typical shopper actually buys.
+    const chosen = pickMedianBy(
+      priced,
+      (c) => c.unitPrice,
+      (c) => descriptionSpecificity(c.product.description)
+    )!;
+
+    productId = chosen.product.productId;
+    description = chosen.product.description;
+    confidence = chosen.score;
+    poolSize = priced.length;
   }
 
   // Same SKU across every reference store; price varies, size does not.
@@ -199,6 +231,7 @@ async function resolveOne(
     description,
     size,
     confidence,
+    poolSize,
     pricePerUnit: round2(pricePerUnit),
     status: 'published',
   };
@@ -265,13 +298,15 @@ export function buildReport(resolutions: Resolution[], apiCalls: number): string
 
   if (enrolled.length > 0) {
     lines.push('## Newly enrolled — review these matches', '');
-    lines.push('| Ingredient | Matched SKU | Size | $/unit | Baseline | Confidence |');
-    lines.push('| --- | --- | --- | --- | --- | --- |');
+    lines.push('| Ingredient | Matched SKU | Size | $/unit | Baseline | Conf. | Pool |');
+    lines.push('| --- | --- | --- | --- | --- | --- | --- |');
     for (const r of enrolled) {
+      // Pool is how many priceable candidates the median was picked from — a
+      // pool of 1 or 2 means the "mid-range" choice had nothing to choose from.
       lines.push(
         `| ${r.normalizedName} | ${r.description ?? '—'} | ${r.size ?? '—'} | ` +
           `$${r.pricePerUnit?.toFixed(2)}/${r.unit} | $${r.baseline.toFixed(2)}/${r.unit} | ` +
-          `${r.confidence?.toFixed(2) ?? '—'} |`
+          `${r.confidence?.toFixed(2) ?? '—'} | ${r.poolSize ?? '—'} |`
       );
     }
     lines.push('');
