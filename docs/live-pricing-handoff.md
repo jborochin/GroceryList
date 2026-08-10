@@ -28,92 +28,114 @@ anything here.
 
 ---
 
-## Current state
+## Current state (updated 2026-08-10, post re-baseline)
 
 | Thing | State |
 |---|---|
 | Schema (`public.prices`, `public.price_sources`) | **Applied** to project `hpysyrhpnfdisowfvuuh` ("Grocery List") |
 | `price_sources` rows | **172 seeded**, 0 marked `reviewed` |
-| `public.prices` rows | **0** — nothing published yet |
+| `public.prices` rows | **0** — nothing published for real yet (still only dry runs) |
 | GitHub Actions secrets | **Not set** — the weekly workflow cannot run yet |
 | Client overlay code | Merged on the branch, **not in any shipped build** |
-| Tests | 336 passing, `npm run typecheck` clean |
+| `priceDatabase.json` | **Re-baselined**: 136 of 172 keys rewritten to this run's live Kroger prices |
+| Tests | 344 passing, `npm run typecheck` clean |
 
-Because `public.prices` is empty *and* no build ships `priceCatalogSync`, users currently see
-identical behavior to before this feature. Everything below is safe to do without user impact until
-the final step.
+Because `public.prices` is still empty *and* no build ships `priceCatalogSync`, users currently see
+identical behavior to before this feature.
 
-### Last dry run (2026-08-10, four chunks of 44)
+### The 1.32x decision — RESOLVED: re-baselined
 
-```
-172 processed → 163 published, 9 rejected, 0 API errors
-mean live/bundled ratio: 1.32x
-  <0.6x:  5      0.6-1.6x: 119      >1.6x: 39
-11 ingredients have a candidate pool of 1-2
-```
+Publishing the live overlay as-is would have raised every user's grocery total by ~32% in one step
+at first flip. Decision made: **re-baseline** — write this run's prices into `priceDatabase.json`
+now, so bundled and (a future) overlay start from the same place and the visible jump happens once
+at release rather than at flip. The other three options (accept as-is / bias lower / tighten the
+band) were not taken.
 
----
+**What was re-baselined:** of 172 ingredients, 136 keys were rewritten to this run's live Kroger
+price. Excluded, deliberately:
+- The 13 `BLS_SERIES` keys (`scripts/lib/blsPriceMapping.ts`) — those are BLS-sourced already, not
+  hand-guesses, and `npm run prices:refresh-bls` would silently overwrite a manual edit anyway.
+- **15 thin-candidate-pool matches** (pool ≤ 2 — see `bagel`, `bean sprout`, `coleslaw mix`,
+  `cornstarch`, `eggplant`, `frozen mixed berry`, `green curry paste`, `hamburger bun`,
+  `lasagna noodle`, `lemon`, `lime`, `pad thai sauce`, `pita`, `red pepper flake`, `tortilla`) — a
+  pool that thin means "mid-range" had nothing to choose from. Most looked fine on inspection, but
+  they're left on the old bundled price pending the step-3 review below rather than trusted blind.
+- `zucchini` — see matching fixes below; it now scores 0 and never entered the pool at all.
 
-## BLOCKING: the 1.32x decision (needs a human, not an agent)
+**Sanity check:** the excluded-key mean ratio for the 136 applied was ~1.31x (matches the original
+1.32x closely, as expected — only one item, zucchini, was newly excluded from what the original
+dry run scored). Applying it makes bundled ≈ live, so the eventual overlay flip should be a
+non-event for these 136 ingredients.
 
-Publishing as-is would raise every user's grocery total by roughly a third, in one step, on the
-first real run. This is **not a bug** — the mid-priced real SKU is a better estimate than a hand
-guess — but it is a visible product change and it has not been decided.
-
-Do not run the job without `--dry-run` until this is settled. Options:
-
-1. **Accept it.** Totals become more accurate and go up.
-2. **Bias selection lower.** `pickMedianBy` in `scripts/lib/krogerMatch.ts` currently takes the
-   lower-middle candidate by price; take a lower quantile instead.
-3. **Tighten the sanity band** from `UNREVIEWED_BAND` 0.25–4x toward ~2x, which drops more of the
-   high tail into rejection (and therefore onto the bundled price).
-4. **Re-baseline.** Write this run's prices into `priceDatabase.json` so bundled and overlay start
-   from the same place, making the visible jump happen once at release rather than at flip.
+**Re-verify before ever repeating this:** don't re-run this re-baseline mechanically off a stale
+dry-run log — the matcher has changed twice since the original 2026-08-10 dry run (see below), and
+another live dry run may score differently now.
 
 ---
 
 ## Remaining tasks, in order
 
-### 1. `tomato paste` — the last unbridgeable ingredient
-Add to `src/data/purchaseProfiles.json`:
+### 1. ~~`tomato paste`~~ — DONE
+Added to `src/data/purchaseProfiles.json`:
 ```json
 "tomato paste": { "sellUnit": "can", "packSize": 1, "grams": { "can": 170, "tbsp": 16 } }
 ```
-Standard can is 6 oz. Follow the rule in §"Invariants" below: `sellUnit` **must** equal the key's
-`priceDatabase.json` unit (`can`).
+Standard can is 6 oz. `sellUnit` matches the key's `priceDatabase.json` unit (`can`), per the
+invariant below. Verified with the invariant-check one-liner in §Invariants.
 
-### 2. Traps for the prepared/snack pattern
-Three rejections were the same failure — a snack or cured product containing the ingredient word:
+### 2. ~~Traps for the prepared/snack pattern~~ — DONE
+Added `trail`, `salami`, `crisp`, `chip`, `cracker` to `TRAP_TOKENS` in
+`scripts/lib/krogerMatch.ts`, catching the three originally-reported live rejections
+(`banana`→Trail Mix, `fennel`→Salami, `chickpea`→Crisps) plus regression coverage for the general
+pattern (`potato`→Chips, `cheddar cheese`→Crackers) in `scripts/__tests__/krogerMatch.test.ts`.
 
-- `banana` → Simple Truth Berries and Banana **Trail Mix** (13.8x)
-- `fennel` → Brooklyn Cured Finocchiona Fennel **Salami** (12.7x)
-- `chickpea` → Simple Truth Baked Chickpea **Crisps** (11.2x)
+`frozen` was deliberately NOT added, per the original warning (`frozen mixed berry`, `edamame`,
+`stir-fry vegetable` are legitimately frozen).
 
-Add `trail`, `salami`, `crisp`, `chip`, `cracker` to `TRAP_TOKENS` in `scripts/lib/krogerMatch.ts`
-and extend `scripts/__tests__/krogerMatch.test.ts` with the three live descriptions above.
+### 3. Review the high-ratio tail and the thin pools — PARTIALLY DONE
+Ran the full live dry run (2026-08-10, all 172, no `--offset`/`--limit`). Results:
 
-The sanity band already catches these, so this is about not burning candidate slots, not safety.
+```
+172 processed → 165 published, 7 rejected
+mean live/bundled ratio: 1.31x (of the 136 ultimately re-baselined — see below)
+```
 
-**Do NOT add `frozen`** — several catalog ingredients are legitimately frozen
-(`frozen mixed berry`, `edamame`, `stir-fry vegetable`) and the veto would break them.
+**Two real match-quality bugs found and fixed** by re-scoring every published row's actual matched
+description against `scoreMatch()` after the trap-word changes above (see
+`scripts/lib/krogerMatch.ts` for the code, `scripts/__tests__/krogerMatch.test.ts` for regressions):
 
-### 3. Review the high-ratio tail and the thin pools
-39 publishes sit above 1.6x, and 11 drew from a candidate pool of 1–2 (so "mid-range" had nothing
-to choose from). Known bad match to fix: **`zucchini` → "Pictsweet Farms Red Potatoes Carrots
-Onions" at 2.5x**, which passed scoring and should not have.
+- **`zucchini` → "Pictsweet Farms® Red Potatoes Carrots Onions Zucchini Frozen Vegetables" (2.5x).**
+  The originally-suspected fix (add `blend`/`medley` to `TRAP_TOKENS`) does NOT catch this — the
+  real title has neither word. Fixed with a *new* check: for single-word search terms, if the
+  description names ≥3 OTHER known single-word `priceDatabase.json` ingredients (here: potato,
+  carrot, onion), reject it as an unlabeled multi-item bag. Threshold is 3, not 2 — at 2 it also
+  false-positived on legitimate single-product SKUs that name 1-2 of their own ingredients in the
+  title (`granola`→"Oats and Honey Granola", `pita`→"Flax Oat Bran...Pita Bread",
+  `quinoa`→"Quinoa & Brown Rice with Garlic"). Gated to single-word terms only — `stir-fry
+  vegetable` (3 tokens) IS itself a blend product by design and must not be vetoed by its own
+  `blend`/`medley`/co-occurrence words.
+- **`cornstarch` → "Comforts™ Fresh Scent Pure Cornstarch Baby Powder"** — matched a baby-powder
+  product, not the cooking ingredient. A bare `baby` trap token would also reject "Baby Carrots" (an
+  ordinary, extremely common real carrot SKU), so this needed a phrase-pair veto (`baby` AND
+  `powder` together) — see `PHRASE_TRAPS` in `scripts/lib/krogerMatch.ts`. (Also pool=1, so it would
+  have been excluded from the re-baseline regardless — see below.)
 
-Full reviewable table with filters:
-<https://claude.ai/code/artifact/9d585ef8-5061-4114-9277-100fab46c07e>
+**Thin pools (pool ≤ 2, 15 of 172):** rather than hand-adjudicate each one, all were excluded from
+the re-baseline and left on the bundled price. On inspection most looked fine (`eggplant`, `tortilla`,
+`lemon`/`lime`) but a few are genuinely questionable (`hamburger bun`→a keto specialty bun,
+`frozen mixed berry`→a mango-berry blend) — worth a human look before ever trusting them. Full list:
+`bagel`, `bean sprout`, `coleslaw mix`, `cornstarch`, `eggplant`, `frozen mixed berry`,
+`green curry paste`, `hamburger bun`, `lasagna noodle`, `lemon`, `lime`, `pad thai sauce`, `pita`,
+`red pepper flake`, `tortilla`.
 
-Known *unfixable-by-matching* cases — recipe unit vs retail packaging genuinely disagree, and the
-sanity band correctly rejects them. Leave them on bundled prices unless someone wants to rethink
-the units:
-- `cilantro` / `parsley` — Kroger sells 0.75 oz clamshells, not bunches
-- `lettuce` — bagged leaf vs a head
-- `green onion` — paste vs fresh
-- `salt` — sea salt SKUs vs the table-salt baseline
+**Not yet done:** the doc's original "unfixable-by-matching" list (`cilantro`/`parsley`/`lettuce`/
+`green onion`/`salt` — retail packaging genuinely disagrees with recipe units) is unchanged; the
+sanity band still correctly rejects these. The full 172-row reviewable table link in the original
+handoff may be stale — re-generate from a fresh dry run if you need it.
 
-### 4. Pin the matches you trust
+### 4. Pin the matches you trust — NOT DONE (blocked)
+Needs `price_sources.last_status`/`confidence` populated, which only happens on a REAL (non-dry)
+run — a dry run writes nothing. Blocked on step 6.
 ```sql
 update public.price_sources set reviewed = true
 where last_status = 'published' and confidence >= 0.9;
@@ -121,21 +143,32 @@ where last_status = 'published' and confidence >= 0.9;
 Reviewed rows pin their `kroger_product_id` and are never re-searched, so review work is permanent
 and re-running the seed never undoes it.
 
-### 5. Set the GitHub Actions secrets
+### 5. Set the GitHub Actions secrets — NOT DONE
 Required: `KROGER_CLIENT_ID`, `KROGER_CLIENT_SECRET`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`.
-Optional: `KROGER_LOCATION_IDS` (overrides the 12 committed reference stores).
+Optional: `KROGER_LOCATION_IDS` (overrides the 12 committed reference stores). These already exist
+in the local `.env` (used for the dry run above) — they still need to be added as GitHub Actions
+secrets for the weekly CI workflow to run unattended. This needs a human with repo admin access; an
+agent should not push credential values into CI without being explicitly asked to.
 
-### 6. First real run — only after step 0 is decided
-Trigger `.github/workflows/refresh-prices.yml` manually (it has a dry-run checkbox) before relying
-on the weekly cron. Then verify:
+### 6. First real run — the 1.32x decision is now resolved (re-baselined), but NOT triggered yet
+The `--dry-run` flag was never dropped this session — no write to `public.prices` or
+`public.price_sources` has happened. Writing real rows to the shared Supabase project is a
+meaningful shared-infrastructure change and should be an explicit, separate go-ahead rather than
+something folded into a re-baseline decision. Once ready:
+```
+npm run prices:refresh-kroger              # for real, no --dry-run
+```
+or trigger `.github/workflows/refresh-prices.yml` manually (after step 5). Then verify:
 ```sql
 select normalized_name, price_per_unit, unit, confidence, as_of
 from public.prices order by confidence nulls first;
 ```
 
-### 7. Ship a client build
+### 7. Ship a client build — NOT DONE
 Until a release contains `src/lib/priceCatalogSync.ts`, existing installs ignore `public.prices`
-entirely no matter what is in it.
+entirely no matter what is in it. A TestFlight/App Store build is its own explicit decision — see
+the `publish-testflight` skill — and shouldn't be bundled into finishing this feature without a
+separate go-ahead.
 
 ---
 
@@ -202,7 +235,7 @@ via `loadPriceCache()`.
 npm run prices:seed-sources            # regenerate seed_price_sources.sql after adding a price key
 npm run prices:find-locations 45202    # discover store ids (filters out fuel/logistics sites)
 npm run prices:refresh-kroger -- --dry-run [--offset N --limit M]
-npm run typecheck && npm test          # 336 tests; all must stay green
+npm run typecheck && npm test          # 344 tests; all must stay green
 ```
 
 Adding a new ingredient needs **no mapping work**: add the `priceDatabase.json` row (already

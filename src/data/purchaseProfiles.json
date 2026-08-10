@@ -56,6 +56,7 @@
   "chickpeas": { "sellUnit": "can", "packSize": 1, "grams": { "cup": 240, "can": 425 } },
 
   "whole wheat bread": { "sellUnit": "loaf", "packSize": 1, "grams": { "slice": 28, "loaf": 567, "each": 567 } },
+  "tomato paste": { "sellUnit": "can", "packSize": 1, "grams": { "can": 170, "tbsp": 16 } },
 
   "_comment2": "Below: grams bridges for ingredients the live price refresh could not price, because retail sells them by weight (a 32 oz carton of broth, a 1.7 oz jar of curry powder) while priceDatabase prices them per fl_oz/cup/bunch/each. Without a grams anchor convertMeasure() refuses the weight->volume/count crossing and the ingredient falls back to its bundled estimate. sellUnit deliberately repeats each key's priceDatabase unit, which is what the derived default already used, so purchase rounding is unchanged.",
 

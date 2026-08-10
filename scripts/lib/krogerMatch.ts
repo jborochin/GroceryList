@@ -12,6 +12,7 @@
  * Kept free of network and filesystem access so it can be unit-tested directly,
  * same as scripts/lib/blsPriceMapping.ts.
  */
+import priceDatabase from '../../src/data/priceDatabase.json';
 import { normalizeName } from '../../src/utils/normalizeName';
 
 /** Minimum scoreMatch() result an UNREVIEWED candidate must clear to publish. */
@@ -178,7 +179,37 @@ const TRAP_TOKENS = [
   'sandwich',
   'pizza',
   'burrito',
+  'trail',
+  'salami',
+  'crisp',
+  'chip',
+  'cracker',
 ];
+
+/**
+ * Multi-vegetable/fruit blends name one ingredient among several ("Red
+ * Potatoes Carrots Onions & Zucchini Blend"), so a bare single-word search
+ * term like "zucchini" or "carrot" passes the head-noun check against the
+ * whole product, not just its share of it.
+ *
+ * Gated to single-token search terms only (not folded into TRAP_TOKENS,
+ * which applies regardless of term length) — a multi-word term like
+ * "stir-fry vegetable" IS itself a blend product by design, and vetoing on
+ * "blend" there would reject its own correct match.
+ */
+const BLEND_TOKENS = ['blend', 'medley'];
+
+/**
+ * Word PAIRS that only mean "not food" together — unlike TRAP_TOKENS, a
+ * single word here is too common in legitimate descriptions to blacklist
+ * alone.
+ *
+ * Live regression: "cornstarch" matched "Comforts Fresh Scent Pure Cornstarch
+ * Baby Powder". A bare "baby" trap would also reject "Baby Carrots" — an
+ * ordinary, extremely common carrot SKU — so only the pair together (baby
+ * powder specifically) is disqualifying.
+ */
+const PHRASE_TRAPS: ReadonlyArray<readonly [string, string]> = [['baby', 'powder']];
 
 const WORD_SPLIT = /[^a-z0-9]+/;
 
@@ -195,6 +226,32 @@ function tokenize(value: string): string[] {
     .map((t) => normalizeName(t))
     .filter(Boolean);
 }
+
+/**
+ * Every priceDatabase.json key that is itself a single word ("zucchini",
+ * "carrot", "onion") — the set of generic produce/pantry nouns the app
+ * already knows how to price on their own.
+ *
+ * Live regression: "zucchini" matched "Pictsweet Farms Red Potatoes Carrots
+ * Onions Zucchini Frozen Vegetables" at 2.5x baseline. Nothing marks that
+ * description as a blend (no "Blend"/"Medley" word — see BLEND_TOKENS), but
+ * it names three OTHER known single-ingredient nouns alongside the search
+ * term, which a genuine single-ingredient SKU never does.
+ *
+ * The co-occurrence count below is deliberately >=3, not >=2: a single
+ * product commonly names one or two of its own ingredients in the title
+ * ("Oats and Honey Granola", "Flax Oat Bran ... Pita Bread", "Quinoa & Brown
+ * Rice with Garlic") without being a multi-item bag. >=2 rejected all three
+ * of those live matches as false positives; only the true multi-vegetable
+ * bag cleared 3.
+ */
+const MIN_COOCCURRING_INGREDIENTS_TO_VETO = 3;
+
+const KNOWN_SINGLE_WORD_INGREDIENTS = new Set(
+  Object.keys(priceDatabase)
+    .map((key) => normalizeName(key))
+    .filter((key) => key.length > 0 && !key.includes(' '))
+);
 
 /**
  * How many words a SKU description carries. Used only as a tie-breaker between
@@ -233,6 +290,21 @@ export function scoreMatch(searchTerm: string, description: string | null | unde
 
   for (const trap of TRAP_TOKENS) {
     if (descSet.has(trap) && !termSet.has(trap)) return 0;
+  }
+
+  for (const [a, b] of PHRASE_TRAPS) {
+    if (descSet.has(a) && descSet.has(b) && !(termSet.has(a) && termSet.has(b))) return 0;
+  }
+
+  if (termTokens.length === 1) {
+    for (const blendWord of BLEND_TOKENS) {
+      if (descSet.has(blendWord) && !termSet.has(blendWord)) return 0;
+    }
+
+    const otherKnownIngredients = new Set(
+      descTokens.filter((t) => t !== termTokens[0] && KNOWN_SINGLE_WORD_INGREDIENTS.has(t))
+    );
+    if (otherKnownIngredients.size >= MIN_COOCCURRING_INGREDIENTS_TO_VETO) return 0;
   }
 
   const headNoun = termTokens[termTokens.length - 1];

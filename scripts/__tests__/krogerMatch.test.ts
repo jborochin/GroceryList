@@ -98,6 +98,18 @@ describe('scoreMatch', () => {
     expect(scoreMatch('lemon', 'Lemon Scented Dish Soap')).toBe(0);
   });
 
+  // Live regression: "cornstarch" matched a cornstarch-based baby powder, not
+  // the cooking ingredient. A bare "baby" trap token would also reject "Baby
+  // Carrots" — an ordinary, extremely common real SKU — so this is a
+  // phrase-pair veto (baby AND powder together), not a single trap word.
+  it('rejects non-food personal-care products via phrase pairs', () => {
+    expect(scoreMatch('cornstarch', 'Comforts™ Fresh Scent Pure Cornstarch Baby Powder')).toBe(0);
+  });
+
+  it('does not veto ordinary "baby" produce SKUs (only "baby powder" together)', () => {
+    expect(scoreMatch('carrot', 'Private Selection Baby Carrots with Onion Dip')).toBe(1);
+  });
+
   // Only reject a trap word when the caller did not ask for it.
   it('does not reject when the trap token is part of the search term', () => {
     expect(scoreMatch('vitamin d milk', 'Kroger Vitamin D Whole Milk, 1 gal')).toBe(1);
@@ -126,6 +138,61 @@ describe('scoreMatch', () => {
 
   it('still accepts the plain form of those ingredients', () => {
     expect(scoreMatch('chicken breast', 'Heritage Farm® Boneless Skinless Chicken Breast')).toBe(1);
+  });
+
+  // Live regression: these matched the search term perfectly and priced inside
+  // the sanity band because the product is a snack/cured good that happens to
+  // contain the ingredient word, not the ingredient itself.
+  it('rejects snack/cured products containing the ingredient word', () => {
+    expect(scoreMatch('banana', 'Simple Truth Berries and Banana Trail Mix')).toBe(0);
+    expect(scoreMatch('fennel', 'Brooklyn Cured Finocchiona Fennel Salami')).toBe(0);
+    expect(scoreMatch('chickpea', 'Simple Truth Baked Chickpea Crisps')).toBe(0);
+    expect(scoreMatch('potato', 'Kettle Cooked Potato Chips')).toBe(0);
+    expect(scoreMatch('cheddar cheese', 'Cheddar Cheese Crackers')).toBe(0);
+  });
+
+  it('still accepts frozen forms of those ingredients (not vetoed)', () => {
+    expect(scoreMatch('edamame', 'Frozen Shelled Edamame')).toBe(1);
+    expect(scoreMatch('stir-fry vegetable', 'Frozen Stir-Fry Vegetable Blend')).not.toBe(0);
+  });
+
+  // Live regression: a mixed-vegetable bag names several vegetables plus a
+  // "Blend"/"Medley" suffix, so a single-word search term for one of them
+  // clears the head-noun check against the whole product, not just its share.
+  it('rejects multi-vegetable blends that merely mention the ingredient', () => {
+    expect(
+      scoreMatch('zucchini', 'Pictsweet Farms Red Potatoes Carrots Onions & Zucchini Blend')
+    ).toBe(0);
+    expect(scoreMatch('carrot', 'Birds Eye Carrot Pea Corn Medley')).toBe(0);
+  });
+
+  // Live regression: the actual Kroger match had no "Blend"/"Medley" word at
+  // all, so only the BLEND_TOKENS veto above would have missed it. This is
+  // the exact title observed — caught by the co-occurring-known-ingredient
+  // check instead (potato + carrot + onion all separately price in the app).
+  it('rejects an unlabeled vegetable mix via co-occurring known ingredients', () => {
+    expect(
+      scoreMatch(
+        'zucchini',
+        'Pictsweet Farms® Red Potatoes Carrots Onions Zucchini Frozen Vegetables'
+      )
+    ).toBe(0);
+  });
+
+  // Live regression: a product commonly names one or two of its OWN
+  // ingredients in the title without being a multi-item bag ("Oats and
+  // Honey Granola", "Quinoa & Brown Rice with Garlic"). Only >=3 co-occurring
+  // known ingredients — a genuine multi-item bag, not seasoning/composition —
+  // trips the veto.
+  it('does not veto a single-ingredient SKU naming one or two of its own ingredients', () => {
+    expect(scoreMatch('carrot', 'Private Selection Baby Carrots with Onion Dip')).toBe(1);
+    expect(scoreMatch('granola', 'Cascadian Farm Organic Oats and Honey Granola Cereal')).toBe(1);
+    expect(scoreMatch('quinoa', 'Seeds of Change Organic Quinoa & Brown Rice with Garlic')).toBe(1);
+  });
+
+  it('still accepts the plain form of blended ingredients', () => {
+    expect(scoreMatch('zucchini', 'Fresh Zucchini')).toBe(1);
+    expect(scoreMatch('carrot', 'Fresh Whole Carrots, 1 lb Bag')).toBe(1);
   });
 });
 

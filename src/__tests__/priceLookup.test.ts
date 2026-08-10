@@ -6,7 +6,7 @@ import { findPrice } from '../utils/priceLookup';
 // Exercises the full resolution ladder:
 //   overrides -> live overlay -> bundled exact -> substring -> fuzzy
 //
-// `tofu` ($3.00/lb bundled) is the anchor because it is not BLS-refreshed, so
+// `tofu` ($3.99/lb bundled) is the anchor because it is not BLS-refreshed, so
 // its bundled value is stable across `npm run prices:refresh-bls`.
 
 const seed = async (rows: PriceRow[]) => {
@@ -28,7 +28,7 @@ beforeEach(async () => {
 
 describe('findPrice resolution ladder', () => {
   it('uses the bundled price when no overlay has loaded', () => {
-    expect(findPrice('tofu')).toEqual({ pricePerUnit: 3, unit: 'lb' });
+    expect(findPrice('tofu')).toEqual({ pricePerUnit: 3.99, unit: 'lb' });
   });
 
   it('prefers a live overlay price over the bundled one', async () => {
@@ -44,7 +44,7 @@ describe('findPrice resolution ladder', () => {
 
   it('falls through to the bundled price for ingredients with no live row', async () => {
     await seed([liveTofu(4.5)]);
-    expect(findPrice('broccoli')).toEqual({ pricePerUnit: 2, unit: 'lb' });
+    expect(findPrice('broccoli')).toEqual({ pricePerUnit: 2.77, unit: 'lb' });
   });
 
   // The overlay is exact-match only; substring and fuzzy resolution stay on the
@@ -52,12 +52,12 @@ describe('findPrice resolution ladder', () => {
   it('does not let the overlay participate in substring or fuzzy matching', async () => {
     await seed([liveTofu(4.5)]);
     // "firm tofu" resolves by substring against the bundled catalog, not the overlay.
-    expect(findPrice('firm tofu')).toEqual({ pricePerUnit: 3, unit: 'lb' });
+    expect(findPrice('firm tofu')).toEqual({ pricePerUnit: 3.99, unit: 'lb' });
   });
 
   it('ignores an overlay row whose unit contradicts the bundled row', async () => {
     await seed([liveTofu(4.5, 'each')]);
-    expect(findPrice('tofu')).toEqual({ pricePerUnit: 3, unit: 'lb' });
+    expect(findPrice('tofu')).toEqual({ pricePerUnit: 3.99, unit: 'lb' });
   });
 
   it('still returns null for names the catalog cannot resolve at all', async () => {
