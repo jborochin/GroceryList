@@ -81,6 +81,12 @@ The workflow runs weekly and on manual dispatch (with a dry-run option). Dry-run
 npm run prices:refresh-kroger -- --dry-run
 ```
 
+A full run is ~2,000 calls and takes 12–15 minutes. Progress streams one line per ingredient, so a run that dies partway still leaves its results in the log. `--offset N --limit M` slices the work over a stable sort, letting a long run tile into chunks that fit a terminal session or a CI step:
+
+```bash
+npm run prices:refresh-kroger -- --dry-run --offset 0 --limit 44
+```
+
 The run summary lists newly enrolled matches to review and everything rejected. Rejections are safe — those ingredients keep their previous or bundled price. To pin a match you've vetted, set `reviewed = true` on its `price_sources` row; reviewed rows are never re-searched.
 
 **Which SKU gets picked:** the mid-priced one among qualifying candidates, not the cheapest. Retail search spans store brand to premium; taking the floor biases grocery totals ~30% low against the bundled baseline. The summary's `Pool` column is how many priceable candidates the median was drawn from — a pool of 1–2 means "mid-range" had nothing to choose from and the pick deserves a look.

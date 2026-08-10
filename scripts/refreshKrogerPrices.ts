@@ -31,7 +31,12 @@
  *   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY      service role — never ships in the app
  */
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { KROGER_REFERENCE_LOCATIONS, KrogerClient, extractPrice } from './lib/krogerClient';
+import {
+  KROGER_REFERENCE_LOCATIONS,
+  KrogerClient,
+  KrogerProduct,
+  extractPrice,
+} from './lib/krogerClient';
 import { loadEnv } from './lib/loadEnv';
 import {
   MIN_CONFIDENCE,
@@ -123,6 +128,7 @@ async function resolveOne(
   let description: string | undefined;
   let confidence: number | undefined;
   let poolSize: number | undefined;
+  let chosenAtPrimary: KrogerProduct | undefined;
 
   if (!productId) {
     const candidates = await kroger.searchProducts(row.search_term, locationIds[0], SEARCH_LIMIT);
@@ -176,12 +182,25 @@ async function resolveOne(
     description = chosen.product.description;
     confidence = chosen.score;
     poolSize = priced.length;
+    chosenAtPrimary = chosen.product;
   }
 
   // Same SKU across every reference store; price varies, size does not.
   const prices: number[] = [];
   let size: string | undefined;
-  for (const locationId of locationIds) {
+
+  // The search already returned this SKU priced at the primary store, so reuse
+  // that rather than spending a second call re-fetching it.
+  if (chosenAtPrimary) {
+    const extracted = extractPrice(chosenAtPrimary);
+    if (extracted) {
+      prices.push(extracted.price);
+      size = extracted.size;
+    }
+  }
+
+  const remaining = chosenAtPrimary ? locationIds.slice(1) : locationIds;
+  for (const locationId of remaining) {
     const product = await kroger.getProduct(productId, locationId);
     if (!product) continue;
     description = description ?? product.description;
@@ -331,6 +350,14 @@ function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
+function intArg(flag: string): number | undefined {
+  const i = process.argv.indexOf(flag);
+  if (i < 0 || !process.argv[i + 1]) return undefined;
+  const n = Number.parseInt(process.argv[i + 1], 10);
+  if (!Number.isFinite(n) || n < 0) throw new Error(`${flag} expects a non-negative integer.`);
+  return n;
+}
+
 function requireEnv(name: string): string {
   const value = process.env[name];
   if (!value) throw new Error(`${name} is not set.`);
@@ -385,9 +412,20 @@ async function main(): Promise<void> {
     .select('normalized_name, search_term, kroger_product_id, reviewed, baseline_price_per_unit, baseline_unit');
   if (error) throw new Error(`Failed to read price_sources: ${error.message}`);
 
-  const rows = (data ?? []) as PriceSourceRow[];
-  if (rows.length === 0) {
+  const allRows = (data ?? []) as PriceSourceRow[];
+  if (allRows.length === 0) {
     throw new Error('price_sources is empty — run `npm run prices:seed-sources` and apply the SQL first.');
+  }
+
+  // --offset/--limit slice the work so a long run can be done in chunks that fit
+  // inside a CI step or a terminal session. Ordering is stable (by primary key)
+  // so chunks tile the set exactly without overlap or gaps.
+  allRows.sort((a, b) => a.normalized_name.localeCompare(b.normalized_name));
+  const offset = intArg('--offset') ?? 0;
+  const limit = intArg('--limit');
+  const rows = allRows.slice(offset, limit != null ? offset + limit : undefined);
+  if (rows.length === 0) {
+    throw new Error(`--offset ${offset} is past the end of ${allRows.length} rows.`);
   }
 
   console.log(
@@ -399,10 +437,20 @@ async function main(): Promise<void> {
   // Resolve everything before writing anything. A single ingredient's failure
   // degrades to a rejection rather than aborting the run.
   const resolutions: Resolution[] = [];
-  for (const row of rows) {
+  for (const [i, row] of rows.entries()) {
     try {
-      resolutions.push(await resolveOne(kroger, row, locationIds));
+      const resolved = await resolveOne(kroger, row, locationIds);
+      resolutions.push(resolved);
+      // Streamed per ingredient rather than buffered to the end: a full run is
+      // ~15 minutes, and if it dies partway the work so far should still be
+      // readable in the log instead of vanishing with the process.
+      console.log(
+        `[${String(i + 1).padStart(3)}/${rows.length}] ${resolved.normalizedName.padEnd(22)} ` +
+          `${resolved.status.padEnd(34)} ` +
+          `${resolved.pricePerUnit != null ? `$${resolved.pricePerUnit.toFixed(2)}/${resolved.unit}` : ''}`
+      );
     } catch (err) {
+      console.log(`[${String(i + 1).padStart(3)}/${rows.length}] ${row.normalized_name} FAILED`);
       resolutions.push({
         normalizedName: row.normalized_name,
         searchTerm: row.search_term,
