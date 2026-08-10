@@ -4,7 +4,7 @@
     "slug": "mealprep-grocery",
     "version": "1.0.0",
     "orientation": "portrait",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "scheme": "mealprepgrocery",
     "icon": "./assets/icon.png",
@@ -18,7 +18,10 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.mealprep.grocery"
+      "bundleIdentifier": "com.mealprep.grocery",
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -37,7 +40,17 @@
     ],
     "extra": {
       "EXPO_PUBLIC_SUPABASE_URL": "",
-      "EXPO_PUBLIC_SUPABASE_ANON_KEY": ""
+      "EXPO_PUBLIC_SUPABASE_ANON_KEY": "",
+      "eas": {
+        "projectId": "cb77ef04-79b3-42ba-a478-a82463b0aaf2"
+      }
+    },
+    "owner": "jborochin",
+    "updates": {
+      "url": "https://u.expo.dev/cb77ef04-79b3-42ba-a478-a82463b0aaf2"
+    },
+    "runtimeVersion": {
+      "policy": "fingerprint"
     }
   }
 }

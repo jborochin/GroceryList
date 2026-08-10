@@ -3,15 +3,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-function readEnv(key: string): string | undefined {
-  const fromProcess = (process.env as Record<string, string | undefined>)[key];
-  if (fromProcess) return fromProcess;
-  const extra = (Constants.expoConfig?.extra ?? {}) as Record<string, string | undefined>;
-  return extra[key];
-}
+const extra = (Constants.expoConfig?.extra ?? {}) as Record<string, string | undefined>;
 
-const SUPABASE_URL = readEnv('EXPO_PUBLIC_SUPABASE_URL');
-const SUPABASE_ANON_KEY = readEnv('EXPO_PUBLIC_SUPABASE_ANON_KEY');
+// Metro only inlines EXPO_PUBLIC_* vars when referenced as a static, literal
+// `process.env.EXPO_PUBLIC_X` — dynamic/bracket access defeats the build-time
+// substitution and silently falls through in production builds.
+const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || extra.EXPO_PUBLIC_SUPABASE_URL;
+const SUPABASE_ANON_KEY =
+  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || extra.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
 export const supabaseConfigured = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 
