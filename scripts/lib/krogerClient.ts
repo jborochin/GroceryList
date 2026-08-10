@@ -47,7 +47,16 @@ export const KROGER_REFERENCE_LOCATIONS: ReadonlyArray<{ id: string; label: stri
 ];
 
 const REQUEST_TIMEOUT_MS = 15_000;
-const MAX_ATTEMPTS = 3;
+
+/**
+ * A full refresh is ~1,500 sequential calls. Well inside the 10,000/day quota,
+ * but sustained bursts draw HTTP 503s — a first run at ~2.5 req/sec lost 26 of
+ * 172 ingredients to them. So: pace requests apart, and back off long enough to
+ * ride out a shedding window rather than giving up in under 4 seconds.
+ */
+const MAX_ATTEMPTS = 5;
+const BACKOFF_BASE_MS = 1_000; // 1s, 2s, 4s, 8s
+const MIN_REQUEST_GAP_MS = 120;
 
 export interface KrogerPrice {
   regular?: number;
@@ -200,10 +209,31 @@ export function extractPrice(product: KrogerProduct): { price: number; size: str
   return { price, size: item.size };
 }
 
+// Wall-clock pacing shared by every request, so bursts stay under the rate that
+// triggers load shedding regardless of which method issued them.
+let nextRequestAt = 0;
+
+async function pace(): Promise<void> {
+  const wait = nextRequestAt - Date.now();
+  if (wait > 0) await sleep(wait);
+  nextRequestAt = Date.now() + MIN_REQUEST_GAP_MS;
+}
+
+/** Honor Retry-After when the server states one; otherwise exponential backoff. */
+function backoffMs(res: Response | null, attempt: number): number {
+  const header = res?.headers.get('retry-after');
+  if (header) {
+    const seconds = Number.parseFloat(header);
+    if (Number.isFinite(seconds) && seconds > 0) return Math.min(seconds * 1000, 30_000);
+  }
+  return BACKOFF_BASE_MS * 2 ** (attempt - 1);
+}
+
 async function fetchWithRetry(url: string, init: RequestInit): Promise<Response> {
   let lastError: unknown = null;
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+    await pace();
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
     try {
@@ -212,7 +242,7 @@ async function fetchWithRetry(url: string, init: RequestInit): Promise<Response>
       if (res.status === 429 || res.status >= 500) {
         lastError = new Error(`HTTP ${res.status}`);
         if (attempt < MAX_ATTEMPTS) {
-          await sleep(500 * 2 ** (attempt - 1));
+          await sleep(backoffMs(res, attempt));
           continue;
         }
       }
@@ -220,7 +250,7 @@ async function fetchWithRetry(url: string, init: RequestInit): Promise<Response>
     } catch (err) {
       lastError = err;
       if (attempt < MAX_ATTEMPTS) {
-        await sleep(500 * 2 ** (attempt - 1));
+        await sleep(backoffMs(null, attempt));
         continue;
       }
     } finally {

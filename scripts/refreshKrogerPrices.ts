@@ -364,7 +364,15 @@ async function main(): Promise<void> {
     process.env.SUPABASE_URL || process.env.EXPO_PUBLIC_SUPABASE_URL;
   if (!supabaseUrl) throw new Error('SUPABASE_URL (or EXPO_PUBLIC_SUPABASE_URL) is not set.');
 
-  const supabase = createClient(supabaseUrl, requireEnv('SUPABASE_SERVICE_ROLE_KEY'), {
+  // Supabase's dashboard labels this key `service_role`, so both spellings are
+  // accepted rather than making the name a thing you have to get right.
+  const serviceKey: string | undefined =
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE;
+  if (!serviceKey) {
+    throw new Error('SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_SERVICE_ROLE) is not set.');
+  }
+
+  const supabase = createClient(supabaseUrl, serviceKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
   const kroger = new KrogerClient(
