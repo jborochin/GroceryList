@@ -1,7 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import priceDatabase from '../data/priceDatabase.json';
 import { PriceRow, __resetPriceCache, loadPriceCache } from '../lib/priceCatalogSync';
 import { STORAGE_KEYS } from '../store/storage';
+import { PriceEntry } from '../types';
 import { findPrice } from '../utils/priceLookup';
+
+const DB = priceDatabase as Record<string, PriceEntry>;
 
 // Exercises the full resolution ladder:
 //   overrides -> live overlay -> bundled exact -> substring -> fuzzy
@@ -68,5 +72,53 @@ describe('findPrice resolution ladder', () => {
   it('normalizes the queried name against the overlay', async () => {
     await seed([liveTofu(4.5)]);
     expect(findPrice('Tofu')).toEqual({ pricePerUnit: 4.5, unit: 'lb' });
+  });
+});
+
+// Substring resolution is bidirectional, and the two directions want opposite winners.
+// These pin that down, because the catalog carries specific cuts alongside their generic
+// parent and a single sorted scan gets one direction wrong.
+describe('findPrice substring ordering', () => {
+  const beefSteak = DB['beef steak'];
+  const sirloinSteak = DB['sirloin steak'];
+
+  it('is set up against two keys that really do differ in price', () => {
+    // Guards the cases below from silently becoming tautologies if the catalog changes.
+    expect(beefSteak).toBeDefined();
+    expect(sirloinSteak).toBeDefined();
+    expect(beefSteak.pricePerUnit).not.toBe(sirloinSteak.pricePerUnit);
+  });
+
+  // Pass 4a: a catalog key inside the query -> most specific wins.
+  it('prefers the specific cut when the query contains it', () => {
+    expect(findPrice('boneless sirloin steak')).toEqual(sirloinSteak);
+    expect(findPrice('grass fed sirloin steak, trimmed')).toEqual(sirloinSteak);
+  });
+
+  // Pass 4b: the query inside a catalog key -> most generic wins. Without the opposite
+  // sort this returns whichever cut happens to have the longest name.
+  it('falls back to the generic key for a bare head noun', () => {
+    expect(findPrice('steak')).toEqual(beefSteak);
+  });
+
+  it('still prefers an exact match over either substring pass', () => {
+    expect(findPrice('beef steak')).toEqual(beefSteak);
+    expect(findPrice('sirloin steak')).toEqual(sirloinSteak);
+  });
+
+  // Whole-word containment: without the space padding, "ham" matches inside "graham".
+  it('does not match a catalog key mid-word', () => {
+    const ham = findPrice('ham');
+    expect(ham).toEqual(DB['ham']);
+    expect(findPrice('graham cracker crumbs')).not.toEqual(ham);
+  });
+
+  // The failure mode this ordering exists to prevent: resolution must depend on the
+  // names involved, not on where a row happens to sit in priceDatabase.json.
+  it('does not depend on catalog insertion order', () => {
+    const keys = Object.keys(DB);
+    expect(keys.indexOf('beef steak')).toBeLessThan(keys.indexOf('sirloin steak'));
+    // `beef steak` is the earlier row, so a first-match-wins scan would return it here.
+    expect(findPrice('thick cut sirloin steak')).toEqual(sirloinSteak);
   });
 });
