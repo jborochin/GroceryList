@@ -10,9 +10,10 @@
  * safe.
  *
  * Kept free of network and filesystem access so it can be unit-tested directly,
- * same as scripts/lib/blsPriceMapping.ts.
+ * same as scripts/lib/blsPriceMapping.ts. It is also free of JSON imports, so the
+ * same source runs unmodified inside a Deno edge function.
  */
-import priceDatabase from '../../src/data/priceDatabase.json';
+import { BLEND_VETO_NOUNS } from './blendVetoNouns';
 import { normalizeName } from '../../src/utils/normalizeName';
 
 /** Minimum scoreMatch() result an UNREVIEWED candidate must clear to publish. */
@@ -250,10 +251,6 @@ function tokenize(value: string): string[] {
 }
 
 /**
- * Every priceDatabase.json key that is itself a single word ("zucchini",
- * "carrot", "onion") — the set of generic produce/pantry nouns the app
- * already knows how to price on their own.
- *
  * Live regression: "zucchini" matched "Pictsweet Farms Red Potatoes Carrots
  * Onions Zucchini Frozen Vegetables" at 2.5x baseline. Nothing marks that
  * description as a blend (no "Blend"/"Medley" word — see BLEND_TOKENS), but
@@ -266,14 +263,14 @@ function tokenize(value: string): string[] {
  * Rice with Garlic") without being a multi-item bag. >=2 rejected all three
  * of those live matches as false positives; only the true multi-vegetable
  * bag cleared 3.
+ *
+ * The noun set is frozen in blendVetoNouns.ts rather than derived from the
+ * catalog — see that file for why deriving it made every ingredient addition
+ * a silent matcher change.
  */
 const MIN_COOCCURRING_INGREDIENTS_TO_VETO = 3;
 
-const KNOWN_SINGLE_WORD_INGREDIENTS = new Set(
-  Object.keys(priceDatabase)
-    .map((key) => normalizeName(key))
-    .filter((key) => key.length > 0 && !key.includes(' '))
-);
+const KNOWN_SINGLE_WORD_INGREDIENTS = BLEND_VETO_NOUNS;
 
 /**
  * How many words a SKU description carries. Used only as a tie-breaker between
