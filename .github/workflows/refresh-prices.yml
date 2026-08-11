@@ -1,8 +1,15 @@
-# Weekly live ingredient price refresh.
+# Weekly live ingredient price top-up.
 #
-# Resolves every row of public.price_sources against the Kroger Products API and
+# Resolves stale rows of public.price_sources against the Kroger Products API and
 # publishes the results to public.prices, which the app reads as an overlay on
 # top of its bundled prices (see src/lib/priceCatalogSync.ts).
+#
+# --top-up rather than a full sweep: at 349 ingredients x 12 reference stores a
+# complete pass is ~4,200 calls against a 10,000/day quota, and the catalog is
+# still growing. So the run spends `topup_run_call_budget` on the rows that are
+# actually stale past `price_ttl_days`, most-requested first (public.ingredient_demand),
+# and the resolve-prices edge function covers anything a user asks for in between.
+# Both knobs live in public.app_config and can be retuned without touching this file.
 #
 # Rejections are safe: an ingredient that fails the confidence gate keeps its
 # previously published price, or falls through to the bundled hand-estimate.
@@ -56,7 +63,7 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
           if [ "${{ inputs.dry_run }}" = "true" ]; then
-            npm run prices:refresh-kroger -- --dry-run
+            npm run prices:refresh-kroger -- --top-up --dry-run
           else
-            npm run prices:refresh-kroger
+            npm run prices:refresh-kroger -- --top-up
           fi

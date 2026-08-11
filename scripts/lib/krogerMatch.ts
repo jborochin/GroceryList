@@ -13,8 +13,8 @@
  * same as scripts/lib/blsPriceMapping.ts. It is also free of JSON imports, so the
  * same source runs unmodified inside a Deno edge function.
  */
-import { BLEND_VETO_NOUNS } from './blendVetoNouns';
-import { normalizeName } from '../../src/utils/normalizeName';
+import { BLEND_VETO_NOUNS } from './blendVetoNouns.ts';
+import { normalizeName } from '../../src/utils/normalizeName.ts';
 
 /**
  * Kroger's own aisle categories that contain food.

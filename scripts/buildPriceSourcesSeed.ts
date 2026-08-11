@@ -21,6 +21,7 @@
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import purchaseProfiles from '../src/data/purchaseProfiles.json';
 import { normalizeName } from '../src/utils/normalizeName';
 
 const PRICE_DB_PATH = 'src/data/priceDatabase.json';
@@ -31,13 +32,38 @@ interface PriceEntry {
   unit: string;
 }
 
+interface PurchaseProfile {
+  sellUnit: string;
+  packSize: number;
+  grams?: Record<string, number>;
+}
+
 const sqlStr = (s: string) => `'${s.replace(/'/g, "''")}'`;
+
+/**
+ * Explicit purchase profiles by normalized name.
+ *
+ * Mirrored onto the row so the on-demand edge function can price a cross-family SKU
+ * without importing the app's purchaseProfile module (which reaches fuse.js). Only
+ * EXPLICIT entries travel: the derived default is `{ sellUnit: price unit, packSize: 1 }`,
+ * which the function reconstructs from baseline_unit, so sending it would be noise.
+ */
+const PROFILES: Record<string, PurchaseProfile> = (() => {
+  const out: Record<string, PurchaseProfile> = {};
+  for (const [key, value] of Object.entries(purchaseProfiles as Record<string, unknown>)) {
+    // `_`-prefixed keys are documentation notes, not profiles.
+    if (key.startsWith('_') || typeof value !== 'object' || value === null) continue;
+    out[normalizeName(key)] = value as PurchaseProfile;
+  }
+  return out;
+})();
 
 interface SourceRow {
   normalized: string;
   searchTerm: string;
   price: number;
   unit: string;
+  profile: PurchaseProfile | null;
 }
 
 /**
@@ -65,14 +91,26 @@ export function buildRows(db: Record<string, PriceEntry>): SourceRow[] {
     }
     seen.set(normalized, key);
 
-    rows.push({ normalized, searchTerm: key, price: entry.pricePerUnit, unit: entry.unit });
+    rows.push({
+      normalized,
+      searchTerm: key,
+      price: entry.pricePerUnit,
+      unit: entry.unit,
+      profile: PROFILES[normalized] ?? null,
+    });
   }
 
   return rows;
 }
 
 function rowToValues(r: SourceRow): string {
-  return `  (${[sqlStr(r.normalized), sqlStr(r.searchTerm), String(r.price), sqlStr(r.unit)].join(', ')})`;
+  return `  (${[
+    sqlStr(r.normalized),
+    sqlStr(r.searchTerm),
+    String(r.price),
+    sqlStr(r.unit),
+    r.profile === null ? 'null' : `${sqlStr(JSON.stringify(r.profile))}::jsonb`,
+  ].join(', ')})`;
 }
 
 export function buildSql(rows: SourceRow[]): string {
@@ -91,12 +129,13 @@ export function buildSql(rows: SourceRow[]): string {
     '  search_term = excluded.search_term,',
     '  baseline_price_per_unit = excluded.baseline_price_per_unit,',
     '  baseline_unit = excluded.baseline_unit,',
+    '  purchase_profile = excluded.purchase_profile,',
     '  updated_at = now();',
   ].join('\n');
 
   return (
     `${header}insert into public.price_sources\n` +
-    '  (normalized_name, search_term, baseline_price_per_unit, baseline_unit)\n' +
+    '  (normalized_name, search_term, baseline_price_per_unit, baseline_unit, purchase_profile)\n' +
     `values\n${rows.map(rowToValues).join(',\n')}\n${onConflict}\n`
   );
 }

@@ -90,6 +90,44 @@ function install(entries: Record<string, PriceEntry>): void {
 }
 
 /**
+ * Fold a handful of freshly resolved rows into the overlay.
+ *
+ * Deliberately NOT `install()`. That one replaces the cache wholesale, which is right for
+ * a full-table refresh and wrong here — an on-demand response carries only the few
+ * ingredients someone happens to be looking at, so replacing would drop every other live
+ * price until the next full refresh. Its empty-guard is wrong here too: rows that all fail
+ * validation should still be a no-op, but for the opposite reason.
+ *
+ * Rows go through the same `ingestRows` validation as the full refresh, so a bad server
+ * row cannot enter the pipeline by this shorter path either.
+ */
+export function mergeRows(rows: PriceRow[]): void {
+  const accepted = ingestRows(rows);
+  if (Object.keys(accepted).length === 0) return;
+  cache = { ...(cache ?? {}), ...accepted };
+  usePriceCatalogStore.getState().bump();
+
+  // Persist so the merged prices survive a restart, same as the full refresh. Merge by
+  // name rather than append, or the stored array grows a duplicate per resolve.
+  void (async () => {
+    try {
+      const stored = await AsyncStorage.getItem(STORAGE_KEYS.priceCache);
+      const previous = stored ? (JSON.parse(stored) as PriceRow[]) : [];
+      const byName = new Map<string, PriceRow>();
+      for (const row of Array.isArray(previous) ? previous : []) {
+        if (row && typeof row.normalized_name === 'string') byName.set(row.normalized_name, row);
+      }
+      for (const row of rows) {
+        if (row && typeof row.normalized_name === 'string') byName.set(row.normalized_name, row);
+      }
+      await AsyncStorage.setItem(STORAGE_KEYS.priceCache, JSON.stringify([...byName.values()]));
+    } catch {
+      // Persistence is best-effort; the in-memory merge above already took effect.
+    }
+  })();
+}
+
+/**
  * Load any persisted overlay from a previous session. Call once on app start so
  * an offline launch still sees the last-known prices. Raw rows are persisted
  * (not the indexed map) so the age limit is re-evaluated on every read.

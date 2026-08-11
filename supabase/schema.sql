@@ -333,6 +333,16 @@ create table if not exists public.price_sources (
   last_resolved_at timestamptz,
   last_status text,
   notes text,
+  -- How the store sells this ingredient: { sellUnit, packSize, grams? }, mirrored
+  -- from src/data/purchaseProfiles.json by scripts/buildPriceSourcesSeed.ts.
+  --
+  -- Carried on the row because the on-demand edge function needs it to price a
+  -- cross-family SKU (bread sized "24 oz" but bought per `each`, beans sized
+  -- "15.5 oz" but bought per `can`) and cannot import the app's purchaseProfile
+  -- module -- that one reaches findPrice and therefore fuse.js. Null means the
+  -- default { sellUnit: baseline_unit, packSize: 1 }, which is what getProfile()
+  -- derives for an ingredient with no explicit entry.
+  purchase_profile jsonb,
   updated_at timestamptz not null default now()
 );
 
@@ -439,3 +449,30 @@ create index if not exists ingredient_demand_pending_idx
 -- The top-up job scans for the least recently resolved rows first.
 create index if not exists price_sources_stale_idx
   on public.price_sources (last_resolved_at nulls first);
+
+-- Atomic upsert-increment for the demand counter.
+--
+-- A read-modify-write from the edge function would lose counts whenever two
+-- devices report the same ingredient concurrently, which is exactly the case that
+-- matters: a popular ingredient is the one being double-counted, and its count is
+-- what orders the weekly top-up.
+create or replace function public.bump_ingredient_demand(
+  p_normalized_name text,
+  p_in_catalog boolean
+)
+returns void
+language sql
+set search_path = public, pg_temp
+as $$
+  insert into public.ingredient_demand (normalized_name, request_count, in_catalog)
+  values (p_normalized_name, 1, p_in_catalog)
+  on conflict (normalized_name) do update set
+    request_count = public.ingredient_demand.request_count + 1,
+    last_requested_at = now(),
+    -- An ingredient can become priceable after it was first requested; never flip
+    -- it back, since enrollment is one-way.
+    in_catalog = public.ingredient_demand.in_catalog or excluded.in_catalog;
+$$;
+
+-- Service role only, same as the table it writes.
+revoke execute on function public.bump_ingredient_demand(text, boolean) from anon, authenticated;

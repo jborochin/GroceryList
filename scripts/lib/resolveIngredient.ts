@@ -19,7 +19,7 @@
  * to the bundled hand-estimate — which is the app's behavior without live pricing at
  * all. Nothing breaks when a match fails, so the gates can afford to be strict.
  */
-import { KrogerClient, KrogerProduct, extractPrice } from './krogerClient';
+import { KrogerClient, KrogerProduct, extractPrice } from './krogerClient.ts';
 import {
   MIN_CONFIDENCE,
   descriptionSpecificity,
@@ -29,7 +29,7 @@ import {
   pickMedianBy,
   sanityBand,
   scoreMatch,
-} from './krogerMatch';
+} from './krogerMatch.ts';
 
 /**
  * How a store sells an ingredient. Structurally identical to `PurchaseProfile` in

@@ -1,4 +1,6 @@
-import { UnitFamily } from '../types';
+// Explicit extension + `import type`: this module is also pulled into the Deno edge
+// function, which resolves specifiers literally and has no bundler to guess with.
+import type { UnitFamily } from '../types/index.ts';
 
 interface UnitDef {
   family: UnitFamily;

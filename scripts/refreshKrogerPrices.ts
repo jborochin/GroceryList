@@ -183,9 +183,65 @@ function requireEnv(name: string): string {
   return value;
 }
 
+/** Tunables the top-up shares with the on-demand edge function, so retuning either
+ *  is one SQL statement rather than a code change in two places. */
+interface TopUpConfig {
+  price_ttl_days: number;
+  topup_run_call_budget: number;
+  demand_promote_threshold: number;
+}
+
+const CONFIG_FALLBACK: TopUpConfig = {
+  price_ttl_days: 14,
+  topup_run_call_budget: 6000,
+  demand_promote_threshold: 5,
+};
+
+async function loadConfig(supabase: SupabaseClient): Promise<TopUpConfig> {
+  const { data } = await supabase.from('app_config').select('key, value');
+  const out: TopUpConfig = { ...CONFIG_FALLBACK };
+  for (const row of (data ?? []) as Array<{ key: string; value: unknown }>) {
+    if (row.key in out) {
+      const n = Number(row.value);
+      if (Number.isFinite(n)) (out as unknown as Record<string, number>)[row.key] = n;
+    }
+  }
+  return out;
+}
+
+/**
+ * Print the ingredients people keep asking for that the catalog cannot price.
+ *
+ * This is the loop that grows the catalog from evidence: names accumulate in
+ * ingredient_demand whenever the app asks about something with no price_sources row,
+ * and the ones that clear the threshold become the next `proposedIngredients.json`
+ * batch for `npm run prices:bootstrap`.
+ */
+async function reportDemand(supabase: SupabaseClient): Promise<void> {
+  const config = await loadConfig(supabase);
+  const { data, error } = await supabase
+    .from('ingredient_demand')
+    .select('normalized_name, request_count, first_requested_at')
+    .eq('in_catalog', false)
+    .eq('promoted', false)
+    .gte('request_count', config.demand_promote_threshold)
+    .order('request_count', { ascending: false })
+    .limit(50);
+  if (error || !data || data.length === 0) return;
+
+  console.log(`\nUnpriced ingredients wanted >= ${config.demand_promote_threshold} times:`);
+  for (const r of data as Array<{ normalized_name: string; request_count: number }>) {
+    console.log(`  ${String(r.request_count).padStart(5)}x  ${r.normalized_name}`);
+  }
+  console.log('Add these to scripts/data/proposedIngredients.json and run `npm run prices:bootstrap`.\n');
+}
+
 async function main(): Promise<void> {
   loadEnv();
   const dryRun = process.argv.includes('--dry-run');
+  // Budgeted, demand-ordered pass. This is what CI runs; the unflagged full sweep
+  // stays available for a manual rebuild.
+  const topUp = process.argv.includes('--top-up');
 
   // Defaults to the committed division spread; the env var is an escape hatch
   // for testing a different set without editing code.
@@ -236,15 +292,93 @@ async function main(): Promise<void> {
     throw new Error('price_sources is empty — run `npm run prices:seed-sources` and apply the SQL first.');
   }
 
-  // --offset/--limit slice the work so a long run can be done in chunks that fit
-  // inside a CI step or a terminal session. Ordering is stable (by primary key)
-  // so chunks tile the set exactly without overlap or gaps.
-  allRows.sort((a, b) => a.normalized_name.localeCompare(b.normalized_name));
-  const offset = intArg('--offset') ?? 0;
-  const limit = intArg('--limit');
-  const rows = allRows.slice(offset, limit != null ? offset + limit : undefined);
+  if (topUp) {
+    await reportDemand(supabase);
+  }
+
+  let rows: PriceSourceRow[];
+
+  if (topUp) {
+    // A full sweep no longer fits the quota: 349 ingredients x 12 stores is ~4,200
+    // calls, and the catalog is still growing toward twice that against a
+    // 10,000/day ceiling. So spend the budget on what is actually stale, most-wanted
+    // first, and let the on-demand function cover the rest between runs.
+    const config = await loadConfig(supabase);
+    const { data: priceRows } = await supabase.from('prices').select('normalized_name, as_of');
+    const asOf = new Map<string, number>();
+    for (const r of (priceRows ?? []) as Array<{ normalized_name: string; as_of: string }>) {
+      const t = Date.parse(r.as_of);
+      if (Number.isFinite(t)) asOf.set(r.normalized_name, t);
+    }
+
+    const { data: demandRows } = await supabase
+      .from('ingredient_demand')
+      .select('normalized_name, request_count');
+    const demand = new Map<string, number>();
+    for (const r of (demandRows ?? []) as Array<{ normalized_name: string; request_count: number }>) {
+      demand.set(r.normalized_name, r.request_count ?? 0);
+    }
+
+    const ttlMs = config.price_ttl_days * 24 * 60 * 60 * 1000;
+    const now = Date.now();
+    const stale = allRows.filter((r) => {
+      const t = asOf.get(r.normalized_name);
+      return t === undefined || now - t > ttlMs;
+    });
+
+    // Most-requested first; among equally-wanted rows, the stalest. A never-resolved
+    // row sorts ahead of any dated one.
+    stale.sort((a, b) => {
+      const byDemand = (demand.get(b.normalized_name) ?? 0) - (demand.get(a.normalized_name) ?? 0);
+      if (byDemand !== 0) return byDemand;
+      const ta = asOf.get(a.normalized_name) ?? -Infinity;
+      const tb = asOf.get(b.normalized_name) ?? -Infinity;
+      if (ta !== tb) return ta - tb;
+      return a.normalized_name.localeCompare(b.normalized_name);
+    });
+
+    const perIngredient = Math.max(1, locationIds.length);
+    const budget = Math.max(1, Math.floor(config.topup_run_call_budget / perIngredient));
+    rows = stale.slice(0, budget);
+
+    console.log(
+      `Top-up: ${stale.length} of ${allRows.length} ingredients are stale past ` +
+        `${config.price_ttl_days}d; budget covers ${budget} ` +
+        `(${config.topup_run_call_budget} calls / ${perIngredient} per ingredient).`
+    );
+    if (rows.length > 0) {
+      const wanted = rows.filter((r) => (demand.get(r.normalized_name) ?? 0) > 0).length;
+      console.log(`  ${wanted} of the selected ${rows.length} have recorded demand.`);
+    }
+    if (dryRun) {
+      console.log('\nWork order:');
+      for (const [i, r] of rows.entries()) {
+        const t = asOf.get(r.normalized_name);
+        console.log(
+          `  ${String(i + 1).padStart(3)}. ${r.normalized_name.padEnd(24)} ` +
+            `demand=${String(demand.get(r.normalized_name) ?? 0).padStart(4)}  ` +
+            `as_of=${t ? new Date(t).toISOString().slice(0, 10) : 'never'}`
+        );
+      }
+      console.log(`\nProjected Kroger calls: ~${rows.length * perIngredient}. Nothing written.`);
+      return;
+    }
+  } else {
+    // --offset/--limit slice the work so a long run can be done in chunks that fit
+    // inside a CI step or a terminal session. Ordering is stable (by primary key)
+    // so chunks tile the set exactly without overlap or gaps.
+    allRows.sort((a, b) => a.normalized_name.localeCompare(b.normalized_name));
+    const offset = intArg('--offset') ?? 0;
+    const limit = intArg('--limit');
+    rows = allRows.slice(offset, limit != null ? offset + limit : undefined);
+    if (rows.length === 0) {
+      throw new Error(`--offset ${offset} is past the end of ${allRows.length} rows.`);
+    }
+  }
+
   if (rows.length === 0) {
-    throw new Error(`--offset ${offset} is past the end of ${allRows.length} rows.`);
+    console.log('Nothing to refresh — every ingredient is inside the TTL.');
+    return;
   }
 
   console.log(
