@@ -38,6 +38,9 @@ export const FOOD_CATEGORIES: ReadonlySet<string> = new Set([
   'Bakery',
   'Beverages',
   'Breakfast',
+  // Chocolate lives here, not in Baking Goods. Found the way this list is meant to
+  // be extended: "dark chocolate" came back `non-food-category` in a bootstrap run.
+  'Candy',
   'Canned & Packaged',
   'Condiment & Sauces',
   'Dairy',
