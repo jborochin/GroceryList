@@ -1,12 +1,58 @@
 [
-  { "key": "ribeye steak", "unit": "lb", "anchor": "beef steak" },
-  { "key": "filet mignon", "unit": "lb", "anchor": "beef steak" },
-  { "key": "new york strip steak", "unit": "lb", "anchor": "beef steak", "searchTerm": "strip steak" },
-  { "key": "flank steak", "unit": "lb", "anchor": "beef steak" },
-  { "key": "skirt steak", "unit": "lb", "anchor": "beef steak" },
-  { "key": "round steak", "unit": "lb", "anchor": "beef steak" },
-  { "key": "t-bone steak", "unit": "lb", "anchor": "beef steak" },
-  { "key": "flat iron steak", "unit": "lb", "anchor": "beef steak" },
-  { "key": "tri-tip steak", "unit": "lb", "anchor": "beef steak" },
-  { "key": "beef tenderloin", "unit": "lb", "anchor": "beef steak" }
+  { "key": "rotisserie chicken", "unit": "lb", "anchor": "whole chicken" },
+  { "key": "halibut", "unit": "lb", "anchor": "cod" },
+  { "key": "red snapper", "unit": "lb", "anchor": "cod", "searchTerm": "snapper fillet" },
+  { "key": "sea bass", "unit": "lb", "anchor": "cod", "searchTerm": "sea bass fillet" },
+
+  { "key": "evaporated milk", "unit": "fl_oz", "anchor": "heavy cream" },
+  { "key": "sweetened condensed milk", "unit": "fl_oz", "anchor": "heavy cream" },
+
+  { "key": "cremini mushroom", "unit": "lb", "anchor": "mushroom", "searchTerm": "baby bella mushroom" },
+  { "key": "oyster mushroom", "unit": "lb", "anchor": "mushroom", "searchTerm": "oyster mushrooms" },
+  { "key": "iceberg lettuce", "unit": "lb", "anchor": "lettuce" },
+  { "key": "swiss chard", "unit": "lb", "anchor": "kale", "searchTerm": "chard" },
+  { "key": "collard greens", "unit": "lb", "anchor": "kale" },
+
+  { "key": "poblano pepper", "unit": "lb", "anchor": "bell pepper" },
+  { "key": "serrano pepper", "unit": "lb", "anchor": "jalapeno" },
+  { "key": "habanero pepper", "unit": "lb", "anchor": "jalapeno" },
+  { "key": "leek", "unit": "lb", "anchor": "onion" },
+  { "key": "radish", "unit": "lb", "anchor": "carrot" },
+
+  { "key": "thyme", "unit": "oz", "anchor": "oregano", "searchTerm": "fresh thyme" },
+  { "key": "rosemary", "unit": "oz", "anchor": "oregano", "searchTerm": "fresh rosemary" },
+  { "key": "sage", "unit": "oz", "anchor": "oregano", "searchTerm": "fresh sage" },
+  { "key": "mint", "unit": "oz", "anchor": "oregano", "searchTerm": "fresh mint" },
+  { "key": "dill", "unit": "oz", "anchor": "oregano", "searchTerm": "fresh dill" },
+  { "key": "chive", "unit": "oz", "anchor": "oregano", "searchTerm": "fresh chives" },
+  { "key": "ginger powder", "unit": "oz", "anchor": "garlic powder", "searchTerm": "ground ginger" },
+
+  { "key": "pinto bean", "unit": "can", "anchor": "black bean", "searchTerm": "pinto beans can" },
+  { "key": "cannellini bean", "unit": "can", "anchor": "black bean", "searchTerm": "cannellini beans" },
+  { "key": "refried beans", "unit": "can", "anchor": "black bean" },
+
+  { "key": "worcestershire sauce", "unit": "fl_oz", "anchor": "soy sauce" },
+  { "key": "hoisin sauce", "unit": "fl_oz", "anchor": "soy sauce" },
+  { "key": "gochujang", "unit": "fl_oz", "anchor": "soy sauce" },
+  { "key": "miso paste", "unit": "fl_oz", "anchor": "tahini" },
+  { "key": "dijon mustard", "unit": "fl_oz", "anchor": "mustard" },
+  { "key": "pesto", "unit": "fl_oz", "anchor": "hummus" },
+  { "key": "almond butter", "unit": "fl_oz", "anchor": "peanut butter" },
+  { "key": "guacamole", "unit": "fl_oz", "anchor": "hummus" },
+
+  { "key": "sourdough bread", "unit": "each", "anchor": "bread" },
+  { "key": "rye bread", "unit": "each", "anchor": "bread" },
+
+  { "key": "kiwi", "unit": "lb", "anchor": "apple", "searchTerm": "kiwi fruit" },
+  { "key": "cornmeal", "unit": "lb", "anchor": "flour", "searchTerm": "yellow cornmeal" },
+  { "key": "almond flour", "unit": "lb", "anchor": "flour", "searchTerm": "blanched almond flour" },
+  { "key": "shallot", "unit": "lb", "anchor": "onion", "searchTerm": "fresh shallots" },
+  { "key": "clam", "unit": "lb", "anchor": "shrimp", "searchTerm": "littleneck clams" },
+  { "key": "pomegranate", "unit": "each", "anchor": "pineapple", "searchTerm": "fresh pomegranate" },
+  { "key": "soba noodle", "unit": "lb", "anchor": "pasta", "searchTerm": "soba buckwheat noodles" },
+  { "key": "white onion", "unit": "lb", "anchor": "onion", "searchTerm": "white onions fresh" },
+  { "key": "wild rice", "unit": "lb", "anchor": "rice", "searchTerm": "wild rice grain" },
+  { "key": "mussel", "unit": "lb", "anchor": "shrimp", "searchTerm": "frozen mussels" },
+  { "key": "salami", "unit": "lb", "anchor": "ham", "searchTerm": "sliced salami" },
+  { "key": "pork belly", "unit": "lb", "anchor": "bacon", "searchTerm": "raw pork belly" }
 ]
