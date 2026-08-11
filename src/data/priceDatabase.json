@@ -157,7 +157,7 @@
   "eggplant": { "pricePerUnit": 1.50, "unit": "each" },
   "pumpkin": { "pricePerUnit": 2.44, "unit": "lb" },
   "fennel": { "pricePerUnit": 2.00, "unit": "each" },
-  "apricot": { "pricePerUnit": 7.56, "unit": "lb" },
+  "apricot": { "pricePerUnit": 4.00, "unit": "lb" },
   "couscous": { "pricePerUnit": 7.95, "unit": "lb" },
   "tahini": { "pricePerUnit": 0.53, "unit": "fl_oz" },
   "spaghetti": { "pricePerUnit": 1.99, "unit": "lb" },

@@ -184,6 +184,15 @@ const TRAP_TOKENS = [
   'crisp',
   'chip',
   'cracker',
+  // Live regression: "apricot" matched "Private Selection Apricot Preserves"
+  // (a cooked fruit spread, not the fresh fruit priceDatabase.json prices) at
+  // 1.9x baseline — perfect token match, healthy pool (8), passed everything.
+  // "preserve" not "preserves" — tokenize() runs normalizeName, which
+  // singularizes "Preserves" to "preserve" before this list is checked.
+  'preserve',
+  'jam',
+  'jelly',
+  'marmalade',
 ];
 
 /**
@@ -210,6 +219,19 @@ const BLEND_TOKENS = ['blend', 'medley'];
  * powder specifically) is disqualifying.
  */
 const PHRASE_TRAPS: ReadonlyArray<readonly [string, string]> = [['baby', 'powder']];
+
+/**
+ * "dried" is not a universal trap, unlike TRAP_TOKENS — `raisin` legitimately
+ * matches "Sun-Maid California Sun-Dried Raisins" (a raisin IS a dried grape,
+ * and the catalog has no separate fresh-vs-dried distinction for it). But
+ * "apricot" and other fresh-produce keys mean the fresh fruit; a live
+ * regression found the median for "apricot" landing on a dried SKU
+ * (Kroger Probiotic Dried Apricots, $11.17/lb) instead of the ~$4/lb fresh
+ * fruit, because dried fruit runs 3-4x pricier per lb (less weight, same
+ * fruit) and skewed the whole candidate pool. Allowlist covers ingredients
+ * that ARE inherently sold dried.
+ */
+const DRIED_PRODUCT_ALLOWLIST = new Set(['raisin']);
 
 const WORD_SPLIT = /[^a-z0-9]+/;
 
@@ -294,6 +316,14 @@ export function scoreMatch(searchTerm: string, description: string | null | unde
 
   for (const [a, b] of PHRASE_TRAPS) {
     if (descSet.has(a) && descSet.has(b) && !(termSet.has(a) && termSet.has(b))) return 0;
+  }
+
+  if (
+    descSet.has('dried') &&
+    !termSet.has('dried') &&
+    !termTokens.some((t) => DRIED_PRODUCT_ALLOWLIST.has(t))
+  ) {
+    return 0;
   }
 
   if (termTokens.length === 1) {

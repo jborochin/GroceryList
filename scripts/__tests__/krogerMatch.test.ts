@@ -156,6 +156,36 @@ describe('scoreMatch', () => {
     expect(scoreMatch('stir-fry vegetable', 'Frozen Stir-Fry Vegetable Blend')).not.toBe(0);
   });
 
+  // Live regression: "apricot" matched "Private Selection Apricot Preserves"
+  // (a cooked fruit spread, not fresh fruit) — perfect token match, healthy
+  // candidate pool, inside the sanity band. Only an explicit veto catches it.
+  it('rejects fruit preserves/jam/jelly for the fresh-fruit ingredient', () => {
+    expect(scoreMatch('apricot', 'Private Selection® Apricot Preserves')).toBe(0);
+    expect(scoreMatch('strawberry', "Smucker's Strawberry Jam")).toBe(0);
+    expect(scoreMatch('grape', "Welch's Grape Jelly")).toBe(0);
+    expect(scoreMatch('orange', 'Kroger Orange Marmalade')).toBe(0);
+  });
+
+  it('still accepts the fresh fruit itself', () => {
+    expect(scoreMatch('apricot', 'Fresh Apricots')).toBe(1);
+  });
+
+  // Live regression: after the preserves fix, "apricot"'s candidate pool was
+  // still dominated by dried-fruit SKUs (dried fruit runs 3-4x pricier per lb
+  // than fresh), and the median landed on "Kroger Probiotic Dried Apricots"
+  // at $11.17/lb instead of ~$4/lb fresh. A bare "dried" trap would also
+  // reject "raisin"'s own correct match ("Sun-Dried Raisins" — a raisin IS a
+  // dried grape), so this needs an allowlist exception.
+  it('rejects dried-fruit products for fresh-fruit ingredients', () => {
+    expect(scoreMatch('apricot', 'Kroger® Probiotic Dried Apricots')).toBe(0);
+    expect(scoreMatch('apricot', 'Mariani® Premium Mediterranean Dried Apricots')).toBe(0);
+    expect(scoreMatch('blueberry', 'Simple Truth Organic Dried Blueberries')).toBe(0);
+  });
+
+  it('still accepts "raisin" matching a dried-grape product (allowlisted)', () => {
+    expect(scoreMatch('raisin', 'Sun-Maid® California Sun-Dried Raisins')).toBe(1);
+  });
+
   // Live regression: a mixed-vegetable bag names several vegetables plus a
   // "Blend"/"Medley" suffix, so a single-word search term for one of them
   // clears the head-noun check against the whole product, not just its share.
