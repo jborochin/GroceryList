@@ -20,6 +20,9 @@ npm run prices:refresh-kroger -- --dry-run  # resolve live prices and report, wr
 npm run prices:bootstrap -- --limit 50      # propose priceDatabase rows for new ingredients (writes nothing)
 npm run prices:refresh-kroger -- --top-up --dry-run  # show the budgeted work order, spends no quota
 npx supabase functions deploy resolve-prices        # on-demand pricing (needs KROGER_* secrets set)
+npm run ig:probe -- <instagram-url>        # fetch + parse a live reel from the CLI (no native build needed)
+npx supabase functions deploy fetch-recipe          # needed for Instagram import on web (preset: 'instagram')
+eas build --profile development --platform ios      # share extension needs a native build; no Expo Go
 ```
 
 There is no lint script. TypeScript strict is the only static check.
@@ -138,6 +141,26 @@ When adding keywords/prices, use canonical units from `unitSynonyms.json`. Categ
 
 `src/utils/recipeUrlParser.ts` fetches a page, regex-extracts every `<script type="application/ld+json">` block, and walks nested `@graph` / array structures looking for `@type` containing `"Recipe"`. It throws `RecipeParseError` with `kind: 'network' | 'not-found' | 'malformed'` — `AddRecipeScreen` differentiates these in its error UI and falls back to the manual-entry tab with the URL prefilled. Sites without JSON-LD or behind bot-protection will fail by design; the fallback path is the happy path for those.
 
+### Instagram recipe import (share sheet → recipe)
+
+`expo-share-intent` puts MealFlow in the OS share sheet, so sharing a reel from Instagram opens `AddRecipe` with the recipe already parsed. The chain:
+
+```
+share sheet → ShareIntentProvider → useShareIntentRouter → parseSharedUrl()
+  ├─ instagram → importInstagramRecipe() → extractCaptionFromHtml() → parseRecipeFromCaption()
+  └─ anything else → parseRecipeFromUrl()   (the JSON-LD path above)
+```
+
+**The crawler User-Agent is load-bearing, not an optimization.** Instagram renders posts client-side: requested with a browser UA, `instagram.com/p/<code>/` returns a ~600KB JavaScript shell with no caption and *no og tags at all*. Requested as `facebookexternalhit/1.1`, the same URL serves the **complete caption** in `og:description` / `<meta name="description">` / `og:title`, with **real newlines preserved inside the attribute value** — which is the only reason the line-based `parseRecipeFromCaption` works on it. Don't "fix" `INSTAGRAM_HEADERS` (`instagramImport.ts`) to look more like a browser; that silently breaks every import. The `/embed/captioned/` endpoint older scrapers used is dead — it now returns the same shell for every shortcode.
+
+There is no official API for this (oEmbed needs App Review; the Graph API only covers posts you own), so the paste-the-caption box stays permanently as the fallback. Roughly **one recipe reel in three can't be auto-parsed** — plenty keep the recipe in the video or a link in bio — so `InstagramImportError.recoveredCaption` carries the caption back to the screen, which drops it into that box already filled in. That is a routine path, not an error to chase.
+
+- **Native fetches instagram.com directly; web can't** (CORS) and routes through `fetch-recipe` with `preset: 'instagram'`, which swaps in the crawler headers server-side. Callers sending no preset keep the browser headers, so the URL importer is unaffected. **Whether Instagram serves meta tags to Supabase's datacenter IPs is unverified** — the share extension is native-only, so this only affects the web build.
+- **`npm run ig:probe -- <url>`** runs the whole fetch → caption → recipe path from the CLI. Since the share extension needs a native build (it cannot run in Expo Go), this is the fast iteration loop — and on Windows it is the only way to exercise it at all.
+- **Share routing is imperative, through the navigation container ref** (`App.tsx` → `ShareIntentRouter`). The package's README prescribes a React Navigation linking config, but that is only needed to route declaratively; the provider gets its URL from `expo-linking`'s `useLinkingURL` plus a native event and an app-active refresh, independently of navigation. This app has never had a linking config and doesn't need one. The router clears non-importable shares (an image, a profile link) or the provider re-offers them on every foreground.
+- **`expo-share-intent` is pinned to `~5.1.1`** — the release whose peer range is `expo: ^54`. 6.x wants 55, 7.x wants 56, 8.x wants 57. Don't bump it without bumping Expo.
+- **Adding a new dependency requires restarting Metro.** A dev server started before the install keeps a stale module map and fails with `Unable to resolve module ./ShareIntentProvider` even though the file is on disk. `npx expo start --web --clear`.
+
 ### Navigation topology
 
 `RootNavigator` (native stack) wraps `TabNavigator` (bottom tabs) plus three modal-style screens (`RecipeDetail`, `AddRecipe`, `Pantry`). Inside tab screens that navigate between tabs, use `useNavigation<BottomTabNavigationProp<TabParamList>>()` — the nested `navigation.getParent()?.navigate(...)` pattern was tried and produces fragile `never` types. Global declaration merging in `src/navigation/types.ts` gives untyped `useNavigation()` calls the right shape elsewhere.
@@ -155,7 +178,8 @@ Only the `src/utils/` modules have tests (see `src/__tests__/`). Screens are int
 ## Things that are easy to get wrong
 
 - **Adding a new persisted store** — also wire it into `src/store/hydration.ts` and add a key to `STORAGE_KEYS`.
-- **Adding a new unit** — add aliases to `unitSynonyms.json` *and* a row to `UNIT_TABLE` in `unitConversion.ts` with the correct family and base conversion *and* a label in `UNIT_LABELS` (`formatters.ts`) or it renders raw. Retail "pack" units (`block`/`bag`/`bottle`…) are `count` family with `toBase: 1`; cross-family pricing goes through purchase-profile `grams`, never `convert()`.
+- **Adding a new unit** — add aliases to `unitSynonyms.json` *and* a row to `UNIT_TABLE` in `unitConversion.ts` with the correct family and base conversion *and* a label in `UNIT_LABELS` (`formatters.ts`) or it renders raw. Note that `unitSynonyms.json` now also drives `splitGluedUnits` (below), so a new alias immediately becomes something a digit can be split from.
+- **Quantities glued to their unit** — `parseIngredient` runs `splitGluedUnits` (`ingredientParser.ts`) so `"300g pasta"` → `300 g pasta`. Instagram captions write metric quantities this way almost universally, and without it `extractQuantity` (which tokenizes on spaces) found no number and the line became `1 each :: "300g pasta"` — unpriceable and un-aggregatable. **The split is driven by the alias table itself, not a generic letter run**, which is what protects `9x13`, `7up`, `350f` and `1st`. Known accepted false positive: `180c` → `180 cup`, since `c` is a cup alias — oven temperatures live in instructions, not ingredient lines. A caption writing the quantity *after* the name (`"Chicken - 200-300 grams"`) is still not recovered; that's asserted as a documented limitation in `instagramCaption.test.ts`. Retail "pack" units (`block`/`bag`/`bottle`…) are `count` family with `toBase: 1`; cross-family pricing goes through purchase-profile `grams`, never `convert()`.
 - **Adding a meal whose ingredient is sold discretely but priced by weight/volume** (e.g. an onion priced per `lb`, a spice used by `tsp`) — the default profile won't round a fractional `each`/won't price across families. Add an explicit `purchaseProfiles.json` entry with a `grams` bridge; `purchaseProfileCoverage.test.ts` fails on any catalog ingredient that rounds to a fractional count.
 - **Adding a new ingredient category** — no enum; categories are just strings. Update the `ordered` array in `GroceryListScreen.tsx` if you want section ordering, otherwise it sorts last.
 - **UUID on React Native** — `uuid` requires `react-native-get-random-values` imported *before* `uuid`. Existing stores do this; new ones that use `uuid` must too.
