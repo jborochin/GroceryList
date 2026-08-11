@@ -153,9 +153,15 @@ export function buildReviewReport(results: Proposed[], existing: Record<string, 
       const anchor = proposal.anchor ? existing[proposal.anchor] : undefined;
       // A ratio far from 1 is not automatically wrong -- filet mignon really is ~2.5x a
       // generic steak -- but it is where a mis-matched SKU shows itself.
+      //
+      // Only comparable when both sides are priced in the SAME unit. Dividing $0.05/fl_oz
+      // of almond milk by $4.32/gallon of milk yields "0.01x", which reads as a
+      // catastrophic mismatch and is in fact a correct price.
       const ratio =
         anchor && resolution.pricePerUnit
-          ? `${(resolution.pricePerUnit / anchor.pricePerUnit).toFixed(2)}x ${proposal.anchor}`
+          ? anchor.unit === resolution.unit
+            ? `${(resolution.pricePerUnit / anchor.pricePerUnit).toFixed(2)}x ${proposal.anchor}`
+            : `n/a (${proposal.anchor} is /${anchor.unit})`
           : '—';
       lines.push(
         `| ${proposal.key} | ${resolution.description ?? '—'} | ${resolution.size ?? '—'} | ` +

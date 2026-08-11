@@ -202,6 +202,32 @@ describe('scoreMatch', () => {
     expect(scoreMatch('apricot', 'Fresh Apricots')).toBe(1);
   });
 
+  // Live regressions from the first large bootstrap batch: each product names the
+  // ingredient it is made FROM, matching perfectly on tokens while being a different
+  // product at a wildly different price per unit.
+  it('rejects prepared products that merely name their ingredient', () => {
+    expect(scoreMatch('clam', 'Progresso™ Rich & Hearty New England Clam Chowder')).toBe(0);
+    expect(scoreMatch('cornmeal', "Dave's Killer Bread Organic Oats & Blues Bread")).toBe(0);
+    expect(scoreMatch('almond flour', 'Simple Mills® Vanilla Cupcake and Cake Almond Flour Mix')).toBe(0);
+    expect(scoreMatch('pomegranate', 'Outshine Pomegranate Frozen Fruit Bars, 6 Count')).toBe(0);
+    expect(scoreMatch('kiwi', 'Capri Sun Strawberry Kiwi Juice Box Pouches')).toBe(0);
+    expect(scoreMatch('soba noodle', 'DOPE! Asian Street Fare Soba Noodle Salad')).toBe(0);
+  });
+
+  it('rejects seasoned and breaded variants of a plain ingredient', () => {
+    expect(scoreMatch('pistachio', 'Simple Truth® Hot Honey Seasoned Pistachio Kernels')).toBe(0);
+    expect(scoreMatch('calamari', 'Private Selection® Oven Ready Breaded Calamari')).toBe(0);
+    expect(scoreMatch('pistachio', 'Kroger® Shelled Pistachios')).toBe(1);
+  });
+
+  // The traps are conditional on absence from the search term, so an ingredient that
+  // legitimately IS one of these still matches its own SKUs.
+  it('still matches ingredients whose own name contains a trap word', () => {
+    expect(scoreMatch('coleslaw mix', 'Kroger® Coleslaw Mix')).toBe(1);
+    expect(scoreMatch('granola bar', 'Nature Valley Oats & Honey Granola Bars')).toBe(1);
+    expect(scoreMatch('orange juice', 'Simply Orange® Pulp Free Orange Juice')).toBe(1);
+  });
+
   // Live regression: after the preserves fix, "apricot"'s candidate pool was
   // still dominated by dried-fruit SKUs (dried fruit runs 3-4x pricier per lb
   // than fresh), and the median landed on "Kroger Probiotic Dried Apricots"

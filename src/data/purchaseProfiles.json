@@ -102,5 +102,32 @@
   "bread": { "sellUnit": "each", "packSize": 1, "grams": { "slice": 28, "each": 567 } },
   "jalapeno": { "sellUnit": "each", "packSize": 1, "grams": { "cup": 90, "each": 14 } },
   "falafel": { "sellUnit": "each", "packSize": 1, "grams": { "each": 25 } },
-  "protein powder": { "sellUnit": "scoop", "packSize": 1, "grams": { "scoop": 32 } }
+  "protein powder": { "sellUnit": "scoop", "packSize": 1, "grams": { "scoop": 32 } },
+
+  "_bakery_note": "Kroger sizes bread SKUs by weight ('24 oz'), so a loaf priced per `each` cannot be resolved without a grams anchor. Same shape as `bread` above.",
+  "sourdough bread": { "sellUnit": "each", "packSize": 1, "grams": { "slice": 30, "each": 680 } },
+  "whole wheat bread": { "sellUnit": "each", "packSize": 1, "grams": { "slice": 28, "each": 567 } },
+  "rye bread": { "sellUnit": "each", "packSize": 1, "grams": { "slice": 32, "each": 454 } },
+  "baguette": { "sellUnit": "each", "packSize": 1, "grams": { "slice": 25, "each": 250 } },
+  "ciabatta": { "sellUnit": "each", "packSize": 1, "grams": { "slice": 30, "each": 400 } },
+  "croissant": { "sellUnit": "each", "packSize": 1, "grams": { "each": 60 } },
+  "english muffin": { "sellUnit": "each", "packSize": 1, "grams": { "each": 57 } },
+  "naan": { "sellUnit": "each", "packSize": 1, "grams": { "each": 90 } },
+  "hot dog bun": { "sellUnit": "each", "packSize": 1, "grams": { "each": 43 } },
+  "dinner roll": { "sellUnit": "each", "packSize": 1, "grams": { "each": 50 } },
+
+  "_canned_note": "Canned goods are sized by net weight ('15.5 oz') but bought by the can, so `can` needs a grams anchor to be reachable.",
+  "pinto bean": { "sellUnit": "can", "packSize": 1, "grams": { "cup": 171, "can": 439 } },
+  "cannellini bean": { "sellUnit": "can", "packSize": 1, "grams": { "cup": 179, "can": 439 } },
+  "refried beans": { "sellUnit": "can", "packSize": 1, "grams": { "cup": 238, "can": 454 } },
+
+  "_condiment_note": "Sold by net weight on the label but measured by volume in recipes, so fl_oz needs an anchor the same way hummus does.",
+  "dijon mustard": { "sellUnit": "fl_oz", "packSize": 1, "grams": { "cup": 249, "tbsp": 16, "fl_oz": 31 } },
+  "pesto": { "sellUnit": "fl_oz", "packSize": 1, "grams": { "cup": 230, "tbsp": 14, "fl_oz": 29 } },
+  "almond butter": { "sellUnit": "fl_oz", "packSize": 1, "grams": { "cup": 256, "tbsp": 16, "fl_oz": 32 } },
+  "guacamole": { "sellUnit": "fl_oz", "packSize": 1, "grams": { "cup": 230, "tbsp": 14, "fl_oz": 29 } },
+  "miso paste": { "sellUnit": "fl_oz", "packSize": 1, "grams": { "cup": 275, "tbsp": 17, "fl_oz": 34 } },
+  "gochujang": { "sellUnit": "fl_oz", "packSize": 1, "grams": { "cup": 280, "tbsp": 18, "fl_oz": 35 } },
+  "worcestershire sauce": { "sellUnit": "fl_oz", "packSize": 1, "grams": { "cup": 240, "tbsp": 15, "fl_oz": 30 } },
+  "hoisin sauce": { "sellUnit": "fl_oz", "packSize": 1, "grams": { "cup": 280, "tbsp": 18, "fl_oz": 35 } }
 }

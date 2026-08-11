@@ -240,6 +240,30 @@ const TRAP_TOKENS = [
   'jam',
   'jelly',
   'marmalade',
+  // Live regressions from the first large bootstrap batch. Each names the
+  // ingredient it is made FROM, so it matches perfectly on tokens while being a
+  // different product at a very different price per unit:
+  //   "clam"        -> Progresso New England Clam Chowder      (0.26x)
+  //   "cornmeal"    -> Dave's Killer Bread Oats & Blues Bread  (8.28x)
+  //   "almond flour"-> Simple Mills Cupcake and Cake Mix       (21.87x)
+  //   "pomegranate" -> Outshine Pomegranate Frozen Fruit Bars  (0.20x)
+  //   "kiwi"        -> Capri Sun Strawberry Kiwi Juice Pouches (juice)
+  //   "soba noodle" -> DOPE! Asian Street Fare Soba Noodle Salad (5.74x)
+  // These are conditional on the token being absent from the SEARCH term, so a
+  // future "coleslaw mix" or "granola bar" key still matches its own SKUs.
+  'chowder',
+  'soup',
+  'salad',
+  'juice',
+  'pouch',
+  'mix',
+  'bar',
+  // Flavored or battered variants of the plain ingredient, same shape as 'flavored'
+  // above but the words retail actually uses:
+  //   "pistachio" -> Simple Truth Hot Honey Seasoned Pistachio Kernels
+  //   "calamari"  -> Private Selection Oven Ready Breaded Calamari
+  'seasoned',
+  'breaded',
 ];
 
 /**
