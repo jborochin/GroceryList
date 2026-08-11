@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { Provider as PaperProvider, ActivityIndicator } from 'react-native-paper';
-import { NavigationContainer } from '@react-navigation/native';
-import { AppState, View } from 'react-native';
+import { NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
+import { AppState, Platform, View } from 'react-native';
+import { ShareIntentProvider } from 'expo-share-intent';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import {
@@ -21,6 +22,8 @@ import { seedIfFirstLaunch } from './src/store/seedFirstLaunch';
 import { remapLegacyRecipeIds } from './src/store/remapLegacyRecipeIds';
 import { useAuthStore } from './src/store/useAuthStore';
 import { ToastHost } from './src/components/ui/ToastHost';
+import { ShareIntentRouter } from './src/components/ShareIntentRouter';
+import { RootStackParamList } from './src/navigation/types';
 import { drainOutbox, migrateLocalToAccount, pullAll, subscribeStores, unsubscribeStores } from './src/lib/sync';
 import { loadPriceCache, refreshPriceCache } from './src/lib/priceCatalogSync';
 import { supabaseConfigured } from './src/lib/supabase';
@@ -31,6 +34,10 @@ export default function App() {
   const hydrated = useHydration();
   const userId = useAuthStore((s) => s.user?.id ?? null);
   const [seeded, setSeeded] = useState(false);
+  // Shares are routed imperatively (see useShareIntentRouter), and one can arrive
+  // before the navigator mounts on a cold start, so readiness is tracked.
+  const navigationRef = useNavigationContainerRef<RootStackParamList>();
+  const [navReady, setNavReady] = useState(false);
   const [fontsLoaded] = useFonts({
     Montserrat_400Regular,
     Montserrat_500Medium,
@@ -103,6 +110,9 @@ export default function App() {
   }
 
   return (
+    // Share intents are native-only; the module is absent in Expo Go and on web,
+    // where the hook disables itself rather than failing.
+    <ShareIntentProvider options={{ disabled: Platform.OS === 'web', resetOnBackground: true }}>
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <PaperProvider theme={theme}>
@@ -110,7 +120,10 @@ export default function App() {
             <View style={{ flex: 1, backgroundColor: '#F5F8F6' }}>
               {/* Radial backdrop rendered once, behind the whole navigator. */}
               <AmbientBackground />
-              <NavigationContainer theme={{
+              <NavigationContainer
+                ref={navigationRef}
+                onReady={() => setNavReady(true)}
+                theme={{
                 dark: false,
                 colors: {
                   primary: theme.colors.primary,
@@ -124,6 +137,7 @@ export default function App() {
                 <ToastHost>
                   <RootNavigator />
                 </ToastHost>
+                <ShareIntentRouter navigationRef={navigationRef} ready={navReady} />
                 <StatusBar style="dark" translucent />
               </NavigationContainer>
             </View>
@@ -131,5 +145,6 @@ export default function App() {
         </PaperProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
+    </ShareIntentProvider>
   );
 }

@@ -36,7 +36,22 @@
     },
     "plugins": [
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-share-intent",
+        {
+          "iosActivationRules": {
+            "NSExtensionActivationSupportsWebURLWithMaxCount": 1,
+            "NSExtensionActivationSupportsWebPageWithMaxCount": 1,
+            "NSExtensionActivationSupportsText": true
+          },
+          "androidIntentFilters": [
+            "text/*"
+          ],
+          "iosShareExtensionName": "MealFlow Recipe Import",
+          "iosAppGroupIdentifier": "group.com.mealprep.grocery.shareintent"
+        }
+      ]
     ],
     "extra": {
       "EXPO_PUBLIC_SUPABASE_URL": "",
