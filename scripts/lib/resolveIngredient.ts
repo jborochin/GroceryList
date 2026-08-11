@@ -23,6 +23,7 @@ import { KrogerClient, KrogerProduct, extractPrice } from './krogerClient';
 import {
   MIN_CONFIDENCE,
   descriptionSpecificity,
+  hasFoodCategory,
   median,
   parseSize,
   pickMedianBy,
@@ -163,9 +164,17 @@ export async function resolveIngredient(
   if (!productId) {
     const candidates = await kroger.searchProducts(input.searchTerm, locationIds[0], searchLimit);
 
+    // Aisle gate before any text scoring. The text gates compare a description to a
+    // search term and cannot tell a cut of beef from "Large Picture Hangers - Gold",
+    // which carries the head noun, trips no trap token, and scores a perfect 1.00.
+    const edible = candidates.filter((product) => hasFoodCategory(product.categories));
+    if (edible.length === 0 && candidates.length > 0) {
+      return { ...base, status: 'rejected:non-food-category' };
+    }
+
     // Score every candidate first, so a pool that is entirely below the
     // confidence bar can be reported as low-confidence rather than no-candidate.
-    const scored = candidates
+    const scored = edible
       .map((product) => ({ product, score: scoreMatch(input.searchTerm, product.description) }))
       .filter((c) => c.score > 0);
     if (scored.length === 0) return { ...base, status: 'rejected:no-candidate' };

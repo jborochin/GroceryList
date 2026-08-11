@@ -15,6 +15,7 @@
     "prices:seed-sources": "tsx scripts/buildPriceSourcesSeed.ts",
     "prices:find-locations": "tsx scripts/findKrogerLocations.ts",
     "prices:refresh-kroger": "tsx scripts/refreshKrogerPrices.ts",
+    "prices:bootstrap": "tsx scripts/prices/bootstrap.ts",
     "brand:assets": "node scripts/generateBrandAssets.mjs"
   },
   "dependencies": {

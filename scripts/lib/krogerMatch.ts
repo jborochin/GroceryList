@@ -16,6 +16,52 @@
 import { BLEND_VETO_NOUNS } from './blendVetoNouns';
 import { normalizeName } from '../../src/utils/normalizeName';
 
+/**
+ * Kroger's own aisle categories that contain food.
+ *
+ * The text gates below can only judge a description against a search term, and some
+ * non-food SKUs read as a perfect match: searching "hanger" returns "Project Partners
+ * Large Picture Hangers - Gold", which carries the head noun, trips no trap token, and
+ * scores 1.00. Priced by weight that lands at $39.90/lb. Category is the only signal
+ * that separates it from a cut of beef.
+ *
+ * This is an ALLOWLIST rather than a denylist of non-food aisles, because the two fail in
+ * very different directions. A missing food category rejects a real match, and rejection
+ * is safe — the ingredient keeps its bundled estimate. A missing non-food category ships
+ * picture hangers as a grocery price. When a legitimate category is missing it shows up
+ * immediately as a `non-food-category` rejection in the run report, which is the cheap
+ * failure. Sampled from ~50 catalog ingredients across every aisle.
+ */
+export const FOOD_CATEGORIES: ReadonlySet<string> = new Set([
+  'Adult Beverage',
+  'Baking Goods',
+  'Bakery',
+  'Beverages',
+  'Breakfast',
+  'Canned & Packaged',
+  'Condiment & Sauces',
+  'Dairy',
+  'Deli',
+  'Frozen',
+  'International',
+  'Meat & Seafood',
+  'Natural & Organic',
+  'Pasta, Sauces, Grain',
+  'Produce',
+  'Snacks',
+]);
+
+/**
+ * Could this product be food?
+ *
+ * Missing category data is treated as "maybe" rather than "no": some SKUs come back with
+ * no categories at all, and the text gates still have to do their job there.
+ */
+export function hasFoodCategory(categories: string[] | null | undefined): boolean {
+  if (!categories || categories.length === 0) return true;
+  return categories.some((c) => FOOD_CATEGORIES.has(c));
+}
+
 /** Minimum scoreMatch() result an UNREVIEWED candidate must clear to publish. */
 export const MIN_CONFIDENCE = 0.6;
 

@@ -1,12 +1,44 @@
 import {
   MIN_CONFIDENCE,
   descriptionSpecificity,
+  hasFoodCategory,
   median,
   parseSize,
   pickMedianBy,
   sanityBand,
   scoreMatch,
 } from '../lib/krogerMatch';
+
+describe('hasFoodCategory', () => {
+  it('accepts grocery aisles', () => {
+    expect(hasFoodCategory(['Meat & Seafood'])).toBe(true);
+    expect(hasFoodCategory(['Produce'])).toBe(true);
+    expect(hasFoodCategory(['Meat & Seafood', 'Natural & Organic'])).toBe(true);
+    expect(hasFoodCategory(['Pasta, Sauces, Grain'])).toBe(true);
+  });
+
+  // Live regression: bootstrapping "hanger steak" with the search term "hanger" matched
+  // "Project Partners Large Picture Hangers - Gold" — head noun present, no trap token,
+  // confidence 1.00 — and priced its 1.6 oz pack at $39.90/lb. No text gate can catch
+  // that; the aisle is the only thing distinguishing it from a cut of beef.
+  it('rejects the non-food aisles that text scoring cannot catch', () => {
+    expect(hasFoodCategory(['Hardware'])).toBe(false);
+    expect(hasFoodCategory(['Cleaning Products'])).toBe(false);
+    expect(hasFoodCategory(['Baby'])).toBe(false);
+  });
+
+  // Missing category data must not reject: some SKUs carry none at all, and the text
+  // gates still have to do their job there.
+  it('treats absent category data as "maybe", not "no"', () => {
+    expect(hasFoodCategory(undefined)).toBe(true);
+    expect(hasFoodCategory(null)).toBe(true);
+    expect(hasFoodCategory([])).toBe(true);
+  });
+
+  it('accepts a product that is food in any one of its categories', () => {
+    expect(hasFoodCategory(['Hardware', 'Produce'])).toBe(true);
+  });
+});
 
 describe('parseSize', () => {
   it('parses plain weight and volume sizes', () => {

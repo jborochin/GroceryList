@@ -1,0 +1,12 @@
+[
+  { "key": "ribeye steak", "unit": "lb", "anchor": "beef steak" },
+  { "key": "filet mignon", "unit": "lb", "anchor": "beef steak" },
+  { "key": "new york strip steak", "unit": "lb", "anchor": "beef steak", "searchTerm": "strip steak" },
+  { "key": "flank steak", "unit": "lb", "anchor": "beef steak" },
+  { "key": "skirt steak", "unit": "lb", "anchor": "beef steak" },
+  { "key": "round steak", "unit": "lb", "anchor": "beef steak" },
+  { "key": "t-bone steak", "unit": "lb", "anchor": "beef steak" },
+  { "key": "flat iron steak", "unit": "lb", "anchor": "beef steak" },
+  { "key": "tri-tip steak", "unit": "lb", "anchor": "beef steak" },
+  { "key": "beef tenderloin", "unit": "lb", "anchor": "beef steak" }
+]
