@@ -342,3 +342,100 @@ create trigger price_sources_touch before update on public.price_sources
 
 -- Enabled with zero policies on purpose: service-role access only.
 alter table public.price_sources enable row level security;
+
+-- =====================================================================
+-- Runtime configuration (public read, service-role write)
+--
+-- Knobs the pricing pipeline reads at run time, so freshness and cost can be
+-- retuned with one SQL statement instead of a redeploy or an app release.
+--
+-- Public-read is intentional and safe: no secrets live here, and the client
+-- needs `ondemand_enabled` / `ondemand_batch_max` before it can decide whether
+-- to ask for a price at all. No write policy, so only the service role changes
+-- values.
+--
+--   price_ttl_days          how old a public.prices row may be before an
+--                           on-demand request re-resolves it against Kroger.
+--                           Distinct from the client's MAX_PRICE_AGE_DAYS = 60,
+--                           which is the hard floor past which a row is ignored
+--                           entirely. Default 14 matches how long the top-up
+--                           budget takes to cycle the whole catalog.
+--   ondemand_enabled        kill switch for on-demand resolution.
+--   ondemand_batch_max      names one resolve-prices call will accept.
+--   ondemand_store_count    reference stores an on-demand resolve medians
+--                           across. Deliberately far below the weekly job's 12:
+--                           a user is waiting on this one.
+--   ondemand_lease_seconds  how long one invocation owns an ingredient before
+--                           another may retry it. Stops two devices asking for
+--                           the same stale ingredient from both calling Kroger.
+--   topup_run_call_budget   hard ceiling on Kroger calls per weekly run, so the
+--                           job cannot grow into the 10,000/day quota as the
+--                           catalog grows.
+--   demand_promote_threshold  requests an unknown ingredient needs before it is
+--                           worth adding to the catalog.
+-- =====================================================================
+create table if not exists public.app_config (
+  key text primary key,
+  value jsonb not null,
+  updated_at timestamptz not null default now()
+);
+
+drop trigger if exists app_config_touch on public.app_config;
+create trigger app_config_touch before update on public.app_config
+  for each row execute function public.touch_updated_at();
+
+alter table public.app_config enable row level security;
+
+drop policy if exists "app_config_public_read" on public.app_config;
+create policy "app_config_public_read" on public.app_config for select using (true);
+
+-- Defaults only. `on conflict do nothing` so re-running schema.sql never
+-- reverts a value that was tuned in production.
+insert into public.app_config (key, value) values
+  ('price_ttl_days', '14'),
+  ('ondemand_enabled', 'true'),
+  ('ondemand_batch_max', '5'),
+  ('ondemand_store_count', '3'),
+  ('ondemand_lease_seconds', '120'),
+  ('topup_run_call_budget', '6000'),
+  ('demand_promote_threshold', '5')
+on conflict (key) do nothing;
+
+-- =====================================================================
+-- Ingredient demand counter (INTERNAL)
+--
+-- One row per normalized ingredient name that has appeared on somebody's
+-- grocery list. Two jobs:
+--
+--  1. It orders the weekly top-up. With a catalog of several hundred keys a
+--     full 12-store sweep no longer fits the daily quota, so the budget goes to
+--     what people actually buy rather than to alphabetical order.
+--  2. It is how the catalog grows. An ingredient nobody has priced yet still
+--     lands here with in_catalog = false, so `--report-demand` can surface the
+--     names worth enrolling instead of guessing at them.
+--
+-- Deliberately carries NO user_id. It is an aggregate popularity counter, so it
+-- holds no per-user data, needs no ownership policy, and cannot leak one user's
+-- list to another. RLS is on with zero policies: service role only.
+-- =====================================================================
+create table if not exists public.ingredient_demand (
+  normalized_name text primary key,
+  request_count integer not null default 0,
+  first_requested_at timestamptz not null default now(),
+  last_requested_at timestamptz not null default now(),
+  -- Whether this name is in price_sources, i.e. whether we can price it at all.
+  in_catalog boolean not null default false,
+  -- Set by hand once an unknown name has been added to priceDatabase.json.
+  promoted boolean not null default false
+);
+
+alter table public.ingredient_demand enable row level security;
+
+-- Partial index: the promotion query only ever asks for names we cannot price.
+create index if not exists ingredient_demand_pending_idx
+  on public.ingredient_demand (request_count desc)
+  where not in_catalog;
+
+-- The top-up job scans for the least recently resolved rows first.
+create index if not exists price_sources_stale_idx
+  on public.price_sources (last_resolved_at nulls first);
