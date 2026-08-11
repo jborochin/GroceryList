@@ -75,7 +75,7 @@ Two things write it:
 - **`resolve-prices`** (edge function, on demand) — the grocery list sends its visible ingredient names; anything stale past `price_ttl_days` is resolved against 1–3 stores and published immediately. This is what keeps a price current between weekly runs.
 - **`--top-up`** (weekly CI) — keeps the accurate 12-store median, but only for rows already stale, ordered by `ingredient_demand`, capped by `topup_run_call_budget`.
 
-The split exists because of quota arithmetic: at ~350 ingredients a full 12-store sweep is ~4,200 calls against 10,000/day, and the catalog is still growing. Spending the weekly budget on what people actually buy — and letting on-demand cover the rest cheaply — is what makes it fit.
+The split exists because of quota arithmetic: at 520 ingredients a full 12-store sweep is ~6,200 calls against 10,000/day, and the catalog is still growing. Spending the weekly budget on what people actually buy — and letting on-demand cover the rest cheaply — is what makes it fit.
 
 **One-time setup:**
 

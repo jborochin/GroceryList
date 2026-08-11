@@ -70,7 +70,7 @@ The two substring passes are not a micro-optimization. Containment is bidirectio
 The live overlay is `public.prices`, written by **two** paths (Kroger Products API, service-role write):
 
 - **On demand** — `supabase/functions/resolve-prices`. The grocery list sends its visible ingredient names (debounced, via `src/lib/priceDemand.ts`); the function resolves only those stale past `price_ttl_days` and returns fresh rows, which `mergeRows()` folds into the cache. Resolves against 1–3 stores because someone is waiting.
-- **Weekly top-up** — `.github/workflows/refresh-prices.yml` running `scripts/refreshKrogerPrices.ts --top-up`. Keeps the accurate 12-store median but only for rows stale past the TTL, ordered by `public.ingredient_demand`, capped by `topup_run_call_budget`. A full sweep no longer fits the quota: 349 keys × 12 stores ≈ 4,200 calls against 10,000/day.
+- **Weekly top-up** — `.github/workflows/refresh-prices.yml` running `scripts/refreshKrogerPrices.ts --top-up`. Keeps the accurate 12-store median but only for rows stale past the TTL, ordered by `public.ingredient_demand`, capped by `topup_run_call_budget`. A full sweep no longer fits the quota: 520 keys × 12 stores ≈ 6,200 calls against 10,000/day.
 
 The app reads the overlay through `src/lib/priceCatalogSync.ts`, a direct analogue of `mealCatalogSync.ts` — synchronous accessor over a module-level cache, AsyncStorage-backed, fire-and-forget refresh fired once from `App.tsx`.
 

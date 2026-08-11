@@ -5,7 +5,7 @@
 // enough to be worth a Kroger call, resolves those, and publishes the result to
 // public.prices where the client's overlay picks it up.
 //
-// Why it exists: the weekly job cannot cover a 349-key catalog at 12 stores
+// Why it exists: the weekly job cannot cover a 520-key catalog at 12 stores
 // inside Kroger's 10,000/day quota, and refreshing an ingredient nobody is
 // buying is wasted budget. Demand decides instead of the alphabet.
 //
