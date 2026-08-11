@@ -18,6 +18,8 @@ npm run prices:seed-sources # regenerate supabase/seed_price_sources.sql from pr
 npm run prices:find-locations 45202  # one-off: discover Kroger store ids for KROGER_LOCATION_IDS
 npm run prices:refresh-kroger -- --dry-run  # resolve live prices and report, writing nothing
 npm run prices:bootstrap -- --limit 50      # propose priceDatabase rows for new ingredients (writes nothing)
+npm run prices:refresh-kroger -- --top-up --dry-run  # show the budgeted work order, spends no quota
+npx supabase functions deploy resolve-prices        # on-demand pricing (needs KROGER_* secrets set)
 ```
 
 There is no lint script. TypeScript strict is the only static check.
@@ -65,7 +67,26 @@ Count units are a special case — distinct labels (`each` vs `slice`) never con
 
 The two substring passes are not a micro-optimization. Containment is bidirectional and the directions want *opposite* winners: a catalog key found inside the query should resolve to the **most specific** match (`"boneless ribeye steak"` → `ribeye steak`), while a query found inside a catalog key should resolve to the **most generic** (`"steak"` → `beef steak`, not whichever cut sorts longest). One sorted scan cannot serve both, so there are two arrays sorted opposite ways, ordered by character length with an alphabetical tiebreak — never by file position. Matching is token-wise, not raw `includes`, or `"graham cracker"` resolves to the `ham` row.
 
-The live overlay is `public.prices`, refreshed weekly by `.github/workflows/refresh-prices.yml` running `scripts/refreshKrogerPrices.ts` (Kroger Products API, national averages, service-role write from CI). The app reads it through `src/lib/priceCatalogSync.ts`, a direct analogue of `mealCatalogSync.ts` — synchronous accessor over a module-level cache, AsyncStorage-backed, fire-and-forget refresh fired once from `App.tsx`.
+The live overlay is `public.prices`, written by **two** paths (Kroger Products API, service-role write):
+
+- **On demand** — `supabase/functions/resolve-prices`. The grocery list sends its visible ingredient names (debounced, via `src/lib/priceDemand.ts`); the function resolves only those stale past `price_ttl_days` and returns fresh rows, which `mergeRows()` folds into the cache. Resolves against 1–3 stores because someone is waiting.
+- **Weekly top-up** — `.github/workflows/refresh-prices.yml` running `scripts/refreshKrogerPrices.ts --top-up`. Keeps the accurate 12-store median but only for rows stale past the TTL, ordered by `public.ingredient_demand`, capped by `topup_run_call_budget`. A full sweep no longer fits the quota: 349 keys × 12 stores ≈ 4,200 calls against 10,000/day.
+
+The app reads the overlay through `src/lib/priceCatalogSync.ts`, a direct analogue of `mealCatalogSync.ts` — synchronous accessor over a module-level cache, AsyncStorage-backed, fire-and-forget refresh fired once from `App.tsx`.
+
+**`install()` vs `mergeRows()`** — `install()` *replaces* the cache and is right only for a full-table refresh. An on-demand response carries a handful of names, so it must merge; using `install()` there would drop every other live price. Both run rows through the same `ingestRows` validation.
+
+**Everything tunable lives in `public.app_config`** (public-read, service-role-write): `price_ttl_days`, `ondemand_enabled` (kill switch), `ondemand_batch_max`, `ondemand_store_count`, `ondemand_lease_seconds`, `topup_run_call_budget`, `demand_promote_threshold`. Values are read as jsonb and coerced, and the boolean **fails safe** — a hand-written `set value = '"false"'` still disables. Change freshness with one statement, no redeploy:
+
+```sql
+update public.app_config set value = '7'::jsonb where key = 'price_ttl_days';
+```
+
+**Concurrency** — `price_sources.last_resolved_at` doubles as a self-expiring lease. A conditional update only matches a row untouched inside `ondemand_lease_seconds`, so two devices wanting the same stale ingredient produce one Kroger call; the loser gets `pending`.
+
+**`public.ingredient_demand`** counts requests per normalized name (no `user_id` — it is an aggregate, so there is no per-user data to protect). It orders the top-up, and names with `in_catalog = false` are the enrollment queue: `--top-up` prints those past `demand_promote_threshold` for the next `prices:bootstrap` batch.
+
+**The edge function shares the matcher rather than copying it** — it imports `scripts/lib/{krogerMatch,resolveIngredient,krogerClient}.ts` and `src/utils/{normalizeName,unitConversion}.ts` directly. That requires explicit `.ts` extensions on that import chain (Deno resolves specifiers literally) and `allowImportingTsExtensions` in tsconfig, which is safe because the project is `noEmit`. Don't strip those extensions. Purchase profiles ride on `price_sources.purchase_profile` because the function cannot import `purchaseProfile.ts` (it reaches `findPrice` → fuse.js), and without a `grams` anchor a bread SKU sized "24 oz" can't be priced per `each`.
 
 Three properties hold this together:
 
