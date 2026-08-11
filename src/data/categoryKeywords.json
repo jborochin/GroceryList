@@ -231,5 +231,9 @@
   "fettuccine": "Pantry",
   "garam masala": "Spices",
   "stir-fry vegetable": "Frozen",
-  "protein powder": "Pantry"
+  "protein powder": "Pantry",
+
+  "steak": "Protein",
+  "filet mignon": "Protein",
+  "tenderloin": "Protein"
 }
