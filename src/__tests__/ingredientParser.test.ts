@@ -1,4 +1,4 @@
-import { parseIngredient } from '../utils/ingredientParser';
+import { parseIngredient, splitGluedUnits } from '../utils/ingredientParser';
 
 describe('parseIngredient', () => {
   it('parses simple integer with unit', () => {
@@ -134,5 +134,77 @@ describe('parseIngredient', () => {
   it('stores raw string', () => {
     const r = parseIngredient('2 cups flour');
     expect(r.raw).toBe('2 cups flour');
+  });
+
+  // Instagram captions glue quantity to unit. Before this was handled, every one
+  // of these fell through as `1 each :: "300g pasta"` — no quantity, no unit, and
+  // therefore no aggregation or pricing downstream.
+  describe('glued quantity+unit (Instagram caption style)', () => {
+    it('splits a metric weight from its unit', () => {
+      expect(parseIngredient('300g pasta')).toMatchObject({
+        quantity: 300,
+        unit: 'g',
+        name: 'pasta',
+      });
+    });
+
+    it('splits a metric volume from its unit', () => {
+      expect(parseIngredient('300ml chicken stock')).toMatchObject({
+        quantity: 300,
+        unit: 'ml',
+        name: 'chicken stock',
+      });
+    });
+
+    it('resolves the "tbs" spelling that captions favour', () => {
+      expect(parseIngredient('1tbs smoked paprika')).toMatchObject({
+        quantity: 1,
+        unit: 'tbsp',
+        name: 'smoked paprika',
+      });
+    });
+
+    it('handles a glued fraction', () => {
+      const r = parseIngredient('1/2tbs oregano');
+      expect(r.quantity).toBeCloseTo(0.5, 5);
+      expect(r.unit).toBe('tbsp');
+      expect(r.name).toBe('oregano');
+    });
+
+    it('handles a glued teaspoon', () => {
+      expect(parseIngredient('2tsp garlic puree')).toMatchObject({
+        quantity: 2,
+        unit: 'tsp',
+        name: 'garlic puree',
+      });
+    });
+
+    it('splits a glued count unit', () => {
+      expect(parseIngredient('3cloves garlic')).toMatchObject({
+        quantity: 3,
+        unit: 'clove',
+        name: 'garlic',
+      });
+    });
+  });
+
+  // The split is gated on the letter run being a real unit alias. These all carry
+  // a digit followed by letters and must survive untouched.
+  describe('deglue guard', () => {
+    it.each([
+      ['9x13 pan', '9x13 pan'],
+      ['7up', '7up'],
+      ['bake at 350f', 'bake at 350f'],
+      ['1st layer of noodles', '1st layer of noodles'],
+      ['2 1/2 cups flour', '2 1/2 cups flour'],
+      ['300 g pasta', '300 g pasta'],
+    ])('leaves %s alone', (input, expected) => {
+      expect(splitGluedUnits(input)).toBe(expected);
+    });
+
+    it('keeps a non-unit suffix out of the quantity', () => {
+      // "7up" must stay a name, not become quantity 7.
+      expect(parseIngredient('7up')).toMatchObject({ name: '7up', unit: 'each' });
+    });
   });
 });

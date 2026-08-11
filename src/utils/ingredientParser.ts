@@ -31,6 +31,33 @@ const SYNONYM_LOOKUP: Record<string, string> = (() => {
 
 const STOP_WORDS = new Set(['of', 'the', 'a', 'an']);
 
+// Instagram captions (and plenty of recipe sites) glue the quantity to the unit:
+// "300g pasta", "1tbs paprika", "1/2tbs oregano". extractQuantity tokenizes on
+// spaces, so "300g" matches no numeric pattern and the whole line falls through
+// as `1 each :: 300g pasta` — unpriceable and un-aggregatable.
+//
+// The split is driven by the alias table itself, longest alias first, so a digit
+// is only ever separated from a *real* unit. That gate is what keeps "9x13",
+// "7up", "350f" and "1st" intact — not the length of the letter run.
+//
+// Known and accepted false positive: "180c" → "180 cup", because "c" is a cup
+// alias. Oven temperatures live in instructions, not ingredient lines, so this
+// costs nothing in the pipeline.
+const GLUED_UNIT_RE = (() => {
+  const singleWordAliases = Object.keys(SYNONYM_LOOKUP)
+    .filter((alias) => /^[a-z]+$/.test(alias))
+    .sort((a, b) => b.length - a.length);
+  return new RegExp(`(\\d)(${singleWordAliases.join('|')})(?=[\\s,;:]|$)`, 'g');
+})();
+
+/**
+ * Separate a quantity from a unit glued onto it ("300g" → "300 g"). Operates on
+ * already-lowercased text, so the pattern needs no case-insensitive flag.
+ */
+export function splitGluedUnits(text: string): string {
+  return text.replace(GLUED_UNIT_RE, '$1 $2');
+}
+
 /**
  * Map a free-typed unit to its canonical form (e.g. "lbs" → "lb", "cups" → "cup").
  * Unknown units are returned lowercased/trimmed so they survive as display-only labels.
@@ -66,6 +93,9 @@ export function parseIngredient(raw: string): Ingredient {
   text = text.replace(/(\d)\s*[-–—]\s*(\d)/g, '$1-$2');
 
   text = text.replace(/\s+/g, ' ').trim();
+
+  // Unglue "300g" → "300 g" before tokenizing, or extractQuantity finds no number.
+  text = splitGluedUnits(text);
 
   // Short-circuit "to taste" / "as needed" / "pinch of X" (tolerate ", to taste")
   const tailMatch = text.match(/^(.*?)(?:[,;]\s*|\s+)(?:to\s+taste|as\s+needed)$/);

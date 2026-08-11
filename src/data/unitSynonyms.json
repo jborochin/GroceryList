@@ -1,6 +1,6 @@
 {
   "tsp": ["tsp", "tsps", "teaspoon", "teaspoons", "t"],
-  "tbsp": ["tbsp", "tbsps", "tablespoon", "tablespoons", "tbl", "T"],
+  "tbsp": ["tbsp", "tbsps", "tablespoon", "tablespoons", "tbl", "T", "tbs", "tbls", "tblsp"],
   "fl_oz": ["fl oz", "fl. oz", "fluid ounce", "fluid ounces", "floz"],
   "cup": ["cup", "cups", "c"],
   "pint": ["pint", "pints", "pt"],
