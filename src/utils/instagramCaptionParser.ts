@@ -70,9 +70,27 @@ function detectHeaderType(line: string): HeaderType {
   return null;
 }
 
+// Creators credit brands and other accounts inline: "300ml chicken stock- i used
+// @knorruk". That tail is commentary, not part of the ingredient, and it breaks the
+// price lookup's name match. Only an explicit attribution clause is stripped, so
+// food-defining hyphens ("sun-dried tomatoes") are untouched.
+const ATTRIBUTION_TAIL_RE =
+  /\s*[-–—,]\s*(?:i\s+(?:used?|use|like|prefer|recommend)|or\s+use|used)\b.*$/i;
+
+function stripAttribution(s: string): string {
+  return s
+    .replace(ATTRIBUTION_TAIL_RE, '')
+    .replace(/\s*@[A-Za-z0-9._]+/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function isNoiseLine(line: string): boolean {
   const stripped = stripEmoji(line);
   if (!stripped) return true; // blank or emoji-only
+  // Captions use punctuation-only lines as visual spacers ("." / "---" / "•••").
+  // Left alone, each one becomes an instruction step.
+  if (!/[a-z0-9]/i.test(stripped)) return true;
   const tokens = stripped.split(/\s+/);
   if (tokens.every((tok) => tok.startsWith('#'))) return true;
   if (
@@ -177,7 +195,7 @@ export function parseRecipeFromCaption(caption: string, sourceUrl?: string): Par
 
   const ingredients: Ingredient[] = ingredientLines
     .filter((l) => !isNoiseLine(l) && looksLikeIngredient(l))
-    .map((l) => parseIngredient(stripBullet(stripEmoji(l))))
+    .map((l) => parseIngredient(stripAttribution(stripBullet(stripEmoji(l)))))
     .filter((i) => i.name.trim().length > 0);
 
   if (ingredients.length === 0) {

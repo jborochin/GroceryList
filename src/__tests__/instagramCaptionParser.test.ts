@@ -124,4 +124,47 @@ Instructions:
     expect(r.ingredients).toHaveLength(2);
     expect(r.ingredients.every((i) => !/washed thoroughly/i.test(i.name))).toBe(true);
   });
+
+  // Both cases below were found by running the parser against live reels.
+  describe('caption noise seen in the wild', () => {
+    it('treats punctuation-only spacer lines as noise, not steps', () => {
+      const caption = `Bbq Chicken Pasta
+
+Ingredients:
+• 300g pasta
+• 500g chicken
+
+Method:
+.
+Boil the pasta.
+.
+.
+Serve.`;
+
+      const r = parseRecipeFromCaption(caption);
+      expect(r.instructions).toEqual(['Boil the pasta.', 'Serve.']);
+    });
+
+    it('strips inline brand attribution from ingredient names', () => {
+      const caption = `Bbq Chicken Pasta
+
+Ingredients:
+• 300ml chicken stock- i used @knorruk
+• 120g cheese- i used mix cheddar and mozzarella
+
+Method:
+1. Cook.`;
+
+      const r = parseRecipeFromCaption(caption);
+      expect(r.ingredients.map((i) => i.name)).toEqual(['chicken stock', 'cheese']);
+      expect(r.ingredients[0]).toMatchObject({ quantity: 300, unit: 'ml' });
+    });
+
+    it('keeps food-defining hyphens that are not attribution', () => {
+      const r = parseRecipeFromCaption(
+        'Salad\n\nIngredients:\n• 1 cup sun-dried tomatoes\n• 2 hard-boiled eggs',
+      );
+      expect(r.ingredients.map((i) => i.name)).toEqual(['sun-dried tomatoes', 'hard-boiled eggs']);
+    });
+  });
 });
