@@ -22,6 +22,7 @@ import { remapLegacyRecipeIds } from './src/store/remapLegacyRecipeIds';
 import { useAuthStore } from './src/store/useAuthStore';
 import { ToastHost } from './src/components/ui/ToastHost';
 import { drainOutbox, migrateLocalToAccount, pullAll, subscribeStores, unsubscribeStores } from './src/lib/sync';
+import { loadPriceCache, refreshPriceCache } from './src/lib/priceCatalogSync';
 import { supabaseConfigured } from './src/lib/supabase';
 
 export default function App() {
@@ -44,6 +45,15 @@ export default function App() {
         .finally(() => setSeeded(true));
     }
   }, [hydrated, seeded]);
+
+  // Live price overlay: read the last-known prices, then refresh from the server
+  // mirror. Once per app start rather than per screen mount — the overlay is
+  // global and screens recompute off usePriceCatalogStore's version counter.
+  // Fire-and-forget by design: both calls swallow their own errors and the
+  // bundled priceDatabase.json is always the floor.
+  useEffect(() => {
+    loadPriceCache().then(refreshPriceCache);
+  }, []);
 
   // Drive sync lifecycle from auth state. Subscribe BEFORE the first pull so
   // any edit made while the pull is in flight is pushed (or outboxed) — the

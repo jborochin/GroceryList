@@ -29,13 +29,13 @@ describe('priceEstimator', () => {
   // hardcoding an expected dollar amount against it would break every refresh.
   it('estimates price via unit conversion', () => {
     const priced = estimatePriceForItem(item('tofu', 2, 'lb'));
-    expect(priced.estimatedPrice).toBeCloseTo(6.0, 1);
+    expect(priced.estimatedPrice).toBeCloseTo(7.98, 1);
     expect(priced.hasPriceGap).toBe(false);
   });
 
   it('converts oz → lb when computing', () => {
     const priced = estimatePriceForItem(item('tofu', 16, 'oz'));
-    expect(priced.estimatedPrice).toBeCloseTo(3.0, 1);
+    expect(priced.estimatedPrice).toBeCloseTo(3.99, 1);
   });
 
   it('uses overrides when present', () => {
@@ -56,6 +56,6 @@ describe('priceEstimator', () => {
     // Previously a unit-conflict gap; now bridged through the broccoli profile's grams.
     const priced = estimatePriceForItem(item('broccoli', 1, 'head'));
     expect(priced.hasPriceGap).toBe(false);
-    expect(priced.estimatedPrice).toBeCloseTo((400 / 453.592) * 2.0, 2);
+    expect(priced.estimatedPrice).toBeCloseTo((400 / 453.592) * 2.77, 2);
   });
 });

@@ -14,3 +14,5 @@ android/
 .superpowers/
 .playwright-mcp/
 supabase/.temp/
+.mcp.json
+skills-lock.json

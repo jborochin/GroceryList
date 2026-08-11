@@ -9,6 +9,7 @@ import { useGroceryRecipeStore } from '../store/useGroceryRecipeStore';
 import { usePantryStore } from '../store/usePantryStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { usePriceOverrideStore } from '../store/usePriceOverrideStore';
+import { usePriceCatalogStore } from '../store/usePriceCatalogStore';
 import { aggregate } from '../utils/ingredientAggregator';
 import { applyPantry } from '../utils/pantryDeduction';
 import { estimatePrices } from '../utils/priceEstimator';
@@ -41,6 +42,7 @@ export function HomeScreen() {
   const pantry = usePantryStore((s) => s.items);
   const settings = useSettingsStore((s) => s.settings);
   const overrides = usePriceOverrideStore((s) => s.overrides);
+  const priceCatalogVersion = usePriceCatalogStore((s) => s.version);
 
   const summary = useMemo(
     () => computeNutritionSummary(plan, recipes, settings, planDays),
@@ -54,7 +56,9 @@ export function HomeScreen() {
     const agg = aggregate([...plan, ...groceryRecipes], recipes);
     const withPantry = applyPantry(agg, pantry);
     return estimatePrices(withPantry, overrides);
-  }, [plan, groceryRecipes, recipes, pantry, overrides]);
+    // priceCatalogVersion ticks when a live price refresh lands; findPrice reads
+    // the overlay through a module-level cache that React can't otherwise see.
+  }, [plan, groceryRecipes, recipes, pantry, overrides, priceCatalogVersion]);
 
   const totalServings = plan.reduce((acc, p) => acc + p.desiredServings, 0);
   const itemsCount = grocery.items.length;

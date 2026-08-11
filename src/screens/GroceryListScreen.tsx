@@ -21,6 +21,9 @@ import { useDismissedItemStore } from '../store/useDismissedItemStore';
 import { usePriceOverrideStore } from '../store/usePriceOverrideStore';
 import { useItemOverrideStore } from '../store/useItemOverrideStore';
 import { useMealScheduleStore } from '../store/useMealScheduleStore';
+import { usePriceCatalogStore } from '../store/usePriceCatalogStore';
+import { requestPrices } from '../lib/priceDemand';
+import { debounce } from '../utils/debounce';
 import { aggregate } from '../utils/ingredientAggregator';
 import { applyPantry } from '../utils/pantryDeduction';
 import { mergeManualItems } from '../utils/mergeManualItems';
@@ -73,6 +76,10 @@ function buildCategorySections(items: GroceryItem[]) {
     .map(([title, data]) => ({ title, data }));
 }
 
+/** Long enough to swallow the render burst from adding a recipe, short enough that a
+ *  price sharpens while the user is still looking at the list. */
+const PRICE_REQUEST_DEBOUNCE_MS = 1500;
+
 export function GroceryListScreen() {
   const t = useAppTheme();
   const insets = useSafeAreaInsets();
@@ -99,6 +106,7 @@ export function GroceryListScreen() {
   const itemOverrides = useItemOverrideStore((s) => s.overrides);
   const setItemOverride = useItemOverrideStore((s) => s.setOverride);
   const removeItemOverride = useItemOverrideStore((s) => s.removeOverride);
+  const priceCatalogVersion = usePriceCatalogStore((s) => s.version);
 
   const [checked, setChecked] = useState<Record<string, boolean>>({});
   const [priceTarget, setPriceTarget] = useState<GroceryItem | null>(null);
@@ -121,7 +129,9 @@ export function GroceryListScreen() {
     // the edited quantity/unit gets priced).
     const overridden = applyItemOverrides(purchasable, itemOverrides);
     return estimatePrices(overridden, overrides);
-  }, [plan, groceryRecipes, recipes, pantry, manualItems, itemOverrides, overrides]);
+    // priceCatalogVersion ticks when a live price refresh lands; findPrice reads
+    // the overlay through a module-level cache that React can't otherwise see.
+  }, [plan, groceryRecipes, recipes, pantry, manualItems, itemOverrides, overrides, priceCatalogVersion]);
 
   // Items the user has swiped away are filtered out of the computed list, and the
   // displayed totals are re-derived from what remains.
@@ -138,6 +148,24 @@ export function GroceryListScreen() {
   useEffect(() => {
     prune(priced.items.map((i) => i.name));
   }, [priced.items, prune]);
+
+  // Ask the server to freshen prices for whatever is actually on the list.
+  //
+  // Debounced because this memo recomputes on every plan/pantry/manual/override change,
+  // and adding one recipe produces a burst of them — the trailing call is the one holding
+  // the settled list. Sends every visible name rather than only the unpriced ones: the
+  // server owns the freshness decision, so the TTL can be retuned in SQL without an app
+  // release. Fire-and-forget; a resolve that lands re-renders through priceCatalogVersion.
+  const namesKey = useMemo(() => visible.items.map((i) => i.name).sort().join(' '), [visible.items]);
+  const requestPricesDebounced = useMemo(
+    () => debounce((names: string[]) => void requestPrices(names), PRICE_REQUEST_DEBOUNCE_MS),
+    []
+  );
+  useEffect(() => {
+    if (!namesKey) return;
+    requestPricesDebounced(namesKey.split(' '));
+  }, [namesKey, requestPricesDebounced]);
+  useEffect(() => () => requestPricesDebounced.cancel(), [requestPricesDebounced]);
 
   const handleDelete = (item: GroceryItem) => {
     // Remove any manual contribution outright; hide any recipe-derived remainder.

@@ -270,3 +270,209 @@ alter table public.meals enable row level security;
 
 drop policy if exists "meals_public_read" on public.meals;
 create policy "meals_public_read" on public.meals for select using (true);
+
+-- =====================================================================
+-- Live ingredient prices (public read, NO user_id, NOT per-user synced)
+--
+-- Refreshed weekly from a retail price API by scripts/refreshKrogerPrices.ts
+-- (run from CI with the service-role key). The bundled src/data/priceDatabase.json
+-- stays the offline floor and the test-enforced source of truth; this table is an
+-- OVERLAY that findPrice() consults on exact normalized match only.
+--
+-- INVARIANT: `unit` must equal the bundled priceDatabase.json row's unit for the
+-- same key. getProfile() derives its default sell unit from the price entry's unit
+-- (src/utils/purchaseProfile.ts), and roundToPurchasable() branches on that unit's
+-- family -- publishing a different unit here would silently change rounding
+-- behavior. The refresh script rejects any conversion it can't land in the
+-- baseline unit, and the client re-checks on ingest.
+--
+-- Kill switch: `truncate public.prices` reverts every device to the bundled
+-- prices on its next refresh.
+-- =====================================================================
+create table if not exists public.prices (
+  normalized_name text primary key,
+  price_per_unit numeric not null check (price_per_unit > 0),
+  unit text not null,
+  source text not null,
+  confidence numeric,
+  as_of timestamptz not null,
+  updated_at timestamptz not null default now()
+);
+
+drop trigger if exists prices_touch on public.prices;
+create trigger prices_touch before update on public.prices
+  for each row execute function public.touch_updated_at();
+
+alter table public.prices enable row level security;
+
+drop policy if exists "prices_public_read" on public.prices;
+create policy "prices_public_read" on public.prices for select using (true);
+
+-- =====================================================================
+-- Ingredient -> retail SKU mapping and review state (INTERNAL).
+--
+-- RLS is enabled with NO policies at all, so no anon/authenticated client can
+-- read or write it -- only the service role (which bypasses RLS) touches this.
+-- Seeded from priceDatabase.json keys by scripts/buildPriceSourcesSeed.ts.
+--
+-- `reviewed` marks a mapping a human has vetted: reviewed rows pin their
+-- kroger_product_id and are never re-searched, so review work is permanent.
+-- Unreviewed rows are re-resolved on every run, which also self-heals
+-- discontinued SKUs. baseline_* mirrors the bundled JSON and is the anchor the
+-- sanity band compares candidate prices against.
+-- =====================================================================
+create table if not exists public.price_sources (
+  normalized_name text primary key,
+  search_term text not null,
+  kroger_product_id text,
+  kroger_description text,
+  reviewed boolean not null default false,
+  confidence numeric,
+  baseline_price_per_unit numeric not null,
+  baseline_unit text not null,
+  last_resolved_at timestamptz,
+  last_status text,
+  notes text,
+  -- How the store sells this ingredient: { sellUnit, packSize, grams? }, mirrored
+  -- from src/data/purchaseProfiles.json by scripts/buildPriceSourcesSeed.ts.
+  --
+  -- Carried on the row because the on-demand edge function needs it to price a
+  -- cross-family SKU (bread sized "24 oz" but bought per `each`, beans sized
+  -- "15.5 oz" but bought per `can`) and cannot import the app's purchaseProfile
+  -- module -- that one reaches findPrice and therefore fuse.js. Null means the
+  -- default { sellUnit: baseline_unit, packSize: 1 }, which is what getProfile()
+  -- derives for an ingredient with no explicit entry.
+  purchase_profile jsonb,
+  updated_at timestamptz not null default now()
+);
+
+drop trigger if exists price_sources_touch on public.price_sources;
+create trigger price_sources_touch before update on public.price_sources
+  for each row execute function public.touch_updated_at();
+
+-- Enabled with zero policies on purpose: service-role access only.
+alter table public.price_sources enable row level security;
+
+-- =====================================================================
+-- Runtime configuration (public read, service-role write)
+--
+-- Knobs the pricing pipeline reads at run time, so freshness and cost can be
+-- retuned with one SQL statement instead of a redeploy or an app release.
+--
+-- Public-read is intentional and safe: no secrets live here, and the client
+-- needs `ondemand_enabled` / `ondemand_batch_max` before it can decide whether
+-- to ask for a price at all. No write policy, so only the service role changes
+-- values.
+--
+--   price_ttl_days          how old a public.prices row may be before an
+--                           on-demand request re-resolves it against Kroger.
+--                           Distinct from the client's MAX_PRICE_AGE_DAYS = 60,
+--                           which is the hard floor past which a row is ignored
+--                           entirely. Default 14 matches how long the top-up
+--                           budget takes to cycle the whole catalog.
+--   ondemand_enabled        kill switch for on-demand resolution.
+--   ondemand_batch_max      names one resolve-prices call will accept.
+--   ondemand_store_count    reference stores an on-demand resolve medians
+--                           across. Deliberately far below the weekly job's 12:
+--                           a user is waiting on this one.
+--   ondemand_lease_seconds  how long one invocation owns an ingredient before
+--                           another may retry it. Stops two devices asking for
+--                           the same stale ingredient from both calling Kroger.
+--   topup_run_call_budget   hard ceiling on Kroger calls per weekly run, so the
+--                           job cannot grow into the 10,000/day quota as the
+--                           catalog grows.
+--   demand_promote_threshold  requests an unknown ingredient needs before it is
+--                           worth adding to the catalog.
+-- =====================================================================
+create table if not exists public.app_config (
+  key text primary key,
+  value jsonb not null,
+  updated_at timestamptz not null default now()
+);
+
+drop trigger if exists app_config_touch on public.app_config;
+create trigger app_config_touch before update on public.app_config
+  for each row execute function public.touch_updated_at();
+
+alter table public.app_config enable row level security;
+
+drop policy if exists "app_config_public_read" on public.app_config;
+create policy "app_config_public_read" on public.app_config for select using (true);
+
+-- Defaults only. `on conflict do nothing` so re-running schema.sql never
+-- reverts a value that was tuned in production.
+insert into public.app_config (key, value) values
+  ('price_ttl_days', '14'),
+  ('ondemand_enabled', 'true'),
+  ('ondemand_batch_max', '5'),
+  ('ondemand_store_count', '3'),
+  ('ondemand_lease_seconds', '120'),
+  ('topup_run_call_budget', '6000'),
+  ('demand_promote_threshold', '5')
+on conflict (key) do nothing;
+
+-- =====================================================================
+-- Ingredient demand counter (INTERNAL)
+--
+-- One row per normalized ingredient name that has appeared on somebody's
+-- grocery list. Two jobs:
+--
+--  1. It orders the weekly top-up. With a catalog of several hundred keys a
+--     full 12-store sweep no longer fits the daily quota, so the budget goes to
+--     what people actually buy rather than to alphabetical order.
+--  2. It is how the catalog grows. An ingredient nobody has priced yet still
+--     lands here with in_catalog = false, so `--report-demand` can surface the
+--     names worth enrolling instead of guessing at them.
+--
+-- Deliberately carries NO user_id. It is an aggregate popularity counter, so it
+-- holds no per-user data, needs no ownership policy, and cannot leak one user's
+-- list to another. RLS is on with zero policies: service role only.
+-- =====================================================================
+create table if not exists public.ingredient_demand (
+  normalized_name text primary key,
+  request_count integer not null default 0,
+  first_requested_at timestamptz not null default now(),
+  last_requested_at timestamptz not null default now(),
+  -- Whether this name is in price_sources, i.e. whether we can price it at all.
+  in_catalog boolean not null default false,
+  -- Set by hand once an unknown name has been added to priceDatabase.json.
+  promoted boolean not null default false
+);
+
+alter table public.ingredient_demand enable row level security;
+
+-- Partial index: the promotion query only ever asks for names we cannot price.
+create index if not exists ingredient_demand_pending_idx
+  on public.ingredient_demand (request_count desc)
+  where not in_catalog;
+
+-- The top-up job scans for the least recently resolved rows first.
+create index if not exists price_sources_stale_idx
+  on public.price_sources (last_resolved_at nulls first);
+
+-- Atomic upsert-increment for the demand counter.
+--
+-- A read-modify-write from the edge function would lose counts whenever two
+-- devices report the same ingredient concurrently, which is exactly the case that
+-- matters: a popular ingredient is the one being double-counted, and its count is
+-- what orders the weekly top-up.
+create or replace function public.bump_ingredient_demand(
+  p_normalized_name text,
+  p_in_catalog boolean
+)
+returns void
+language sql
+set search_path = public, pg_temp
+as $$
+  insert into public.ingredient_demand (normalized_name, request_count, in_catalog)
+  values (p_normalized_name, 1, p_in_catalog)
+  on conflict (normalized_name) do update set
+    request_count = public.ingredient_demand.request_count + 1,
+    last_requested_at = now(),
+    -- An ingredient can become priceable after it was first requested; never flip
+    -- it back, since enrollment is one-way.
+    in_catalog = public.ingredient_demand.in_catalog or excluded.in_catalog;
+$$;
+
+-- Service role only, same as the table it writes.
+revoke execute on function public.bump_ingredient_demand(text, boolean) from anon, authenticated;

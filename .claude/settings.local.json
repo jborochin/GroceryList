@@ -11,7 +11,19 @@
       "Bash(dir *)",
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\vorte\\\\OneDrive\\\\Desktop\\\\Projects\\\\GroceryList\" -Recurse -Directory)",
       "Bash(Select-Object -ExpandProperty FullName)",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:8081)",
+      "Bash(npx expo *)",
+      "mcp__plugin_playwright_playwright__browser_wait_for",
+      "mcp__plugin_playwright_playwright__browser_click",
+      "mcp__plugin_playwright_playwright__browser_type",
+      "mcp__plugin_playwright_playwright__browser_take_screenshot",
+      "Bash(taskkill //F //PID 34620)",
+      "Bash(netstat -ano)",
+      "Read(//c/Users/vorte/.expo/**)",
+      "Read(//c/Users/vorte/AppData/Local/ngrok/**)",
+      "Read(//c/Users/vorte/AppData/Roaming/npm-cache/**)",
+      "Bash(npx jest *)"
     ]
   },
   "enabledMcpjsonServers": [

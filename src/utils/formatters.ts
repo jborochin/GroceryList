@@ -32,6 +32,17 @@ const UNIT_LABELS: Record<string, { singular: string; plural?: string }> = {
   stick: { singular: 'stick', plural: 'sticks' },
 };
 
+/**
+ * Does this unit have a display label?
+ *
+ * `formatUnit` falls back to echoing the raw token, so a unit missing from the table
+ * above ships as "2 fl_oz" rather than "2 fl oz". That fallback is invisible at the call
+ * site, so priceCatalogConsistency.test.ts asserts against this instead.
+ */
+export function hasUnitLabel(unit: string): boolean {
+  return Object.prototype.hasOwnProperty.call(UNIT_LABELS, unit);
+}
+
 export function formatQuantity(qty: number): string {
   if (qty === 0) return '0';
   if (qty < 0.1) return qty.toFixed(3).replace(/0+$/, '').replace(/\.$/, '');
