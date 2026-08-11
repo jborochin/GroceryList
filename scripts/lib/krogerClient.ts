@@ -114,7 +114,10 @@ export class KrogerClient {
     // Refresh a minute early so a token can't expire mid-request.
     if (this.token && Date.now() < this.tokenExpiresAt - 60_000) return this.token;
 
-    const basic = Buffer.from(`${this.clientId}:${this.clientSecret}`).toString('base64');
+    // btoa rather than Buffer: this client also runs inside a Deno edge function, and
+    // btoa is available in both runtimes. Credentials are ASCII, so btoa's Latin-1
+    // limitation is not a concern here.
+    const basic = btoa(`${this.clientId}:${this.clientSecret}`);
     const res = await fetchWithRetry(TOKEN_URL, {
       method: 'POST',
       headers: {

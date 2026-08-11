@@ -31,26 +31,9 @@
  *   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY      service role — never ships in the app
  */
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import {
-  KROGER_REFERENCE_LOCATIONS,
-  KrogerClient,
-  KrogerProduct,
-  extractPrice,
-} from './lib/krogerClient';
+import { KROGER_REFERENCE_LOCATIONS, KrogerClient } from './lib/krogerClient';
 import { loadEnv } from './lib/loadEnv';
-import {
-  MIN_CONFIDENCE,
-  descriptionSpecificity,
-  median,
-  parseSize,
-  pickMedianBy,
-  sanityBand,
-  scoreMatch,
-} from './lib/krogerMatch';
-
-/** Candidate pool per ingredient. Wide enough to span the store-brand-to-premium
- *  spread so the median is meaningful, narrow enough to stay relevant. */
-const SEARCH_LIMIT = 12;
+import { Resolution, resolveIngredient } from './lib/resolveIngredient';
 import { convertMeasure, getProfile } from '../src/utils/purchaseProfile';
 
 const SOURCE = 'kroger';
@@ -64,196 +47,30 @@ interface PriceSourceRow {
   baseline_unit: string;
 }
 
-interface Resolution {
-  normalizedName: string;
-  searchTerm: string;
-  reviewed: boolean;
-  wasEnrolled: boolean; // had no pinned product id before this run
-  productId?: string;
-  description?: string;
-  size?: string;
-  confidence?: number;
-  poolSize?: number; // priceable candidates the median was chosen from
-  pricePerUnit?: number;
-  baseline: number;
-  unit: string;
-  status: 'published' | `rejected:${string}` | 'unresolved';
-}
-
 // --- resolution ------------------------------------------------------------
 
 /**
- * Turn a SKU's shelf price into a price per the app's canonical unit.
+ * Adapt a price_sources row to the shared resolver.
  *
- * e.g. $4.79 for "16 oz" of a key whose baseline unit is `lb`
- *      -> 16 oz = 1 lb -> $4.79/lb
- *
- * Uses the same two-step conversion order as estimatePriceForItem(): plain
- * convert() within a unit family, then convertMeasure()'s grams bridge for
- * cross-family cases (a cheese block priced per lb). Returns null when neither
- * can land the size in the baseline unit — the invariant that keeps rounding
- * behavior stable.
+ * The resolver itself lives in scripts/lib/resolveIngredient.ts so the weekly top-up,
+ * the catalog bootstrap and the on-demand edge function all apply the same gates. Node
+ * callers supply the real purchase profile; the edge function cannot, because getProfile
+ * reaches findPrice and therefore fuse.js.
  */
-export function toPricePerBaselineUnit(
-  shelfPrice: number,
-  size: { qty: number; unit: string },
-  normalizedName: string,
-  baselineUnit: string
-): number | null {
-  const profile = getProfile(normalizedName);
-  const qtyInBaseline = convertMeasure(size.qty, size.unit, baselineUnit, profile);
-  if (qtyInBaseline === null || !Number.isFinite(qtyInBaseline) || qtyInBaseline <= 0) return null;
-  return shelfPrice / qtyInBaseline;
-}
-
-async function resolveOne(
-  kroger: KrogerClient,
-  row: PriceSourceRow,
-  locationIds: string[]
-): Promise<Resolution> {
-  const base: Resolution = {
-    normalizedName: row.normalized_name,
-    searchTerm: row.search_term,
-    reviewed: row.reviewed,
-    wasEnrolled: !row.kroger_product_id,
-    baseline: row.baseline_price_per_unit,
-    unit: row.baseline_unit,
-    status: 'unresolved',
-  };
-
-  // A reviewed mapping pins its SKU and is never re-searched, so review work is
-  // permanent. Unreviewed rows re-search every run, which self-heals when a SKU
-  // is discontinued.
-  let productId = row.reviewed ? row.kroger_product_id : null;
-  let description: string | undefined;
-  let confidence: number | undefined;
-  let poolSize: number | undefined;
-  let chosenAtPrimary: KrogerProduct | undefined;
-
-  if (!productId) {
-    const candidates = await kroger.searchProducts(row.search_term, locationIds[0], SEARCH_LIMIT);
-
-    // Score every candidate first, so a pool that is entirely below the
-    // confidence bar can be reported as low-confidence rather than no-candidate.
-    const scored = candidates
-      .map((product) => ({ product, score: scoreMatch(row.search_term, product.description) }))
-      .filter((c) => c.score > 0);
-    if (scored.length === 0) return { ...base, status: 'rejected:no-candidate' };
-
-    const qualified = scored.filter((c) => row.reviewed || c.score >= MIN_CONFIDENCE);
-    if (qualified.length === 0) {
-      const bestScore = Math.max(...scored.map((c) => c.score));
-      const best = scored.find((c) => c.score === bestScore)!;
-      return {
-        ...base,
-        productId: best.product.productId,
-        description: best.product.description,
-        confidence: best.score,
-        status: `rejected:low-confidence(${bestScore.toFixed(2)})`,
-      };
-    }
-
-    // The search response already carries price and size per candidate at this
-    // location, so ranking the pool by unit price costs no extra API calls.
-    const priced = qualified.flatMap((c) => {
-      const extracted = extractPrice(c.product);
-      const size = extracted ? parseSize(extracted.size) : null;
-      if (!extracted || !size) return [];
-      const unitPrice = toPricePerBaselineUnit(
-        extracted.price,
-        size,
-        row.normalized_name,
-        row.baseline_unit
-      );
-      if (unitPrice === null) return [];
-      return [{ ...c, unitPrice }];
-    });
-    if (priced.length === 0) return { ...base, status: 'rejected:no-priceable-candidate' };
-
-    // Mid-priced candidate rather than cheapest: the store brand at the bottom
-    // of the spread undershoots what a typical shopper actually buys.
-    const chosen = pickMedianBy(
-      priced,
-      (c) => c.unitPrice,
-      (c) => descriptionSpecificity(c.product.description)
-    )!;
-
-    productId = chosen.product.productId;
-    description = chosen.product.description;
-    confidence = chosen.score;
-    poolSize = priced.length;
-    chosenAtPrimary = chosen.product;
-  }
-
-  // Same SKU across every reference store; price varies, size does not.
-  const prices: number[] = [];
-  let size: string | undefined;
-
-  // The search already returned this SKU priced at the primary store, so reuse
-  // that rather than spending a second call re-fetching it.
-  if (chosenAtPrimary) {
-    const extracted = extractPrice(chosenAtPrimary);
-    if (extracted) {
-      prices.push(extracted.price);
-      size = extracted.size;
-    }
-  }
-
-  const remaining = chosenAtPrimary ? locationIds.slice(1) : locationIds;
-  for (const locationId of remaining) {
-    const product = await kroger.getProduct(productId, locationId);
-    if (!product) continue;
-    description = description ?? product.description;
-    confidence = confidence ?? scoreMatch(row.search_term, product.description);
-    const extracted = extractPrice(product);
-    if (!extracted) continue;
-    prices.push(extracted.price);
-    size = size ?? extracted.size;
-  }
-
-  const shelfPrice = median(prices);
-  if (shelfPrice === null || !size) {
-    return { ...base, productId, description, confidence, status: 'rejected:no-price' };
-  }
-
-  const parsed = parseSize(size);
-  if (!parsed) {
-    return { ...base, productId, description, size, confidence, status: 'rejected:unparseable-size' };
-  }
-
-  const pricePerUnit = toPricePerBaselineUnit(
-    shelfPrice,
-    parsed,
-    row.normalized_name,
-    row.baseline_unit
+function resolveOne(kroger: KrogerClient, row: PriceSourceRow, locationIds: string[]) {
+  return resolveIngredient(
+    kroger,
+    {
+      normalizedName: row.normalized_name,
+      searchTerm: row.search_term,
+      reviewed: row.reviewed,
+      krogerProductId: row.kroger_product_id,
+      baselinePricePerUnit: row.baseline_price_per_unit,
+      baselineUnit: row.baseline_unit,
+    },
+    locationIds,
+    { profile: getProfile(row.normalized_name) ?? undefined, convertMeasure }
   );
-  if (pricePerUnit === null) {
-    return { ...base, productId, description, size, confidence, status: 'rejected:unit-conflict' };
-  }
-
-  if (!sanityBand(pricePerUnit, row.baseline_price_per_unit, row.reviewed)) {
-    const ratio = (pricePerUnit / row.baseline_price_per_unit).toFixed(1);
-    return {
-      ...base,
-      productId,
-      description,
-      size,
-      confidence,
-      pricePerUnit,
-      status: `rejected:out-of-band(${ratio}x)`,
-    };
-  }
-
-  return {
-    ...base,
-    productId,
-    description,
-    size,
-    confidence,
-    poolSize,
-    pricePerUnit: round2(pricePerUnit),
-    status: 'published',
-  };
 }
 
 // --- persistence -----------------------------------------------------------
@@ -324,7 +141,9 @@ export function buildReport(resolutions: Resolution[], apiCalls: number): string
       // pool of 1 or 2 means the "mid-range" choice had nothing to choose from.
       lines.push(
         `| ${r.normalizedName} | ${r.description ?? '—'} | ${r.size ?? '—'} | ` +
-          `$${r.pricePerUnit?.toFixed(2)}/${r.unit} | $${r.baseline.toFixed(2)}/${r.unit} | ` +
+          `$${r.pricePerUnit?.toFixed(2)}/${r.unit} | ` +
+          // Null only in the bootstrap path, which prints its own report rather than this one.
+          `${r.baseline === null ? '—' : `$${r.baseline.toFixed(2)}/${r.unit}`} | ` +
           `${r.confidence?.toFixed(2) ?? '—'} | ${r.poolSize ?? '—'} |`
       );
     }
