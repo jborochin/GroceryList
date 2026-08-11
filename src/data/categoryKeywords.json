@@ -365,5 +365,23 @@
   "poppy seed": "Spices",
   "herbes de provence": "Spices",
   "five spice": "Spices",
-  "star anise": "Spices"
+  "star anise": "Spices",
+  "tarragon": "Spices",
+
+  "chocolate": "Pantry",
+  "nut": "Pantry",
+
+  "agave": "Condiments/Oils",
+  "tzatziki": "Condiments/Oils",
+  "enchilada sauce": "Condiments/Oils",
+  "alfredo sauce": "Condiments/Oils",
+
+  "prosciutto": "Protein",
+  "anchovy": "Protein",
+  "veal": "Protein",
+  "mortadella": "Protein",
+  "mackerel": "Protein",
+  "sardine": "Protein",
+
+  "turnip": "Produce"
 }

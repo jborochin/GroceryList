@@ -129,5 +129,19 @@
   "miso paste": { "sellUnit": "fl_oz", "packSize": 1, "grams": { "cup": 275, "tbsp": 17, "fl_oz": 34 } },
   "gochujang": { "sellUnit": "fl_oz", "packSize": 1, "grams": { "cup": 280, "tbsp": 18, "fl_oz": 35 } },
   "worcestershire sauce": { "sellUnit": "fl_oz", "packSize": 1, "grams": { "cup": 240, "tbsp": 15, "fl_oz": 30 } },
-  "hoisin sauce": { "sellUnit": "fl_oz", "packSize": 1, "grams": { "cup": 280, "tbsp": 18, "fl_oz": 35 } }
+  "hoisin sauce": { "sellUnit": "fl_oz", "packSize": 1, "grams": { "cup": 280, "tbsp": 18, "fl_oz": 35 } },
+
+  "_liquid_note": "Labelled by net WEIGHT ('16 oz') but bought and measured by volume, so fl_oz needs a grams anchor the same way chicken broth does. Without one these resolve as no-priceable-candidate.",
+  "chicken stock": { "sellUnit": "fl_oz", "packSize": 1, "grams": { "cup": 240, "fl_oz": 30 } },
+  "beef stock": { "sellUnit": "fl_oz", "packSize": 1, "grams": { "cup": 240, "fl_oz": 30 } },
+  "egg white": { "sellUnit": "fl_oz", "packSize": 1, "grams": { "cup": 243, "fl_oz": 30 } },
+  "agave nectar": { "sellUnit": "fl_oz", "packSize": 1, "grams": { "cup": 328, "tbsp": 21, "fl_oz": 41 } },
+  "apple butter": { "sellUnit": "fl_oz", "packSize": 1, "grams": { "cup": 280, "tbsp": 18, "fl_oz": 35 } },
+  "sunflower butter": { "sellUnit": "fl_oz", "packSize": 1, "grams": { "cup": 256, "tbsp": 16, "fl_oz": 32 } },
+  "italian dressing": { "sellUnit": "fl_oz", "packSize": 1, "grams": { "cup": 230, "tbsp": 14, "fl_oz": 29 } },
+  "tzatziki": { "sellUnit": "fl_oz", "packSize": 1, "grams": { "cup": 240, "tbsp": 15, "fl_oz": 30 } },
+  "french onion dip": { "sellUnit": "fl_oz", "packSize": 1, "grams": { "cup": 240, "tbsp": 15, "fl_oz": 30 } },
+  "queso dip": { "sellUnit": "fl_oz", "packSize": 1, "grams": { "cup": 245, "tbsp": 15, "fl_oz": 31 } },
+  "enchilada sauce": { "sellUnit": "fl_oz", "packSize": 1, "grams": { "cup": 245, "fl_oz": 31 } },
+  "alfredo sauce": { "sellUnit": "fl_oz", "packSize": 1, "grams": { "cup": 250, "fl_oz": 31 } }
 }
