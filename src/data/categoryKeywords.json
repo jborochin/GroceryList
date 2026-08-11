@@ -214,5 +214,22 @@
   "curry paste": "Condiments/Oils",
   "curry powder": "Spices",
   "jerk seasoning": "Spices",
-  "pizza dough": "Bakery"
+  "pizza dough": "Bakery",
+
+  "bbq sauce": "Condiments/Oils",
+  "buffalo sauce": "Condiments/Oils",
+  "pad thai sauce": "Condiments/Oils",
+  "teriyaki sauce": "Condiments/Oils",
+  "dressing": "Condiments/Oils",
+  "marinara sauce": "Pantry",
+  "bean sprout": "Produce",
+  "coleslaw mix": "Produce",
+  "chia seed": "Pantry",
+  "sesame seed": "Spices",
+  "edamame": "Frozen",
+  "falafel": "Frozen",
+  "fettuccine": "Pantry",
+  "garam masala": "Spices",
+  "stir-fry vegetable": "Frozen",
+  "protein powder": "Pantry"
 }
