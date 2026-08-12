@@ -7,6 +7,12 @@ web-build/
 .env
 .env.*
 !.env.example
+# Apple signing keys — App Store Connect API (.p8) and any exported certs.
+# These belong outside the repo entirely (~/.appstoreconnect/private_keys);
+# this is only a guard against an accidental copy landing here.
+*.p8
+*.p12
+*.mobileprovision
 .vscode/
 ios/
 android/
