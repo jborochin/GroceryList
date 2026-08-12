@@ -8,6 +8,7 @@
  * Usage:
  *   npm run ig:probe -- https://www.instagram.com/reel/C_LYHf-uByQ/
  *   npm run ig:probe -- <url> --caption     # also dump the raw caption
+ *   npm run ig:probe -- <url> --image       # check the cover-frame endpoint is alive
  */
 import { importInstagramRecipe, InstagramImportError } from '../src/utils/instagramImport';
 import { parseSharedUrl } from '../src/utils/instagramUrl';
@@ -19,10 +20,11 @@ function formatQuantity(value: number): string {
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const showCaption = args.includes('--caption');
+  const showImage = args.includes('--image');
   const url = args.find((a) => !a.startsWith('--'));
 
   if (!url) {
-    console.error('Usage: npm run ig:probe -- <instagram-url> [--caption]');
+    console.error('Usage: npm run ig:probe -- <instagram-url> [--caption] [--image]');
     process.exit(1);
   }
 
@@ -40,6 +42,13 @@ async function main(): Promise<void> {
     console.log(`Servings  : ${recipe.servings}`);
     console.log(`Source    : ${recipe.sourceUrl ?? '(none)'}`);
     console.log(`Image     : ${recipe.imageUrl ?? '(none)'}`);
+    const n = recipe.nutritionPerServing;
+    const provenance = recipe.estimatedMacros?.length
+      ? ` (estimated: ${recipe.estimatedMacros.join(', ')})`
+      : ' (stated in caption)';
+    console.log(
+      `Macros    : ${n ? `${n.calories} cal | ${n.proteinG}g P | ${n.carbsG}g C | ${n.fatG}g F${provenance}` : '(none)'}`,
+    );
 
     console.log(`\nIngredients (${recipe.ingredients.length}):`);
     for (const ingredient of recipe.ingredients) {
@@ -72,6 +81,40 @@ async function main(): Promise<void> {
       process.exit(2);
     }
     throw err;
+  }
+
+  if (showImage) {
+    // The importer prefers /media/?size=l over og:image because og:image has a
+    // play button composited in. That endpoint is undocumented, so this is the
+    // repeatable check that it is still serving images rather than a login page.
+    console.log('\n--- cover image ---');
+    const { extractCaptionFromHtml } = await import('../src/utils/instagramCaption');
+    const { coverImageUrlFromShortcode } = await import('../src/utils/instagramUrl');
+    const res = await fetch(target.url, { headers: { 'User-Agent': 'facebookexternalhit/1.1' } });
+    const extracted = extractCaptionFromHtml(await res.text());
+    const canonical = extracted?.canonicalUrl ? parseSharedUrl(extracted.canonicalUrl) : null;
+    const shortcode =
+      target.shortcode ?? (canonical?.kind === 'instagram' ? canonical.shortcode : null);
+
+    const candidates: Array<[string, string | undefined]> = [
+      ['cover  (/media/?size=l)', shortcode ? coverImageUrlFromShortcode(shortcode) : undefined],
+      ['og:image', extracted?.imageUrl],
+    ];
+    for (const [label, candidate] of candidates) {
+      if (!candidate) {
+        console.log(`  ${label.padEnd(24)} (none)`);
+        continue;
+      }
+      try {
+        const r = await fetch(candidate, { redirect: 'follow' });
+        const bytes = r.ok ? (await r.arrayBuffer()).byteLength : 0;
+        console.log(
+          `  ${label.padEnd(24)} ${r.status} ${(r.headers.get('content-type') ?? '?').padEnd(12)} ${bytes} bytes`,
+        );
+      } catch (err) {
+        console.log(`  ${label.padEnd(24)} ERROR ${err instanceof Error ? err.message : err}`);
+      }
+    }
   }
 
   if (showCaption) {

@@ -1,4 +1,9 @@
-import { extractFirstUrl, parseSharedUrl, postUrlFromShortcode } from '../utils/instagramUrl';
+import {
+  coverImageUrlFromShortcode,
+  extractFirstUrl,
+  parseSharedUrl,
+  postUrlFromShortcode,
+} from '../utils/instagramUrl';
 
 describe('extractFirstUrl', () => {
   it('returns a bare url unchanged', () => {
@@ -89,5 +94,29 @@ describe('parseSharedUrl', () => {
 describe('postUrlFromShortcode', () => {
   it('builds a canonical post url', () => {
     expect(postUrlFromShortcode('C6IsG9BI3WZ')).toBe('https://www.instagram.com/p/C6IsG9BI3WZ/');
+  });
+});
+
+describe('coverImageUrlFromShortcode', () => {
+  // The /p/ form is not cosmetic: /reel/<code>/media/ 404s.
+  it('builds a /p/ media url', () => {
+    expect(coverImageUrlFromShortcode('C6IsG9BI3WZ')).toBe(
+      'https://www.instagram.com/p/C6IsG9BI3WZ/media/?size=l',
+    );
+  });
+
+  // A /share/… link hides its shortcode, so the importer re-derives one from
+  // og:url. That only works if the username-owned form round-trips.
+  it.each([
+    'https://www.instagram.com/recipebylayla/reel/C_LYHf-uByQ/',
+    'https://www.instagram.com/jalalsamfit/reel/DbgHTSuCvk8/',
+    'https://www.instagram.com/p/DbgHTSuCvk8/',
+  ])('recovers a shortcode from canonical url %s', (canonical) => {
+    const target = parseSharedUrl(canonical);
+    expect(target.kind).toBe('instagram');
+    if (target.kind !== 'instagram' || !target.shortcode) throw new Error('no shortcode');
+    expect(coverImageUrlFromShortcode(target.shortcode)).toMatch(
+      /^https:\/\/www\.instagram\.com\/p\/[A-Za-z0-9_-]+\/media\/\?size=l$/,
+    );
   });
 });

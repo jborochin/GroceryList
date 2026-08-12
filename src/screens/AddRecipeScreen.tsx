@@ -24,6 +24,7 @@ import {
 import { parseRecipeFromCaption } from '../utils/instagramCaptionParser';
 import { importInstagramRecipe, InstagramImportError } from '../utils/instagramImport';
 import { parseSharedUrl } from '../utils/instagramUrl';
+import { estimateMissingMacros } from '../utils/recipeMacros';
 import { IngredientEditor } from '../components/IngredientEditor';
 import { ServingStepper } from '../components/ServingStepper';
 import { Ingredient, NutritionPerServing } from '../types';
@@ -256,7 +257,12 @@ export function AddRecipeScreen() {
   const [nutrition, setNutrition] = useState<NutritionPerServing | undefined>(undefined);
   const [estimatedFields, setEstimatedFields] = useState<Set<keyof NutritionPerServing>>(new Set());
 
+  // Bumped by anything that establishes new macro state, so a background estimate
+  // that resolves late can tell whether it is still the current one.
+  const importSeq = useRef(0);
+
   const applyParsed = (parsed: ParsedRecipe) => {
+    importSeq.current += 1;
     setTitle(parsed.title);
     setImageUrl(parsed.imageUrl ?? '');
     setSourceUrl(parsed.sourceUrl);
@@ -360,6 +366,9 @@ export function AddRecipeScreen() {
   }, [sharedTarget, runInstagramImport, runUrlImport]);
 
   // Caption parsing is pure + synchronous — no network, so no importing spinner.
+  // When the caption states no macros we still estimate them, but in the
+  // background: the form is usable immediately and the numbers land a second or
+  // two later rather than holding a 0ms interaction open on a network call.
   const handleImportCaption = () => {
     const trimmed = caption.trim();
     if (!trimmed) return;
@@ -370,6 +379,16 @@ export function AddRecipeScreen() {
       setMode('manual');
       haptics.success();
       toast.show({ message: `Imported "${parsed.title}"`, tone: 'success' });
+      if (parsed.missingMacros?.length) {
+        const seq = ++importSeq.current;
+        void estimateMissingMacros(parsed, parsed.missingMacros).then((enriched) => {
+          // A newer import — or a value the user has already typed over — must win.
+          if (seq !== importSeq.current) return;
+          if (!enriched.estimatedMacros?.length) return;
+          setNutrition(enriched.nutritionPerServing);
+          setEstimatedFields(new Set(enriched.estimatedMacros));
+        });
+      }
     } catch (err) {
       if (err instanceof RecipeParseError) {
         setImportError({ kind: err.kind, message: err.message, source: 'caption' });
@@ -425,6 +444,8 @@ export function AddRecipeScreen() {
   };
 
   const setNutritionField = (key: keyof NutritionPerServing, v: string) => {
+    // Typed macros outrank a background estimate still in flight.
+    importSeq.current += 1;
     const num = parseFloat(v) || 0;
     setNutrition({
       calories: 0,

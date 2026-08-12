@@ -1,7 +1,8 @@
 import { ParsedRecipe, RecipeParseError, RecipeParseErrorKind } from './recipeUrlParser';
 import { extractCaptionFromHtml } from './instagramCaption';
 import { parseRecipeFromCaption } from './instagramCaptionParser';
-import { parseSharedUrl } from './instagramUrl';
+import { coverImageUrlFromShortcode, parseSharedUrl } from './instagramUrl';
+import { estimateMissingMacros } from './recipeMacros';
 
 // Instagram serves a ~600KB client-rendered shell to anything that looks like a
 // browser. Asked as a link-preview crawler, the same URL returns the complete
@@ -122,18 +123,35 @@ export async function importInstagramRecipe(url: string): Promise<ParsedRecipe> 
   }
 
   const sourceUrl = extracted.canonicalUrl ?? target.url;
+  let parsed: ParsedRecipe;
   try {
-    const parsed = parseRecipeFromCaption(extracted.caption, sourceUrl);
-    return {
-      ...parsed,
-      // The reel thumbnail is a better recipe image than nothing, and the caption
-      // parser never supplies one.
-      imageUrl: parsed.imageUrl ?? extracted.imageUrl,
-    };
+    parsed = parseRecipeFromCaption(extracted.caption, sourceUrl);
   } catch (err) {
     const kind: RecipeParseErrorKind = err instanceof RecipeParseError ? err.kind : 'malformed';
     const message =
       err instanceof Error ? err.message : 'The caption could not be read as a recipe.';
     throw new InstagramImportError(kind, message, extracted.caption);
   }
+
+  // A /share/… link doesn't expose its shortcode, but og:url resolves to the real
+  // post, so the canonical URL is a second chance at one.
+  const canonical = extracted.canonicalUrl ? parseSharedUrl(extracted.canonicalUrl) : null;
+  const shortcode =
+    target.shortcode ?? (canonical?.kind === 'instagram' ? canonical.shortcode : null);
+
+  const withImage: ParsedRecipe = {
+    ...parsed,
+    // The reel thumbnail is a better recipe image than nothing, and the caption
+    // parser never supplies one. Prefer the play-button-free cover frame, with
+    // og:image as the fallback.
+    imageUrl:
+      parsed.imageUrl ??
+      (shortcode ? coverImageUrlFromShortcode(shortcode) : undefined) ??
+      extracted.imageUrl,
+  };
+
+  // Captions state their own macros most of the time; estimate whatever is left.
+  // Deliberately outside the try: this is total and non-throwing, and a nutrition
+  // hiccup must never turn a successfully parsed recipe into an import error.
+  return estimateMissingMacros(withImage, parsed.missingMacros ?? []);
 }

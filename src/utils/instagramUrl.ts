@@ -137,3 +137,20 @@ export function parseSharedUrl(text: string): SharedTarget {
 export function postUrlFromShortcode(shortcode: string): string {
   return `https://www.instagram.com/p/${shortcode}/`;
 }
+
+/**
+ * Clean cover frame for a post.
+ *
+ * A reel's `og:image` is served through Instagram's `stp=cmp1_…_tt6` transform,
+ * which composites a large play triangle into the middle of the picture — fine
+ * as a link preview, ugly as a recipe photo. That URL is signature-locked, so
+ * editing `stp` off it just returns 403. This legacy redirect endpoint serves
+ * the same frame at higher resolution with no play button, needs no auth or
+ * crawler UA, and carries no expiry signature — unlike the CDN URL, so a stored
+ * imageUrl won't rot.
+ *
+ * The `/p/` form is required: `/reel/<code>/media/` 404s.
+ */
+export function coverImageUrlFromShortcode(shortcode: string): string {
+  return `${postUrlFromShortcode(shortcode)}media/?size=l`;
+}
