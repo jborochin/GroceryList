@@ -1,0 +1,50 @@
+{
+  "totalHits": 3,
+  "foods": [
+    {
+      "fdcId": 2094095,
+      "description": "GREEK YOGURT, PLAIN",
+      "dataType": "Branded",
+      "brandOwner": "Chobani, LLC",
+      "brandName": "CHOBANI",
+      "gtinUpc": "0894700010045",
+      "servingSize": 170,
+      "servingSizeUnit": "g",
+      "householdServingFullText": "1 container",
+      "foodNutrients": [
+        { "nutrientId": 1008, "nutrientNumber": "208", "nutrientName": "Energy", "unitName": "KCAL", "value": 59 },
+        { "nutrientId": 1003, "nutrientNumber": "203", "nutrientName": "Protein", "unitName": "G", "value": 10 },
+        { "nutrientId": 1005, "nutrientNumber": "205", "nutrientName": "Carbohydrate, by difference", "unitName": "G", "value": 3.6 },
+        { "nutrientId": 1004, "nutrientNumber": "204", "nutrientName": "Total lipid (fat)", "unitName": "G", "value": 0.4 }
+      ]
+    },
+    {
+      "fdcId": 173944,
+      "description": "Bananas, raw",
+      "dataType": "SR Legacy",
+      "foodNutrients": [
+        { "nutrientNumber": "208", "nutrientName": "Energy", "unitName": "KCAL", "value": 89 },
+        { "nutrientNumber": "203", "nutrientName": "Protein", "unitName": "G", "value": 1.09 },
+        { "nutrientNumber": "205", "nutrientName": "Carbohydrate, by difference", "unitName": "G", "value": 22.8 },
+        { "nutrientNumber": "204", "nutrientName": "Total lipid (fat)", "unitName": "G", "value": 0.33 }
+      ],
+      "foodMeasures": [
+        { "disseminationText": "1 medium (7\" to 7-7/8\" long)", "gramWeight": 118, "modifier": "medium" },
+        { "disseminationText": "1 cup, sliced", "gramWeight": 150, "modifier": "cup, sliced" }
+      ]
+    },
+    {
+      "fdcId": 999999,
+      "description": "WATER, PURIFIED",
+      "dataType": "Branded",
+      "brandName": "STORE BRAND",
+      "servingSize": 240,
+      "servingSizeUnit": "ml",
+      "householdServingFullText": "1 bottle",
+      "foodNutrients": [
+        { "nutrientNumber": "208", "nutrientName": "Energy", "unitName": "KCAL", "value": 0 },
+        { "nutrientNumber": "203", "nutrientName": "Protein", "unitName": "G", "value": 0 }
+      ]
+    }
+  ]
+}

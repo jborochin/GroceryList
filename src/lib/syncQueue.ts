@@ -7,7 +7,9 @@ export type OutboxTable =
   | 'meal_plan_entries'
   | 'pantry_items'
   | 'price_overrides'
-  | 'user_settings';
+  | 'user_settings'
+  | 'food_log_entries'
+  | 'custom_foods';
 
 export interface OutboxEntry {
   id: string;            // outbox row id (uuid-ish)
@@ -41,6 +43,8 @@ export function naturalKey(table: OutboxTable, payload: Record<string, unknown>)
   switch (table) {
     case 'recipes':
     case 'pantry_items':
+    case 'food_log_entries':
+    case 'custom_foods':
       return payload.id;
     case 'meal_plan_entries':
       return payload.recipe_id;

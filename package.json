@@ -16,7 +16,8 @@
     "prices:find-locations": "tsx scripts/findKrogerLocations.ts",
     "prices:refresh-kroger": "tsx scripts/refreshKrogerPrices.ts",
     "prices:bootstrap": "tsx scripts/prices/bootstrap.ts",
-    "brand:assets": "node scripts/generateBrandAssets.mjs"
+    "brand:assets": "node scripts/generateBrandAssets.mjs",
+    "food:probe": "tsx scripts/probeFoodSearch.ts"
   },
   "dependencies": {
     "@expo-google-fonts/montserrat": "^0.4.2",

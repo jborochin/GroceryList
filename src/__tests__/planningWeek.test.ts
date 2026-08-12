@@ -1,7 +1,15 @@
 import {
+  cellToDateKey,
+  dateKeyLabel,
+  dateKeyToCell,
   getWeekStart,
+  parseDateKey,
   parseWeekStart,
+  shiftDate,
   shiftWeek,
+  toDateKey,
+  todayKey,
+  weekDateKeys,
   weekLabel,
   weekRangeLabel,
 } from '../utils/planningWeek';
@@ -75,5 +83,108 @@ describe('weekRangeLabel', () => {
 
   it('spells both months when the week spans two', () => {
     expect(weekRangeLabel('2026-06-29')).toBe('Jun 29 – Jul 5');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Day keys — the bridge between a single logged day and the schedule grid.
+// ---------------------------------------------------------------------------
+
+describe('parseDateKey / toDateKey', () => {
+  it('round-trips a date key through local time', () => {
+    expect(toDateKey(parseDateKey('2026-08-13'))).toBe('2026-08-13');
+  });
+
+  it('parses to local midnight, not UTC midnight', () => {
+    // `new Date('2026-08-13')` is UTC midnight, which is the 12th anywhere west
+    // of Greenwich — a late dinner would be filed under the wrong day.
+    const d = parseDateKey('2026-08-13');
+    expect(d.getFullYear()).toBe(2026);
+    expect(d.getMonth()).toBe(7);
+    expect(d.getDate()).toBe(13);
+    expect(d.getHours()).toBe(0);
+  });
+
+  it('zero-pads single-digit months and days', () => {
+    expect(toDateKey(new Date(2026, 0, 5))).toBe('2026-01-05');
+  });
+});
+
+describe('todayKey', () => {
+  it('is the local date of the given instant', () => {
+    expect(todayKey(new Date(2026, 7, 13, 23, 30))).toBe('2026-08-13');
+  });
+});
+
+describe('shiftDate', () => {
+  it('moves forward and backward by days', () => {
+    expect(shiftDate('2026-08-13', 1)).toBe('2026-08-14');
+    expect(shiftDate('2026-08-13', -1)).toBe('2026-08-12');
+  });
+
+  it('crosses month and year boundaries', () => {
+    expect(shiftDate('2026-08-31', 1)).toBe('2026-09-01');
+    expect(shiftDate('2026-12-31', 1)).toBe('2027-01-01');
+    expect(shiftDate('2026-03-01', -1)).toBe('2026-02-28');
+  });
+
+  it('handles a leap day', () => {
+    expect(shiftDate('2028-02-28', 1)).toBe('2028-02-29');
+  });
+});
+
+describe('dateKeyToCell', () => {
+  it('indexes Monday as day 0 and Sunday as day 6', () => {
+    // 2026-08-10 is a Monday.
+    expect(dateKeyToCell('2026-08-10')).toEqual({ weekStart: '2026-08-10', day: 0 });
+    expect(dateKeyToCell('2026-08-13')).toEqual({ weekStart: '2026-08-10', day: 3 });
+    expect(dateKeyToCell('2026-08-16')).toEqual({ weekStart: '2026-08-10', day: 6 });
+  });
+
+  it('agrees with getWeekStart for every day of a week', () => {
+    for (let i = 0; i < 7; i++) {
+      const key = shiftDate('2026-08-10', i);
+      const cell = dateKeyToCell(key);
+      expect(cell.weekStart).toBe(getWeekStart(parseDateKey(key)));
+      expect(cell.day).toBe(i);
+    }
+  });
+});
+
+describe('cellToDateKey', () => {
+  it('inverts dateKeyToCell', () => {
+    for (let i = 0; i < 7; i++) {
+      const key = shiftDate('2026-08-10', i);
+      const { weekStart, day } = dateKeyToCell(key);
+      expect(cellToDateKey(weekStart, day)).toBe(key);
+    }
+  });
+});
+
+describe('weekDateKeys', () => {
+  it('lists the seven days of a week, Monday first', () => {
+    expect(weekDateKeys('2026-08-10')).toEqual([
+      '2026-08-10',
+      '2026-08-11',
+      '2026-08-12',
+      '2026-08-13',
+      '2026-08-14',
+      '2026-08-15',
+      '2026-08-16',
+    ]);
+  });
+});
+
+describe('dateKeyLabel', () => {
+  const today = new Date(2026, 7, 13);
+
+  it('names the days around today', () => {
+    expect(dateKeyLabel('2026-08-13', today)).toBe('Today');
+    expect(dateKeyLabel('2026-08-12', today)).toBe('Yesterday');
+    expect(dateKeyLabel('2026-08-14', today)).toBe('Tomorrow');
+  });
+
+  it('falls back to a weekday and date', () => {
+    expect(dateKeyLabel('2026-08-17', today)).toBe('Mon, Aug 17');
   });
 });

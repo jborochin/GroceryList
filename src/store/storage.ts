@@ -15,6 +15,8 @@ export const STORAGE_KEYS = {
   settings: 'mealprep/settings/v1',
   priceOverrides: 'mealprep/priceOverrides/v1',
   itemOverrides: 'mealprep/itemOverrides/v1',
+  foodLog: 'mealprep/foodLog/v1',
+  customFoods: 'mealprep/customFoods/v1',
   seeded: 'mealprep/seeded/v1',
   lastSyncedAt: 'mealprep/sync/lastSyncedAt/v1',
   outbox: 'mealprep/sync/outbox/v1',

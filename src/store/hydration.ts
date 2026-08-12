@@ -12,9 +12,11 @@ import { usePriceOverrideStore } from './usePriceOverrideStore';
 import { useItemOverrideStore } from './useItemOverrideStore';
 import { useAuthStore } from './useAuthStore';
 import { useFavoritesStore } from './useFavoritesStore';
+import { useFoodLogStore } from './useFoodLogStore';
+import { useCustomFoodStore } from './useCustomFoodStore';
 import { getWeekStart } from '../utils/planningWeek';
 
-const stores = [useRecipeStore, useMealPlanStore, useMealScheduleStore, useMealDispositionStore, usePantryStore, useManualItemStore, useGroceryRecipeStore, useDismissedItemStore, useSettingsStore, usePriceOverrideStore, useItemOverrideStore, useFavoritesStore];
+const stores = [useRecipeStore, useMealPlanStore, useMealScheduleStore, useMealDispositionStore, usePantryStore, useManualItemStore, useGroceryRecipeStore, useDismissedItemStore, useSettingsStore, usePriceOverrideStore, useItemOverrideStore, useFavoritesStore, useFoodLogStore, useCustomFoodStore];
 
 export function useHydration(): boolean {
   const [hydrated, setHydrated] = useState(false);

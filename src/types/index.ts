@@ -127,6 +127,93 @@ export interface UserSettings {
   cookingEasePreference: number;
 }
 
+// ---------------------------------------------------------------------------
+// Food logging (the Log tab)
+// ---------------------------------------------------------------------------
+
+// Where a logged food's numbers came from.
+// - 'usda'   — USDA FoodData Central (branded products and whole foods)
+// - 'off'    — Open Food Facts (barcode fallback when FDC has no UPC match)
+// - 'custom' — a CustomFood the user defined by hand
+// - 'recipe' — one of the user's own Recipes / a catalog meal clone
+// - 'quick'  — bare calories typed in with no food behind them
+export type FoodSource = 'usda' | 'off' | 'custom' | 'recipe' | 'quick';
+
+// One selectable portion of a food, always anchored to grams so servingMath can
+// scale per-100g nutrition. `label` is what the source calls it ("1 container",
+// "2 tbsp") and is shown verbatim.
+export interface FoodServing {
+  label: string;
+  grams: number;
+}
+
+// A search result. NOT persisted — logging snapshots it into a FoodLogEntry.
+export interface FoodItem {
+  source: FoodSource;
+  sourceId: string;
+  name: string;
+  brand?: string;
+  barcode?: string;
+  // Per 100 g, the basis both FDC and Open Food Facts publish. Absent only for
+  // 'quick' entries, which carry no scalable basis.
+  per100g?: NutritionPerServing;
+  // Household measures offered in the serving picker, most useful first. May be
+  // empty, in which case the picker falls back to grams.
+  servings: FoodServing[];
+}
+
+// One thing the user actually ate, on one date, in one slot.
+//
+// `nutrition` is the TOTAL for this entry as logged — already multiplied by
+// servingQty — and is a snapshot, never a pointer to an fdcId. The app is
+// offline-first and USDA/OFF rows change under us; a diary that silently
+// rewrites last month's calories is broken. Same reasoning as
+// Recipe.nutritionPerServing.
+//
+// At most one of fromCellId/replacesCellId is set, both referring to a
+// ScheduleCell on the day's plan:
+// - fromCellId    — "I ate the planned meal" (the *Ate this* button).
+// - replacesCellId — "I ate something else instead" (*Ate other*). The plan
+//   cell deliberately survives: the ingredients are already on the grocery
+//   list because they were already bought.
+// Either way resolveDay() stops projecting that cell.
+//
+// The schedule is device-local while this table syncs, so on a second device
+// these ids dangle. That is harmless — device B has no cells to suppress, so it
+// simply renders the logged entry.
+export interface FoodLogEntry {
+  id: string;
+  date: string; // local ISO date key, YYYY-MM-DD (see planningWeek.ts)
+  slot: MealSlot;
+  displayName: string;
+  brand?: string;
+  source: FoodSource;
+  sourceId?: string;
+  barcode?: string;
+  servingQty: number;
+  servingLabel: string; // the FoodServing label chosen, or 'g'
+  gramsPerServing?: number;
+  nutrition: NutritionPerServing;
+  fromCellId?: string;
+  replacesCellId?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+// A food the user defined by hand — homemade dishes, and the escape hatch when
+// a barcode misses both databases.
+export interface CustomFood {
+  id: string;
+  name: string;
+  brand?: string;
+  servingLabel: string;
+  gramsPerServing?: number;
+  nutritionPerServing: NutritionPerServing;
+  barcode?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
 export interface PriceOverride {
   name: string;
   pricePerUnit: number;

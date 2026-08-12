@@ -5,10 +5,17 @@ import { useMealPlanStore } from '../store/useMealPlanStore';
 import { usePantryStore } from '../store/usePantryStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { usePriceOverrideStore } from '../store/usePriceOverrideStore';
+import { useFoodLogStore } from '../store/useFoodLogStore';
+import { useCustomFoodStore } from '../store/useCustomFoodStore';
 import { STORAGE_KEYS } from '../store/storage';
 import {
   CookingFrequency,
+  CustomFood,
+  FoodLogEntry,
+  FoodSource,
   MealPlanEntry,
+  MealSlot,
+  NutritionPerServing,
   PantryItem,
   PriceOverride,
   Recipe,
@@ -109,6 +116,105 @@ function overrideToRow(o: PriceOverride, key: string, userId: string) {
     price_per_unit: o.pricePerUnit,
     unit: o.unit,
     deleted_at: null,
+  };
+}
+
+function foodLogToRow(e: FoodLogEntry, userId: string) {
+  return {
+    id: e.id,
+    user_id: userId,
+    entry_date: e.date,
+    slot: e.slot,
+    display_name: e.displayName,
+    brand: e.brand ?? null,
+    source: e.source,
+    source_id: e.sourceId ?? null,
+    barcode: e.barcode ?? null,
+    serving_qty: e.servingQty,
+    serving_label: e.servingLabel,
+    grams_per_serving: e.gramsPerServing ?? null,
+    nutrition: e.nutrition,
+    from_cell_id: e.fromCellId ?? null,
+    replaces_cell_id: e.replacesCellId ?? null,
+    created_at: new Date(e.createdAt).toISOString(),
+    updated_at: new Date(e.updatedAt).toISOString(),
+    deleted_at: null,
+  };
+}
+
+const ZERO_NUTRITION: NutritionPerServing = { calories: 0, proteinG: 0, carbsG: 0, fatG: 0 };
+
+function asSlot(v: unknown): MealSlot {
+  return v === 'breakfast' || v === 'lunch' || v === 'dinner' || v === 'snack' ? v : 'snack';
+}
+
+function asFoodSource(v: unknown): FoodSource {
+  return v === 'usda' || v === 'off' || v === 'custom' || v === 'recipe' || v === 'quick'
+    ? v
+    : 'quick';
+}
+
+function asNutrition(v: unknown): NutritionPerServing {
+  const n = (v ?? {}) as Partial<NutritionPerServing>;
+  return {
+    calories: Number(n.calories) || 0,
+    proteinG: Number(n.proteinG) || 0,
+    carbsG: Number(n.carbsG) || 0,
+    fatG: Number(n.fatG) || 0,
+  };
+}
+
+function rowToFoodLog(row: Record<string, unknown>): FoodLogEntry {
+  return {
+    id: row.id as string,
+    // `entry_date` is a Postgres `date`, which PostgREST renders as YYYY-MM-DD —
+    // already the local date key the day view uses. Never build a Date from it:
+    // that would reinterpret it as UTC midnight and shift the day west of GMT.
+    date: String(row.entry_date).slice(0, 10),
+    slot: asSlot(row.slot),
+    displayName: row.display_name as string,
+    brand: (row.brand as string | null) ?? undefined,
+    source: asFoodSource(row.source),
+    sourceId: (row.source_id as string | null) ?? undefined,
+    barcode: (row.barcode as string | null) ?? undefined,
+    servingQty: Number(row.serving_qty),
+    servingLabel: (row.serving_label as string | null) ?? 'g',
+    gramsPerServing: row.grams_per_serving == null ? undefined : Number(row.grams_per_serving),
+    nutrition: asNutrition(row.nutrition) ?? ZERO_NUTRITION,
+    fromCellId: (row.from_cell_id as string | null) ?? undefined,
+    replacesCellId: (row.replaces_cell_id as string | null) ?? undefined,
+    createdAt: row.created_at ? new Date(row.created_at as string).getTime() : Date.now(),
+    updatedAt: row.updated_at ? new Date(row.updated_at as string).getTime() : Date.now(),
+  };
+}
+
+function customFoodToRow(f: CustomFood, userId: string) {
+  return {
+    id: f.id,
+    user_id: userId,
+    name: f.name,
+    brand: f.brand ?? null,
+    serving_label: f.servingLabel,
+    grams_per_serving: f.gramsPerServing ?? null,
+    nutrition_per_serving: f.nutritionPerServing,
+    barcode: f.barcode ?? null,
+    created_at: new Date(f.createdAt).toISOString(),
+    updated_at: new Date(f.updatedAt).toISOString(),
+    deleted_at: null,
+  };
+}
+
+function rowToCustomFood(row: Record<string, unknown>): CustomFood {
+  return {
+    id: row.id as string,
+    name: row.name as string,
+    brand: (row.brand as string | null) ?? undefined,
+    servingLabel: (row.serving_label as string | null) ?? 'serving',
+    gramsPerServing: row.grams_per_serving == null ? undefined : Number(row.grams_per_serving),
+    nutritionPerServing: asNutrition(row.nutrition_per_serving),
+    barcode: (row.barcode as string | null) ?? undefined,
+    createdAt: row.created_at ? new Date(row.created_at as string).getTime() : Date.now(),
+    updatedAt: row.updated_at ? new Date(row.updated_at as string).getTime() : Date.now(),
   };
 }
 
@@ -252,6 +358,42 @@ async function pushOverrideDelete(key: string, userId: string) {
   );
 }
 
+async function pushFoodLog(e: FoodLogEntry, userId: string) {
+  const row = foodLogToRow(e, userId);
+  await safePush('food_log_entries', 'upsert', row, () =>
+    getSupabase().from('food_log_entries').upsert(row)
+  );
+}
+
+async function pushFoodLogDelete(id: string, userId: string) {
+  const payload = { id, user_id: userId };
+  await safePush('food_log_entries', 'delete', payload, () =>
+    getSupabase()
+      .from('food_log_entries')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('user_id', userId)
+  );
+}
+
+async function pushCustomFood(f: CustomFood, userId: string) {
+  const row = customFoodToRow(f, userId);
+  await safePush('custom_foods', 'upsert', row, () =>
+    getSupabase().from('custom_foods').upsert(row)
+  );
+}
+
+async function pushCustomFoodDelete(id: string, userId: string) {
+  const payload = { id, user_id: userId };
+  await safePush('custom_foods', 'delete', payload, () =>
+    getSupabase()
+      .from('custom_foods')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('user_id', userId)
+  );
+}
+
 async function pushSettings(s: UserSettings, userId: string) {
   const row = settingsToRow(s, userId);
   await safePush('user_settings', 'upsert', row, () =>
@@ -318,16 +460,20 @@ async function doPullAll(userId: string): Promise<void> {
     const snapMeals = new Map(useMealPlanStore.getState().entries.map((e) => [e.recipeId, e]));
     const snapPantry = new Map(usePantryStore.getState().items.map((i) => [i.id, i]));
     const snapOverrides = new Map(Object.entries(usePriceOverrideStore.getState().overrides));
+    const snapFoodLog = new Map(useFoodLogStore.getState().entries.map((e) => [e.id, e]));
+    const snapCustomFoods = new Map(useCustomFoodStore.getState().foods.map((f) => [f.id, f]));
     const snapSettings = useSettingsStore.getState().settings;
 
     // Fetch INCLUDING soft-deleted rows: without tombstones, a remotely
     // deleted item is indistinguishable from a never-pushed local creation,
     // and the merge would push it back to life.
-    const [recipes, meals, pantry, overrides, settings] = await Promise.all([
+    const [recipes, meals, pantry, overrides, foodLog, customFoods, settings] = await Promise.all([
       supabase.from('recipes').select('*').eq('user_id', userId),
       supabase.from('meal_plan_entries').select('*').eq('user_id', userId),
       supabase.from('pantry_items').select('*').eq('user_id', userId),
       supabase.from('price_overrides').select('*').eq('user_id', userId),
+      supabase.from('food_log_entries').select('*').eq('user_id', userId),
+      supabase.from('custom_foods').select('*').eq('user_id', userId),
       supabase.from('user_settings').select('*').eq('user_id', userId).maybeSingle(),
     ]);
 
@@ -400,6 +546,34 @@ async function doPullAll(userId: string): Promise<void> {
         usePriceOverrideStore.setState({ overrides: Object.fromEntries(next) });
         for (const [key, o] of toPush) pushQueue.push(() => void pushOverride(key, o, userId));
       }
+      if (!foodLog.error && foodLog.data) {
+        const current = new Map(useFoodLogStore.getState().entries.map((e) => [e.id, e]));
+        const { next, toPush } = mergeStore(
+          foodLog.data as Row[],
+          (row) => row.id as string,
+          rowToFoodLog,
+          snapFoodLog,
+          current,
+          pending,
+          'food_log_entries'
+        );
+        useFoodLogStore.getState().replaceAll(next.map(([, e]) => e));
+        for (const [, e] of toPush) pushQueue.push(() => void pushFoodLog(e, userId));
+      }
+      if (!customFoods.error && customFoods.data) {
+        const current = new Map(useCustomFoodStore.getState().foods.map((f) => [f.id, f]));
+        const { next, toPush } = mergeStore(
+          customFoods.data as Row[],
+          (row) => row.id as string,
+          rowToCustomFood,
+          snapCustomFoods,
+          current,
+          pending,
+          'custom_foods'
+        );
+        useCustomFoodStore.getState().replaceAll(next.map(([, f]) => f));
+        for (const [, f] of toPush) pushQueue.push(() => void pushCustomFood(f, userId));
+      }
       if (!settings.error && settings.data) {
         // Settings are a single atomic object: apply the server copy only if
         // the user didn't change anything while the pull was in flight.
@@ -416,7 +590,13 @@ async function doPullAll(userId: string): Promise<void> {
     for (const push of pushQueue) push();
 
     const allOk =
-      !recipes.error && !meals.error && !pantry.error && !overrides.error && !settings.error;
+      !recipes.error &&
+      !meals.error &&
+      !pantry.error &&
+      !overrides.error &&
+      !foodLog.error &&
+      !customFoods.error &&
+      !settings.error;
     if (allOk) {
       await AsyncStorage.setItem(STORAGE_KEYS.lastSyncedAt, String(Date.now()));
     }
@@ -545,6 +725,36 @@ export function subscribeStores(userId: string): () => void {
   );
 
   unsubscribers.push(
+    useFoodLogStore.subscribe((state, prev) => {
+      if (applyingRemoteCount > 0) return;
+      const prevMap = new Map(prev.entries.map((e) => [e.id, e]));
+      const nextMap = new Map(state.entries.map((e) => [e.id, e]));
+      for (const e of state.entries) {
+        const p = prevMap.get(e.id);
+        if (!p || p.updatedAt !== e.updatedAt) void pushFoodLog(e, userId);
+      }
+      for (const e of prev.entries) {
+        if (!nextMap.has(e.id)) void pushFoodLogDelete(e.id, userId);
+      }
+    })
+  );
+
+  unsubscribers.push(
+    useCustomFoodStore.subscribe((state, prev) => {
+      if (applyingRemoteCount > 0) return;
+      const prevMap = new Map(prev.foods.map((f) => [f.id, f]));
+      const nextMap = new Map(state.foods.map((f) => [f.id, f]));
+      for (const f of state.foods) {
+        const p = prevMap.get(f.id);
+        if (!p || p.updatedAt !== f.updatedAt) void pushCustomFood(f, userId);
+      }
+      for (const f of prev.foods) {
+        if (!nextMap.has(f.id)) void pushCustomFoodDelete(f.id, userId);
+      }
+    })
+  );
+
+  unsubscribers.push(
     useSettingsStore.subscribe((state, prev) => {
       if (applyingRemoteCount > 0) return;
       if (state.settings === prev.settings) return;
@@ -578,6 +788,8 @@ export async function migrateLocalToAccount(userId: string): Promise<void> {
   const entries = useMealPlanStore.getState().entries;
   const pantry = usePantryStore.getState().items;
   const overrides = usePriceOverrideStore.getState().overrides;
+  const foodLog = useFoodLogStore.getState().entries;
+  const customFoods = useCustomFoodStore.getState().foods;
   const settings = useSettingsStore.getState().settings;
 
   const supabase = getSupabase();
@@ -609,6 +821,16 @@ export async function migrateLocalToAccount(userId: string): Promise<void> {
     await supabase
       .from('price_overrides')
       .upsert(overrideRows, { onConflict: 'user_id,normalized_name', ignoreDuplicates: true });
+  }
+  if (foodLog.length > 0) {
+    await supabase
+      .from('food_log_entries')
+      .upsert(foodLog.map((e) => foodLogToRow(e, userId)), { ignoreDuplicates: true });
+  }
+  if (customFoods.length > 0) {
+    await supabase
+      .from('custom_foods')
+      .upsert(customFoods.map((f) => customFoodToRow(f, userId)), { ignoreDuplicates: true });
   }
   // Settings can't use ignoreDuplicates: the handle_new_user trigger creates a
   // default row at signup, so the row always exists. Migrate local settings
