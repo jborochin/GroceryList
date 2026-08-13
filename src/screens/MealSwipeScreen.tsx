@@ -302,7 +302,9 @@ export function MealSwipeScreen() {
           : `Added ${summary.recipeCount} meals to your week`,
       tone: 'success',
     });
-    navigation.navigate('Tabs', { screen: 'Plan' });
+    // Straight to the Week grid: the deck just committed a week's meals, so the
+    // calendar is what the user needs to see, not today's log.
+    navigation.navigate('Tabs', { screen: 'Log', params: { view: 'week' } });
   }, [chosen, planEntries.length, days, slots, settings.cuisinePreferences, settings.cookingFrequency, toast, navigation]);
 
   const current = deck[index];

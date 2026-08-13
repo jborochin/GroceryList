@@ -2,7 +2,7 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { HomeScreen } from '../screens/HomeScreen';
 import { RecipeLibraryScreen } from '../screens/RecipeLibraryScreen';
-import { WeeklyPlanScreen } from '../screens/WeeklyPlanScreen';
+import { FoodLogScreen } from '../screens/FoodLogScreen';
 import { GroceryListScreen } from '../screens/GroceryListScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { TabParamList } from './types';
@@ -27,7 +27,7 @@ export function TabNavigator() {
     >
       <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Library" component={RecipeLibraryScreen} />
-      <Tab.Screen name="Plan" component={WeeklyPlanScreen} />
+      <Tab.Screen name="Log" component={FoodLogScreen} />
       <Tab.Screen name="List" component={GroceryListScreen} />
       <Tab.Screen name="Settings" component={SettingsScreen} />
     </Tab.Navigator>

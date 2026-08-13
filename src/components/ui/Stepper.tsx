@@ -10,22 +10,33 @@ interface Props {
   onChange: (v: number) => void;
   min?: number;
   max?: number;
+  // How much one press moves the value. Servings count in ones, but grams need
+  // tens — nobody logs a yogurt one gram at a time.
+  step?: number;
   unit?: string;
   size?: 'sm' | 'md';
 }
 
-export function Stepper({ value, onChange, min = 1, max = 99, unit, size = 'md' }: Props) {
+export function Stepper({
+  value,
+  onChange,
+  min = 1,
+  max = 99,
+  step = 1,
+  unit,
+  size = 'md',
+}: Props) {
   const t = useAppTheme();
   const dec = () => {
     if (value > min) {
       haptics.selection();
-      onChange(value - 1);
+      onChange(Math.max(min, value - step));
     }
   };
   const inc = () => {
     if (value < max) {
       haptics.selection();
-      onChange(value + 1);
+      onChange(Math.min(max, value + step));
     }
   };
   const iconSize = size === 'sm' ? 16 : 18;

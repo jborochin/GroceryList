@@ -476,3 +476,120 @@ $$;
 
 -- Service role only, same as the table it writes.
 revoke execute on function public.bump_ingredient_demand(text, boolean) from anon, authenticated;
+
+-- =====================================================================
+-- 12. food_log_entries (per user)
+--
+-- What the user actually ate, one row per food per day per slot. The meal
+-- *plan* it is displayed against (useMealScheduleStore) stays device-local, so
+-- from_cell_id / replaces_cell_id are ids this table cannot join to. That is
+-- deliberate — they are display hints that suppress a projected plan row on the
+-- device that made the decision; a second device has no cells to suppress and
+-- simply renders the logged entry.
+--
+-- `nutrition` is the total for the entry AS LOGGED (already scaled by
+-- serving_qty) and is a snapshot, never a reference to an fdcId. USDA and Open
+-- Food Facts rewrite rows under us; a diary whose history changes is broken.
+-- =====================================================================
+create table if not exists public.food_log_entries (
+  id uuid primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  entry_date date not null,
+  slot text not null,
+  display_name text not null,
+  brand text,
+  source text not null,
+  source_id text,
+  barcode text,
+  serving_qty numeric not null,
+  serving_label text not null,
+  grams_per_serving numeric,
+  nutrition jsonb not null,
+  from_cell_id text,
+  replaces_cell_id text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz
+);
+
+create index if not exists food_log_user_updated_idx on public.food_log_entries(user_id, updated_at);
+-- The day view reads one date at a time.
+create index if not exists food_log_user_date_idx on public.food_log_entries(user_id, entry_date);
+
+drop trigger if exists food_log_touch on public.food_log_entries;
+create trigger food_log_touch before update on public.food_log_entries
+  for each row execute function public.touch_updated_at();
+
+alter table public.food_log_entries enable row level security;
+
+drop policy if exists "food_log_select_own" on public.food_log_entries;
+drop policy if exists "food_log_insert_own" on public.food_log_entries;
+drop policy if exists "food_log_update_own" on public.food_log_entries;
+drop policy if exists "food_log_delete_own" on public.food_log_entries;
+
+create policy "food_log_select_own" on public.food_log_entries for select using (auth.uid() = user_id);
+create policy "food_log_insert_own" on public.food_log_entries for insert with check (auth.uid() = user_id);
+create policy "food_log_update_own" on public.food_log_entries for update using (auth.uid() = user_id);
+create policy "food_log_delete_own" on public.food_log_entries for delete using (auth.uid() = user_id);
+
+-- =====================================================================
+-- 13. custom_foods (per user)
+--
+-- Foods the user defined by hand: homemade dishes, and the fallback when a
+-- scanned barcode misses both FoodData Central and Open Food Facts.
+-- =====================================================================
+create table if not exists public.custom_foods (
+  id uuid primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  name text not null,
+  brand text,
+  serving_label text not null,
+  grams_per_serving numeric,
+  nutrition_per_serving jsonb not null,
+  barcode text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz
+);
+
+create index if not exists custom_foods_user_updated_idx on public.custom_foods(user_id, updated_at);
+
+drop trigger if exists custom_foods_touch on public.custom_foods;
+create trigger custom_foods_touch before update on public.custom_foods
+  for each row execute function public.touch_updated_at();
+
+alter table public.custom_foods enable row level security;
+
+drop policy if exists "custom_foods_select_own" on public.custom_foods;
+drop policy if exists "custom_foods_insert_own" on public.custom_foods;
+drop policy if exists "custom_foods_update_own" on public.custom_foods;
+drop policy if exists "custom_foods_delete_own" on public.custom_foods;
+
+create policy "custom_foods_select_own" on public.custom_foods for select using (auth.uid() = user_id);
+create policy "custom_foods_insert_own" on public.custom_foods for insert with check (auth.uid() = user_id);
+create policy "custom_foods_update_own" on public.custom_foods for update using (auth.uid() = user_id);
+create policy "custom_foods_delete_own" on public.custom_foods for delete using (auth.uid() = user_id);
+
+-- =====================================================================
+-- 14. food_cache (INTERNAL)
+--
+-- Response cache for the food-search edge function. USDA FoodData Central's
+-- free key allows ~1,000 requests/hour across every user of this app, so search
+-- results and barcode lookups are cached rather than re-fetched.
+--
+-- cache_key is 'q:<lowercased query>' or 'upc:<barcode>'. Carries no user_id —
+-- a public food database's answer is the same for everyone, so there is nothing
+-- per-user to protect. RLS on with ZERO policies: service role only, like
+-- price_sources. The client never reads this table; it goes through the
+-- function.
+-- =====================================================================
+create table if not exists public.food_cache (
+  cache_key text primary key,
+  payload jsonb not null,
+  fetched_at timestamptz not null default now()
+);
+
+alter table public.food_cache enable row level security;
+
+-- Stale rows are evicted by fetched_at, so the function scans on it.
+create index if not exists food_cache_fetched_idx on public.food_cache (fetched_at);

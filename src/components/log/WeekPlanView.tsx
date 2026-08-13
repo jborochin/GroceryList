@@ -1,86 +1,69 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, View, Pressable } from 'react-native';
-import Animated, {
-  useAnimatedScrollHandler,
-  useSharedValue,
-} from 'react-native-reanimated';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 import type { CompositeNavigationProp } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRecipeStore } from '../store/useRecipeStore';
-import { useMealPlanStore } from '../store/useMealPlanStore';
-import { useMealScheduleStore } from '../store/useMealScheduleStore';
-import { useSettingsStore } from '../store/useSettingsStore';
-import { ServingStepper } from '../components/ServingStepper';
-import { EmptyState } from '../components/EmptyState';
-import { MealPickerSheet } from '../components/MealPickerSheet';
-import { computeNutritionSummary } from '../utils/nutritionSummary';
-import { ensureRecipeForMeal } from '../utils/commitMealPlan';
-import { catalogCloneIdSet } from '../utils/deterministicId';
-import { getWeekStart, parseWeekStart, shiftWeek, weekLabel, weekRangeLabel } from '../utils/planningWeek';
+import { useRecipeStore } from '../../store/useRecipeStore';
+import { useMealPlanStore } from '../../store/useMealPlanStore';
+import { useMealScheduleStore } from '../../store/useMealScheduleStore';
+import { useSettingsStore } from '../../store/useSettingsStore';
+import { ServingStepper } from '../ServingStepper';
+import { EmptyState } from '../EmptyState';
+import { MealPickerSheet } from '../MealPickerSheet';
+import { computeNutritionSummary } from '../../utils/nutritionSummary';
+import { ensureRecipeForMeal } from '../../utils/commitMealPlan';
+import { catalogCloneIdSet } from '../../utils/deterministicId';
+import {
+  cellToDateKey,
+  getWeekStart,
+  shiftWeek,
+  weekRangeLabel,
+} from '../../utils/planningWeek';
 import {
   getMealCatalog,
   loadMealCatalogCache,
   refreshMealCatalogCache,
-} from '../lib/mealCatalogSync';
-import { NutritionBar } from '../components/NutritionBar';
-import { RootStackParamList, TabParamList } from '../navigation/types';
-import { Meal, MealSlot, ScheduleCell } from '../types';
-import { useAppTheme } from '../theme/tokens';
+} from '../../lib/mealCatalogSync';
+import { NutritionBar } from '../NutritionBar';
+import { RootStackParamList, TabParamList } from '../../navigation/types';
+import { Meal, MealSlot, ScheduleCell } from '../../types';
+import { useAppTheme } from '../../theme/tokens';
 import {
-  AmbientBackground,
-  CollapsingHeader,
-  Header,
   Surface,
   Text,
   IconButton,
   SectionHeader,
   Button,
   Pill,
-  TAB_BAR_SPACE,
-} from '../components/ui';
+} from '../ui';
+import { buildWeek } from './weekDays';
 
 type Nav = CompositeNavigationProp<
   BottomTabNavigationProp<TabParamList>,
   NativeStackNavigationProp<RootStackParamList>
 >;
 
-const SLOTS: MealSlot[] = ['breakfast', 'lunch', 'dinner', 'snack'];
-const SLOT_LABEL: Record<MealSlot, string> = {
-  breakfast: 'Breakfast',
-  lunch: 'Lunch',
-  dinner: 'Dinner',
-  snack: 'Snack',
-};
-const SLOT_ICON: Record<MealSlot, string> = {
-  breakfast: 'weather-sunset-up',
-  lunch: 'white-balance-sunny',
-  dinner: 'weather-night',
-  snack: 'food-apple-outline',
-};
+import { SLOTS, SLOT_ICON, SLOT_LABEL } from './weekDays';
 
-const WEEKDAY_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
-// 0 = Monday. Day headers carry the real dates of the selected week ("Mon 23",
-// today highlighted only when that week contains today); the schedule keys off
-// weekStart + day index.
-function buildWeek(weekStart: string) {
-  const monday = parseWeekStart(weekStart);
-  const isCurrentWeek = weekStart === getWeekStart();
-  const todayIndex = (new Date().getDay() + 6) % 7;
-  return WEEKDAY_SHORT.map((label, i) => {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
-    return { index: i, label, date: d.getDate(), isToday: isCurrentWeek && i === todayIndex };
-  });
+interface Props {
+  /** Jump to a day's log — the Week view's rows are also a way in to logging. */
+  onOpenDay: (dateKey: string) => void;
 }
 
-export function WeeklyPlanScreen() {
+// The day that should be expanded when a week first opens: today, if the
+// viewed week contains it, otherwise Monday.
+function defaultExpandedDay(weekStart: string): number {
+  const isCurrentWeek = weekStart === getWeekStart();
+  return isCurrentWeek ? (new Date().getDay() + 6) % 7 : 0;
+}
+
+// The meal-plan calendar. Formerly the Week tab's own screen; now the Log tab's
+// "Week" mode, so it renders content only — FoodLogScreen owns the scroll
+// container, the header and the ambient background.
+export function WeekPlanView({ onOpenDay }: Props) {
   const t = useAppTheme();
-  const insets = useSafeAreaInsets();
   const navigation = useNavigation<Nav>();
   const recipes = useRecipeStore((s) => s.recipes);
   const plan = useMealPlanStore((s) => s.entries);
@@ -108,6 +91,15 @@ export function WeeklyPlanScreen() {
 
   const week = useMemo(() => buildWeek(selectedWeekStart), [selectedWeekStart]);
   const isCurrentWeek = selectedWeekStart === getWeekStart();
+
+  const [expandedDay, setExpandedDay] = useState(() => defaultExpandedDay(selectedWeekStart));
+
+  // Switching weeks (Prev/Next, "Back to this week") should always land on
+  // today (if that week contains it) or Monday — never a stale index left
+  // over from the previous week.
+  useEffect(() => {
+    setExpandedDay(defaultExpandedDay(selectedWeekStart));
+  }, [selectedWeekStart]);
 
   const recipeById = useMemo(() => new Map(recipes.map((r) => [r.id, r])), [recipes]);
 
@@ -150,15 +142,7 @@ export function WeeklyPlanScreen() {
     [plan, recipes, settings, planDays]
   );
 
-  const totalServings = plan.reduce((acc, p) => acc + p.desiredServings, 0);
   const hasPlan = weekCells.length > 0 || plan.length > 0;
-
-  const scrollY = useSharedValue(0);
-  const onScroll = useAnimatedScrollHandler({
-    onScroll: (e) => {
-      scrollY.value = e.contentOffset.y;
-    },
-  });
 
   const handleClearWeek = () => {
     Alert.alert(
@@ -202,82 +186,60 @@ export function WeeklyPlanScreen() {
       for (const slot of SLOTS) {
         if (!cellsByKey.has(`${day.index}:${slot}`)) {
           assign(day.index, slot, recipeId, servings);
+          setExpandedDay(day.index);
           return;
         }
       }
     }
     assign(0, 'dinner', recipeId, servings);
+    setExpandedDay(0);
   };
 
   if (recipes.length === 0) {
     return (
-      <View style={{ flex: 1, backgroundColor: t.palette.bg, paddingTop: insets.top }}>
-        <EmptyState
-          icon="calendar-blank-outline"
-          title="No recipes yet"
-          subtitle="Add a recipe to your library, or let us auto-build a week that fits your macros."
-        >
-          <Button
-            label="Auto meal prep"
-            icon="auto-fix"
-            onPress={() => navigation.navigate('AutoMealPrep')}
-            size="lg"
-          />
-        </EmptyState>
-      </View>
+      <EmptyState
+        icon="calendar-blank-outline"
+        title="No recipes yet"
+        subtitle="Add a recipe to your library, or let us auto-build a week that fits your macros."
+      >
+        <Button
+          label="Auto meal prep"
+          icon="auto-fix"
+          onPress={() => navigation.navigate('AutoMealPrep')}
+          size="lg"
+        />
+      </EmptyState>
     );
   }
 
-  const headerTitle = weekLabel(selectedWeekStart);
   const destinationLabel =
     picker?.mode === 'slot'
       ? `${week[picker.day].label} · ${SLOT_LABEL[picker.slot]}`
-      : headerTitle;
+      : weekRangeLabel(selectedWeekStart);
 
   return (
-    <View style={{ flex: 1, backgroundColor: t.palette.bg }}>
-      <AmbientBackground />
-      <Animated.ScrollView
-        contentContainerStyle={{
-          paddingTop: insets.top,
-          paddingHorizontal: t.spacing.lg,
-          paddingBottom: TAB_BAR_SPACE + (hasPlan ? 80 : t.spacing.lg),
-        }}
-        showsVerticalScrollIndicator={false}
-        onScroll={onScroll}
-        scrollEventThrottle={16}
-      >
-        <Header
-          title={headerTitle}
-          subtitle={
-            weekCells.length === 0
-              ? 'Tap a meal slot to plan it, or auto-build a week.'
-              : `${weekCells.length} ${weekCells.length === 1 ? 'meal' : 'meals'} planned · ${totalServings} servings`
-          }
-          trailing={
-            <View style={{ flexDirection: 'row', gap: t.spacing.xs }}>
-              {hasPlan ? (
-                <IconButton
-                  icon="trash-can-outline"
-                  onPress={handleClearWeek}
-                  variant="tonal"
-                  size={20}
-                  accessibilityLabel="Clear all meals"
-                />
-              ) : null}
-              <IconButton
-                icon="auto-fix"
-                onPress={() => navigation.navigate('AutoMealPrep')}
-                variant="tonal"
-                size={20}
-                accessibilityLabel="Auto meal prep"
-              />
-            </View>
-          }
+    <>
+      <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: t.spacing.xs }}>
+        {hasPlan ? (
+          <IconButton
+            icon="trash-can-outline"
+            onPress={handleClearWeek}
+            variant="tonal"
+            size={20}
+            accessibilityLabel="Clear all meals this week"
+          />
+        ) : null}
+        <IconButton
+          icon="auto-fix"
+          onPress={() => navigation.navigate('AutoMealPrep')}
+          variant="tonal"
+          size={20}
+          accessibilityLabel="Auto meal prep"
         />
+      </View>
 
-        {/* Week switcher — every planning action on this screen targets the
-            selected week, and the grocery list follows it. */}
+      {/* Week switcher — every planning action here targets the selected week,
+          and the grocery list follows it. */}
         <View
           style={{
             flexDirection: 'row',
@@ -319,34 +281,102 @@ export function WeeklyPlanScreen() {
         </View>
 
         <View style={{ gap: t.spacing.sm }}>
-          {week.map((day) => (
-            <Surface
-              key={day.index}
-              variant="outlined"
-              pad={t.spacing.md}
-              style={day.isToday ? { borderColor: t.palette.primary, borderWidth: 1 } : undefined}
-            >
-              {/* Day header */}
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: t.spacing.sm,
-                  marginBottom: t.spacing.sm,
-                }}
-              >
-                <Text variant="bodyLg" weight="semibold">
-                  {day.label}
-                </Text>
-                <Text variant="caption" tone="tertiary" tabularNums>
-                  {day.date}
-                </Text>
-                {day.isToday ? (
-                  <View style={{ marginLeft: 'auto' }}>
-                    <Pill label="Today" tone="primary" size="sm" />
+          {week.map((day) => {
+            const isExpanded = day.index === expandedDay;
+
+            // The chevron always jumps to that day's Log.
+            const openDayButton = (
+              <IconButton
+                icon="chevron-right"
+                onPress={() => onOpenDay(cellToDateKey(selectedWeekStart, day.index))}
+                variant="tonal"
+                size={16}
+                accessibilityLabel={`Open the log for ${day.label} ${day.date}`}
+              />
+            );
+
+            if (!isExpanded) {
+              return (
+                <Surface key={day.index} variant="outlined" pad={t.spacing.md}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', minHeight: 44 }}>
+                    {/* A button can't nest another button (invalid HTML on
+                        web), so the chevron below is a sibling, not a child,
+                        of this row's own Pressable — same pattern as the
+                        assigned-meal row further down. */}
+                    <Pressable
+                      onPress={() => setExpandedDay(day.index)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Expand ${day.label} ${day.date}`}
+                      style={({ pressed }) => ({
+                        flex: 1,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: t.spacing.sm,
+                        minHeight: 44,
+                        opacity: pressed ? 0.6 : 1,
+                      })}
+                    >
+                      <Text variant="bodyLg" weight="semibold">
+                        {day.label}
+                      </Text>
+                      <Text variant="caption" tone="tertiary" tabularNums>
+                        {day.date}
+                      </Text>
+                      {day.isToday ? <Pill label="Today" tone="primary" size="sm" /> : null}
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: t.spacing.xs,
+                          marginLeft: 'auto',
+                        }}
+                      >
+                        {SLOTS.map((slot) => {
+                          const filled = (cellsByKey.get(`${day.index}:${slot}`) ?? []).length > 0;
+                          return (
+                            <Icon
+                              key={slot}
+                              name={SLOT_ICON[slot]}
+                              size={16}
+                              color={filled ? t.palette.primary : t.palette.textTertiary}
+                            />
+                          );
+                        })}
+                      </View>
+                    </Pressable>
+                    {openDayButton}
                   </View>
-                ) : null}
-              </View>
+                </Surface>
+              );
+            }
+
+            return (
+              <Surface
+                key={day.index}
+                variant="outlined"
+                pad={t.spacing.md}
+                style={{ borderColor: t.palette.primary, borderWidth: 1 }}
+              >
+                {/* Header — expanding is already done; only the chevron
+                    (jump to that day's Log) is interactive here. */}
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: t.spacing.sm,
+                    minHeight: 44,
+                    marginBottom: t.spacing.xs,
+                  }}
+                >
+                  <Text variant="bodyLg" weight="semibold">
+                    {day.label}
+                  </Text>
+                  <Text variant="caption" tone="tertiary" tabularNums>
+                    {day.date}
+                  </Text>
+                  {day.isToday ? <Pill label="Today" tone="primary" size="sm" /> : null}
+                  <View style={{ marginLeft: 'auto' }}>{openDayButton}</View>
+                </View>
 
               {/* Meal slots */}
               <View style={{ gap: t.spacing.xs }}>
@@ -439,8 +469,9 @@ export function WeeklyPlanScreen() {
                   );
                 })}
               </View>
-            </Surface>
-          ))}
+              </Surface>
+            );
+          })}
         </View>
 
         <SectionHeader
@@ -529,27 +560,20 @@ export function WeeklyPlanScreen() {
             </Surface>
           </>
         ) : null}
-      </Animated.ScrollView>
-      <CollapsingHeader title={headerTitle} scrollY={scrollY} />
 
+      {/* Inline rather than floating: the tab now has two modes, and a
+          pinned button would sit under the Day/Week toggle competing with the
+          tab bar for the same corner. */}
       {hasPlan ? (
-        <View
-          style={{
-            position: 'absolute',
-            left: t.spacing.lg,
-            right: t.spacing.lg,
-            bottom: TAB_BAR_SPACE + t.spacing.sm,
-          }}
-        >
-          <Button
-            label="View grocery list"
-            icon="cart-arrow-right"
-            onPress={() => navigation.navigate('List')}
-            fullWidth
-            size="lg"
-            style={t.shadow.medium}
-          />
-        </View>
+        <Button
+          label="View grocery list"
+          icon="cart-arrow-right"
+          onPress={() => navigation.navigate('List')}
+          fullWidth
+          size="lg"
+          variant="secondary"
+          style={{ marginTop: t.spacing.lg }}
+        />
       ) : null}
 
       <MealPickerSheet
@@ -565,6 +589,6 @@ export function WeeklyPlanScreen() {
           navigation.navigate('AddRecipe', undefined);
         }}
       />
-    </View>
+    </>
   );
 }

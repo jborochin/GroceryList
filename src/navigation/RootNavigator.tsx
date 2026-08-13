@@ -7,6 +7,10 @@ import { AddRecipeScreen } from '../screens/AddRecipeScreen';
 import { PantryScreen } from '../screens/PantryScreen';
 import { AutoMealPrepScreen } from '../screens/AutoMealPrepScreen';
 import { MealSwipeScreen } from '../screens/MealSwipeScreen';
+import { FoodSearchScreen } from '../screens/FoodSearchScreen';
+import { LogFoodScreen } from '../screens/LogFoodScreen';
+import { CustomFoodScreen } from '../screens/CustomFoodScreen';
+import { BarcodeScanScreen } from '../screens/BarcodeScanScreen';
 import { AuthScreen } from '../screens/AuthScreen';
 import { OnboardingScreen } from '../screens/OnboardingScreen';
 import { RootStackParamList } from './types';
@@ -71,6 +75,21 @@ export function RootNavigator() {
           <Stack.Screen
             name="MealSwipe"
             component={MealSwipeScreen}
+            options={{ animation: 'slide_from_bottom', presentation: 'modal' }}
+          />
+          {/* Food logging flow. Search → serving picker → back to the day.
+              Each step slides in from the right so the path reads as forward
+              motion; only the entry point presents as a modal. */}
+          <Stack.Screen
+            name="FoodSearch"
+            component={FoodSearchScreen}
+            options={{ animation: 'slide_from_bottom', presentation: 'modal' }}
+          />
+          <Stack.Screen name="LogFood" component={LogFoodScreen} />
+          <Stack.Screen name="CustomFood" component={CustomFoodScreen} />
+          <Stack.Screen
+            name="BarcodeScan"
+            component={BarcodeScanScreen}
             options={{ animation: 'slide_from_bottom', presentation: 'modal' }}
           />
         </Stack.Group>

@@ -27,7 +27,7 @@ const BAR_HEIGHT = 60;
 const ICON_BY_ROUTE: Record<string, string> = {
   Home: 'view-dashboard-variant-outline',
   Library: 'silverware-fork-knife',
-  Plan: 'calendar-blank-outline',
+  Log: 'notebook-outline',
   List: 'cart-outline',
   Settings: 'tune-variant',
 };
@@ -35,7 +35,7 @@ const ICON_BY_ROUTE: Record<string, string> = {
 const ICON_FOCUSED: Record<string, string> = {
   Home: 'view-dashboard-variant',
   Library: 'silverware-fork-knife',
-  Plan: 'calendar-month',
+  Log: 'notebook',
   List: 'cart',
   Settings: 'tune-variant',
 };
@@ -43,7 +43,7 @@ const ICON_FOCUSED: Record<string, string> = {
 const LABEL_BY_ROUTE: Record<string, string> = {
   Home: 'Home',
   Library: 'Recipes',
-  Plan: 'Week',
+  Log: 'Log',
   List: 'List',
   Settings: 'You',
 };

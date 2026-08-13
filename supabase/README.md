@@ -211,3 +211,60 @@ The function fails open: if the API key is not set or the upstream call errors, 
 supabase functions serve compute-nutrition
 # then POST { "ingredients": ["1 cup flour", "2 eggs"], "servings": 4 } with an auth header
 ```
+
+---
+
+## `food-search` — the Log tab's food database
+
+Backs food search and barcode lookup for food logging. Three operations, all
+returning `{ ok, foods: FoodItem[] }`:
+
+```jsonc
+{ "query": "chobani greek yogurt" }  // text search
+{ "barcode": "0038000138416" }       // scanned product
+{ "fdcId": "173944" }                // detail, for household portions
+```
+
+Two sources: **USDA FoodData Central** for search and the first barcode attempt,
+**Open Food Facts** as the barcode fallback (no key, but it does require a
+descriptive `User-Agent`). A barcode miss in both is a routine outcome — the app
+offers to save it as a custom food.
+
+The mapping is imported from `src/utils/foodSearchMapping.ts` rather than
+duplicated here, the same way `resolve-prices` shares the Kroger matcher. That
+is why the import carries explicit `.ts` extensions; don't strip them.
+
+**One-time setup:**
+
+1. Get a free FoodData Central key at
+   [fdc.nal.usda.gov/api-key-signup](https://fdc.nal.usda.gov/api-key-signup).
+   The quota is ~1,000 requests/hour **per key, across every user of the app**,
+   which is why responses are cached in `public.food_cache` (30-day TTL, misses
+   deliberately not cached).
+2. Set it as a secret:
+
+   ```bash
+   supabase secrets set FDC_API_KEY=your_api_key
+   ```
+
+3. Deploy:
+
+   ```bash
+   supabase functions deploy food-search
+   ```
+
+Without the key, text search returns `not-configured` and the app routes the
+user to manual entry; barcode lookups still work through Open Food Facts.
+
+**Test it without deploying** — `npm run food:probe` calls the same upstreams
+through the same mapping:
+
+```bash
+npm run food:probe -- "greek yogurt"          # FDC search
+npm run food:probe -- 0038000138416           # barcode, FDC then OFF
+npm run food:probe -- 173944 --detail         # household portions
+npm run food:probe -- "oats" --remote         # through the deployed function
+```
+
+`FDC_API_KEY=DEMO_KEY` works for roughly 30 calls/hour if you only want a smoke
+test.
