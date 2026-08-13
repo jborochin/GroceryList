@@ -17,36 +17,57 @@ export const GRAM_SERVING: FoodServing = { label: 'g', grams: 1 };
  * Serving options for the picker: whatever the source published, plus a plain
  * gram entry as the last resort. Deduped by label, source order preserved —
  * FDC and OFF both list the most representative portion first.
+ *
+ * A zero-gram serving is kept ONLY when the food carries `perServing` macros,
+ * because that is the one case where an unweighable portion can still be
+ * priced in calories. Offering it otherwise would put a guaranteed 0 kcal
+ * option in the picker.
  */
-export function servingOptions(item: Pick<FoodItem, 'servings'>): FoodServing[] {
+export function servingOptions(item: Pick<FoodItem, 'servings' | 'perServing'>): FoodServing[] {
   const out: FoodServing[] = [];
   const seen = new Set<string>();
   for (const s of item.servings) {
     const label = s.label.trim();
-    if (!label || !(s.grams > 0)) continue;
+    const weighable = s.grams > 0;
+    if (!label) continue;
+    if (!weighable && !item.perServing) continue;
     const key = label.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
-    out.push({ label, grams: s.grams });
+    out.push({ label, grams: weighable ? s.grams : 0 });
   }
-  if (!seen.has('g')) out.push(GRAM_SERVING);
+  // A perServing food has no mass, so grams would only ever produce zeroes.
+  if (!seen.has('g') && !(item.perServing && out.length > 0)) out.push(GRAM_SERVING);
   return out;
 }
 
 /**
- * Macros for `qty` of `serving`. Returns zeroes when the food has no per-100g
- * basis (a 'quick' entry), which the caller should treat as "type the numbers
- * in yourself" rather than as a real zero.
+ * Macros for `qty` of `serving`.
+ *
+ * Two bases, because foods arrive with two different kinds of knowledge:
+ *  - `per100g` — what FoodData Central and Open Food Facts publish. Scales to
+ *    any portion, so it wins whenever it exists.
+ *  - `perServing` — what a person knows about their own cooking. A bowl of
+ *    homemade chilli is 400 kcal; nobody weighed it. Scaling that by quantity
+ *    is still exactly right, it just can't be converted to grams.
+ *
+ * Returns zeroes only when there is no basis at all (a 'quick' entry), which the
+ * caller should treat as "type the numbers in yourself", not as a real zero.
  */
 export function nutritionForServing(
-  per100g: NutritionPerServing | undefined,
+  item: Pick<FoodItem, 'per100g' | 'perServing'>,
   serving: FoodServing,
   qty: number
 ): NutritionPerServing {
-  if (!per100g) return ZERO_NUTRITION;
+  if (!Number.isFinite(qty) || qty <= 0) return ZERO_NUTRITION;
+
   const grams = totalGrams(serving, qty);
-  if (!(grams > 0)) return ZERO_NUTRITION;
-  return scaleNutrition(per100g, grams / 100);
+  if (item.per100g && grams > 0) return scaleNutrition(item.per100g, grams / 100);
+
+  // No mass to scale by — fall back to counting servings.
+  if (item.perServing) return scaleNutrition(item.perServing, qty);
+
+  return ZERO_NUTRITION;
 }
 
 /** Total gram weight of `qty` of `serving`. */

@@ -139,9 +139,13 @@ export interface UserSettings {
 // - 'quick'  — bare calories typed in with no food behind them
 export type FoodSource = 'usda' | 'off' | 'custom' | 'recipe' | 'quick';
 
-// One selectable portion of a food, always anchored to grams so servingMath can
-// scale per-100g nutrition. `label` is what the source calls it ("1 container",
-// "2 tbsp") and is shown verbatim.
+// One selectable portion of a food. `label` is what the source calls it
+// ("1 container", "2 tbsp") and is shown verbatim.
+//
+// `grams: 0` means "not weighable" — a serving that exists as a unit but has no
+// mass behind it. Homemade food is the case: someone knows a bowl of their chilli
+// is 400 kcal without ever having weighed it. Those foods carry `perServing`
+// instead of `per100g`; see servingMath.
 export interface FoodServing {
   label: string;
   grams: number;
@@ -154,9 +158,13 @@ export interface FoodItem {
   name: string;
   brand?: string;
   barcode?: string;
-  // Per 100 g, the basis both FDC and Open Food Facts publish. Absent only for
-  // 'quick' entries, which carry no scalable basis.
+  // Per 100 g, the basis both FDC and Open Food Facts publish.
   per100g?: NutritionPerServing;
+  // Per ONE of `servings[0]`, for foods that have no mass basis at all — a
+  // custom food entered without a gram weight. Exactly one of per100g/perServing
+  // is normally set; when both are, the gram basis wins because it can scale to
+  // any portion.
+  perServing?: NutritionPerServing;
   // Household measures offered in the serving picker, most useful first. May be
   // empty, in which case the picker falls back to grams.
   servings: FoodServing[];

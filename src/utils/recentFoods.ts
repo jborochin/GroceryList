@@ -90,22 +90,38 @@ export function frequentFoods(entries: FoodLogEntry[], limit = 50): RecentFood[]
 
 /**
  * Re-logging a recent reuses its stored macro snapshot rather than re-querying
- * the database — same numbers, offline, instantly. The per-100g basis is
- * back-computed from the gram weight so the serving picker still works if the
- * user wants to change the quantity.
+ * the database — same numbers, offline, instantly.
+ *
+ * Two bases, because a logged entry may or may not have had a weight behind it:
+ *  - With a gram weight, back-compute per-100g so the picker can offer any
+ *    portion (half a container, 150 g).
+ *  - Without one, divide down to a single serving. A homemade dish logged as
+ *    "1 bowl, 400 kcal" has no mass to convert, and dropping it here is what
+ *    made re-logging such a food produce a silent 0 kcal.
  */
 export function recentToFoodItem(recent: RecentFood): FoodItem {
   const grams = recent.gramsPerServing;
-  const totalGrams = grams && grams > 0 ? grams * recent.servingQty : 0;
+  const qty = recent.servingQty > 0 ? recent.servingQty : 1;
+  const weighed = grams && grams > 0 ? grams * qty : 0;
+
   const per100g =
-    totalGrams > 0
+    weighed > 0
       ? {
-          calories: (recent.nutrition.calories / totalGrams) * 100,
-          proteinG: (recent.nutrition.proteinG / totalGrams) * 100,
-          carbsG: (recent.nutrition.carbsG / totalGrams) * 100,
-          fatG: (recent.nutrition.fatG / totalGrams) * 100,
+          calories: (recent.nutrition.calories / weighed) * 100,
+          proteinG: (recent.nutrition.proteinG / weighed) * 100,
+          carbsG: (recent.nutrition.carbsG / weighed) * 100,
+          fatG: (recent.nutrition.fatG / weighed) * 100,
         }
       : undefined;
+
+  const perServing = per100g
+    ? undefined
+    : {
+        calories: recent.nutrition.calories / qty,
+        proteinG: recent.nutrition.proteinG / qty,
+        carbsG: recent.nutrition.carbsG / qty,
+        fatG: recent.nutrition.fatG / qty,
+      };
 
   return {
     source: recent.source,
@@ -113,6 +129,7 @@ export function recentToFoodItem(recent: RecentFood): FoodItem {
     name: recent.displayName,
     brand: recent.brand,
     per100g,
-    servings: grams && grams > 0 ? [{ label: recent.servingLabel, grams }] : [],
+    perServing,
+    servings: [{ label: recent.servingLabel, grams: grams && grams > 0 ? grams : 0 }],
   };
 }

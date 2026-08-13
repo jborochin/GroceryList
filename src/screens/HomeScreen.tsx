@@ -10,10 +10,13 @@ import { usePantryStore } from '../store/usePantryStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { usePriceOverrideStore } from '../store/usePriceOverrideStore';
 import { usePriceCatalogStore } from '../store/usePriceCatalogStore';
+import { useMealScheduleStore } from '../store/useMealScheduleStore';
+import { useFoodLogStore } from '../store/useFoodLogStore';
 import { aggregate } from '../utils/ingredientAggregator';
 import { applyPantry } from '../utils/pantryDeduction';
 import { estimatePrices } from '../utils/priceEstimator';
-import { computeNutritionSummary } from '../utils/nutritionSummary';
+import { resolveDay } from '../utils/foodLogDay';
+import { todayKey } from '../utils/planningWeek';
 import { NutritionBar } from '../components/NutritionBar';
 import { TabParamList, RootStackParamList } from '../navigation/types';
 import { useAppTheme } from '../theme/tokens';
@@ -44,9 +47,11 @@ export function HomeScreen() {
   const overrides = usePriceOverrideStore((s) => s.overrides);
   const priceCatalogVersion = usePriceCatalogStore((s) => s.version);
 
-  const summary = useMemo(
-    () => computeNutritionSummary(plan, recipes, settings, planDays),
-    [plan, recipes, settings, planDays]
+  const cells = useMealScheduleStore((s) => s.cells);
+  const logEntries = useFoodLogStore((s) => s.entries);
+  const today = useMemo(
+    () => resolveDay(todayKey(), cells, logEntries, recipes),
+    [cells, logEntries, recipes]
   );
   const grocery = useMemo(() => {
     // Same two sources the Grocery tab aggregates, so the preview doesn't
@@ -63,7 +68,7 @@ export function HomeScreen() {
   const totalServings = plan.reduce((acc, p) => acc + p.desiredServings, 0);
   const itemsCount = grocery.items.length;
 
-  const today = new Date().toLocaleDateString(undefined, {
+  const todayLabel = new Date().toLocaleDateString(undefined, {
     weekday: 'long',
     month: 'long',
     day: 'numeric',
@@ -78,7 +83,7 @@ export function HomeScreen() {
           accessibilityLabel="MealFlow"
         />
         <View style={{ flex: 1 }}>
-          <Header eyebrow={today} title="Kitchen" subtitle="Plan smart, shop once, eat well." />
+          <Header eyebrow={todayLabel} title="Kitchen" subtitle="Plan smart, shop once, eat well." />
         </View>
       </View>
 
@@ -148,7 +153,7 @@ export function HomeScreen() {
         <Button
           label="Plan week"
           icon="calendar-month"
-          onPress={() => navigation.navigate('Plan')}
+          onPress={() => navigation.navigate('Log', { view: 'week' })}
           style={{ flex: 1 }}
           fullWidth
         />
@@ -162,17 +167,23 @@ export function HomeScreen() {
         />
       </View>
 
-      <SectionHeader title="Daily nutrition" trailing={
-        <Text variant="caption" tone="tertiary" tabularNums>
-          {summary.target.dailyCalories} kcal goal
-        </Text>
-      } />
+      {/* Today, not the week's average. Home and the Log tab must agree, and
+          what someone wants from a home screen is "where am I right now". The
+          weekly projection still lives on the Log tab's Week view. */}
+      <SectionHeader
+        title="Today"
+        trailing={
+          <Text variant="caption" tone="tertiary" tabularNums>
+            {settings.dailyCalorieTarget} kcal goal
+          </Text>
+        }
+      />
 
-      <GlassSurface variant="hero" pad={t.spacing.lg}>
+      <GlassSurface variant="hero" pad={t.spacing.lg} onPress={() => navigation.navigate('Log')}>
         <NutritionBar
           label="Calories"
-          actual={summary.daily.calories}
-          target={summary.target.dailyCalories}
+          actual={today.totals.calories}
+          target={settings.dailyCalorieTarget}
           unit=""
           color={t.palette.primary}
         />
@@ -186,27 +197,27 @@ export function HomeScreen() {
         />
         <NutritionBar
           label="Protein"
-          actual={summary.daily.proteinG}
-          target={summary.target.dailyProteinG}
+          actual={today.totals.proteinG}
+          target={settings.macroGrams.proteinG}
           color={t.palette.textPrimary}
         />
         <NutritionBar
           label="Carbs"
-          actual={summary.daily.carbsG}
-          target={summary.target.dailyCarbsG}
+          actual={today.totals.carbsG}
+          target={settings.macroGrams.carbsG}
           color={t.palette.textSecondary}
         />
         <NutritionBar
           label="Fat"
-          actual={summary.daily.fatG}
-          target={summary.target.dailyFatG}
+          actual={today.totals.fatG}
+          target={settings.macroGrams.fatG}
           color={t.palette.textTertiary}
         />
-        {summary.hasMissingData ? (
-          <Text variant="caption" tone="tertiary" style={{ marginTop: t.spacing.sm }}>
-            Some recipes are missing nutrition data — totals may be understated.
-          </Text>
-        ) : null}
+        <Text variant="caption" tone="tertiary" style={{ marginTop: t.spacing.sm }}>
+          {today.projected.calories > 0
+            ? `Includes ${Math.round(today.projected.calories)} kcal still planned — tap to confirm what you ate.`
+            : 'Tap to log a meal.'}
+        </Text>
       </GlassSurface>
 
       <SectionHeader title="Quick add" />

@@ -20,6 +20,10 @@ npm run prices:refresh-kroger -- --dry-run  # resolve live prices and report, wr
 npm run prices:bootstrap -- --limit 50      # propose priceDatabase rows for new ingredients (writes nothing)
 npm run prices:refresh-kroger -- --top-up --dry-run  # show the budgeted work order, spends no quota
 npx supabase functions deploy resolve-prices        # on-demand pricing (needs KROGER_* secrets set)
+npm run food:probe -- "greek yogurt"       # food database lookup from the CLI (also: a barcode)
+npm run food:probe -- 0038000138416 --off  # force the Open Food Facts fallback
+npx supabase functions deploy food-search           # the Log tab's database (needs FDC_API_KEY set)
+eas build --profile development --platform ios      # barcode scanning needs a native build; no Expo Go
 ```
 
 There is no lint script. TypeScript strict is the only static check.
@@ -108,9 +112,9 @@ Rows older than 60 days are dropped on read, so a dead refresh job decays back t
 
 ### Stores and hydration
 
-Nine persisted Zustand stores under `src/store/`, each with its own AsyncStorage key (see `STORAGE_KEYS` in `storage.ts`): `useRecipeStore`, `useMealPlanStore`, `usePantryStore`, `useManualItemStore`, `useGroceryRecipeStore` (recipes added straight to the grocery list, off-plan), `useDismissedItemStore`, `useSettingsStore`, `usePriceOverrideStore`, `useItemOverrideStore` (name/quantity/unit/category edits from the grocery-row pencil icon). Plus `useAuthStore` (Supabase session — initialized separately in `hydration.ts`, not in the persist array) and `useSyncStateStore` (sync metadata).
+Persisted Zustand stores under `src/store/`, each with its own AsyncStorage key (see `STORAGE_KEYS` in `storage.ts`): `useRecipeStore`, `useMealPlanStore`, `useMealScheduleStore`, `useMealDispositionStore`, `usePantryStore`, `useManualItemStore`, `useGroceryRecipeStore` (recipes added straight to the grocery list, off-plan), `useDismissedItemStore`, `useSettingsStore`, `usePriceOverrideStore`, `useItemOverrideStore` (name/quantity/unit/category edits from the grocery-row pencil icon), `useFavoritesStore`, `useFoodLogStore` + `useCustomFoodStore` (the Log tab). Plus `useAuthStore` (Supabase session — initialized separately in `hydration.ts`, not in the persist array) and `useSyncStateStore` (sync metadata).
 
-`useHydration()` in `src/store/hydration.ts` waits for all five to rehydrate before `App.tsx` renders the navigator — prevents a flash of empty state. Any new persisted store must be added to the `stores` array there or it will silently block hydration.
+`useHydration()` in `src/store/hydration.ts` waits for every one of them to rehydrate before `App.tsx` renders the navigator — prevents a flash of empty state. Any new persisted store must be added to the `stores` array there or it will silently block hydration.
 
 `seedIfFirstLaunch()` in `src/store/seedFirstLaunch.ts` runs once per install (gated by the `STORAGE_KEYS.seeded` flag) to insert sample recipes and a starter pantry. Don't seed from within store definitions — stores are hydrated before the flag is read. It skips seeding when a Supabase session exists (account state arrives via sync).
 
@@ -138,9 +142,45 @@ When adding keywords/prices, use canonical units from `unitSynonyms.json`. Categ
 
 `src/utils/recipeUrlParser.ts` fetches a page, regex-extracts every `<script type="application/ld+json">` block, and walks nested `@graph` / array structures looking for `@type` containing `"Recipe"`. It throws `RecipeParseError` with `kind: 'network' | 'not-found' | 'malformed'` — `AddRecipeScreen` differentiates these in its error UI and falls back to the manual-entry tab with the URL prefilled. Sites without JSON-LD or behind bot-protection will fail by design; the fallback path is the happy path for those.
 
+### Food logging (the Log tab)
+
+The Log tab is where the plan meets reality. It **replaced the Week tab** — weekly planning is now its `Week` mode, because the plan is already a prediction of the log: a planned dinner is a dinner you expect to eat.
+
+```
+FoodLogScreen  ── Day  → resolveDay() → slot sections (logged + projected rows)
+               └─ Week → WeekPlanView  (the former WeeklyPlanScreen, unchanged logic)
+```
+
+**`resolveDay()` (`src/utils/foodLogDay.ts`) is the whole idea.** It merges two independent record sets: `ScheduleCell` (device-local, what you intend to eat) and `FoodLogEntry` (synced, what you ate). A planned meal counts toward the day's totals *from the moment it is planned*, rendered as `projected`, so a day you forget to open still reads correctly and confirming a meal sharpens the number rather than creating it. A cell stops projecting once some entry references it via `fromCellId` ("Ate this") or `replacesCellId` ("Ate other").
+
+**Neither action touches the schedule**, and that is load-bearing: the grocery list is built from cells (`ScheduleCell → MealPlanEntry → aggregate()`), and the ingredients for a replaced meal were already bought. Confirming or replacing a meal must never change the grocery total — there is a live regression for exactly this.
+
+The schedule is device-local while the log syncs, so `fromCellId`/`replacesCellId` dangle on a second device. Harmless by design: device B has no cells to suppress, so it just renders the logged entry.
+
+**`FoodLogEntry.nutrition` is a snapshot, already scaled by `servingQty` — never a pointer to an `fdcId`.** USDA and Open Food Facts rewrite rows under us, and a diary whose history silently changes is broken. Same reasoning as `Recipe.nutritionPerServing`.
+
+#### The food database
+
+`supabase/functions/food-search` fronts two sources and answers three operations (`query`, `barcode`, `fdcId`). It **imports `src/utils/foodSearchMapping.ts`** rather than copying it — the same trick `resolve-prices` uses, so the `.ts` extensions on that import chain are required (Deno resolves specifiers literally). The older `usda-nutrition` function kept a copy and its header had to say "keep the two in sync"; they never are.
+
+Two things about FoodData Central are counter-intuitive and were measured against the live API, not assumed:
+
+- **A combined `dataType` query does not work.** `"chobani"` filtered to `Branded` returns 23,479 hits; `dataType=Branded,Foundation,SR Legacy` returns 424, all of them SR Legacy — as does passing no `dataType` at all, and as does the POST form with a real JSON array. FDC's ranking buries Branded whenever the curated datasets are in scope, which for a food logger is backwards. So `searchUsda` fires **two parallel queries** and merges, generics first (capped at `GENERIC_RESULTS`) so "banana" doesn't open on banana bread.
+- **`foodMeasures` comes back empty from search for every dataset.** Household portions ("1 medium banana") exist only on `/food/{fdcId}`. Fetching detail for 25 results would cost 25 calls a search, so `loadFoodPortions()` fetches lazily for the one food the user opened in the serving picker. It is non-throwing — a whole food is still loggable in grams.
+
+Open Food Facts is the **barcode fallback only**, tried when FDC has no exact `gtinUpc` match. It needs no key but does require a descriptive `User-Agent`. It also publishes `energy_100g` in **kJ** next to `energy-kcal_100g`; reading the wrong key overstates a food ~4.2×, which is why the mapping never touches `energy_100g` and why the saved fixture is a live payload showing both.
+
+Responses cache in `public.food_cache` (service role only, 30-day TTL, **misses are not cached** — a barcode absent today may be added to OFF tomorrow). FDC's free key allows ~1,000 requests/hour across every user of the app, so the cache is not optional. `FDC_API_KEY=DEMO_KEY` works for ~30 calls/hour if you only need a smoke test.
+
+**`npm run food:probe -- <query|barcode>`** runs the whole path from the CLI (`--off`, `--detail`, `--remote`, `--json`). Barcode scanning can't run on web or on Windows at all, so this is the only repeatable check of the data path without a device build — the same role `ig:probe` plays for Instagram.
+
+**Barcode scanning needs a native build.** `expo-camera` cannot run in Expo Go (`eas build --profile development`), and the scan button is hidden on web where there is no camera. Per the dependency rule below, restart Metro with `--clear` after installing it.
+
 ### Navigation topology
 
-`RootNavigator` (native stack) wraps `TabNavigator` (bottom tabs) plus three modal-style screens (`RecipeDetail`, `AddRecipe`, `Pantry`). Inside tab screens that navigate between tabs, use `useNavigation<BottomTabNavigationProp<TabParamList>>()` — the nested `navigation.getParent()?.navigate(...)` pattern was tried and produces fragile `never` types. Global declaration merging in `src/navigation/types.ts` gives untyped `useNavigation()` calls the right shape elsewhere.
+`RootNavigator` (native stack) wraps `TabNavigator` (bottom tabs: Home / Recipes / **Log** / List / You) plus modal-style screens (`RecipeDetail`, `AddRecipe`, `Pantry`, and the logging flow `FoodSearch` → `LogFood`, plus `BarcodeScan` and `CustomFood`). Inside tab screens that navigate between tabs, use `useNavigation<BottomTabNavigationProp<TabParamList>>()` — the nested `navigation.getParent()?.navigate(...)` pattern was tried and produces fragile `never` types. Global declaration merging in `src/navigation/types.ts` gives untyped `useNavigation()` calls the right shape elsewhere.
+
+There is no `Plan` tab any more. Callers that want the calendar navigate to `Log` with `{ view: 'week' }` (Home's "Plan week" button, and `MealSwipeScreen` after committing a deck).
 
 ### Theming
 
@@ -165,3 +205,5 @@ Only the `src/utils/` modules have tests (see `src/__tests__/`). Screens are int
 - **Adding a meal to `mealCatalog.json`** — every ingredient must resolve via `findPrice` *and* use a known unit or `mealCatalogPriceCoverage.test.ts` fails (usually add a row to `priceDatabase.json` + a keyword to `categoryKeywords.json`). `mealCatalog.test.ts` also enforces valid cuisine/dietary keys, calories > 0, and unique slug ids. Re-run `npm run seed:build` after edits.
 - **Hardcoding an exact dollar price in a test** — two independent sources of drift now. `BLS_SERIES` in `scripts/lib/blsPriceMapping.ts` rewrites ~13 bundled prices on `npm run prices:refresh-bls` (this broke `priceEstimator.test.ts`'s chicken-breast assertions once already). Separately, *any* ingredient can be overlaid by the weekly live refresh. Tests never see the overlay unless they seed it (the module cache starts empty), so bundled-price assertions are safe — but assert against a non-BLS-mapped fixture like `tofu`, and seed live prices explicitly via `loadPriceCache()` rather than expecting them.
 - **Adding a persisted store vs. `usePriceCatalogStore`** — that one is deliberately *not* persisted and must stay out of `hydration.ts`; adding it there would block hydration forever waiting for a rehydrate that never fires.
+- **A logged food has two possible nutrition bases, and only one of them is grams.** Database foods carry `per100g`; a custom food saved without a weight carries `perServing` (`FoodItem`, `servingMath.ts`). Anything that turns a food into macros must handle both, or the homemade case — which is most custom foods — silently logs 0 calories. `FoodServing.grams === 0` means "a unit with no mass", not "invalid". This was a real bug, caught in the app rather than in tests; `servingMath.test.ts` and `recentFoods.test.ts` now pin it.
+- **Changing what counts toward a day's totals** — `resolveDay()` feeds both the Log tab and Home's "Today" card, and a planned meal counts before it is confirmed. If you make confirming a meal *add* rather than *replace*, every day double-counts. The paired invariant is that confirming or replacing must leave the grocery total untouched, since the plan cell survives both.

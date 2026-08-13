@@ -36,7 +36,14 @@
     },
     "plugins": [
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "MealFlow uses the camera to scan barcodes on food packaging so you can log what you're eating.",
+          "recordAudioAndroid": false
+        }
+      ]
     ],
     "extra": {
       "EXPO_PUBLIC_SUPABASE_URL": "",
