@@ -2,6 +2,7 @@ import {
   cellToDateKey,
   dateKeyLabel,
   dateKeyToCell,
+  getSundayWeekStart,
   getWeekStart,
   parseDateKey,
   parseWeekStart,
@@ -35,6 +36,20 @@ describe('getWeekStart', () => {
   it('crosses year boundaries', () => {
     // 2026-01-01 is a Thursday; its week starts Mon 2025-12-29.
     expect(getWeekStart(new Date(2026, 0, 1))).toBe('2025-12-29');
+  });
+});
+
+describe('getSundayWeekStart', () => {
+  it('returns the same Sunday for every day of the week', () => {
+    // 2026-08-09 is a Sunday.
+    for (let offset = 0; offset < 7; offset++) {
+      expect(getSundayWeekStart(shiftDate('2026-08-09', offset))).toBe('2026-08-09');
+    }
+  });
+
+  it('crosses month boundaries', () => {
+    // 2026-08-01 is a Saturday; its Sunday-Saturday week starts Sun 2026-07-26.
+    expect(getSundayWeekStart('2026-08-01')).toBe('2026-07-26');
   });
 });
 

@@ -26,6 +26,18 @@ export function parseWeekStart(weekStart: string): Date {
   return parseDateKey(weekStart);
 }
 
+/**
+ * Sunday (local) of the calendar week containing `dateKey`, as a date key.
+ * Distinct from `getWeekStart` (Monday-anchored, drives the schedule grid) —
+ * this is the Sunday-Saturday week the Log tab's day strip displays.
+ */
+export function getSundayWeekStart(dateKey: string): string {
+  const d = parseDateKey(dateKey);
+  const sunday = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  sunday.setDate(sunday.getDate() - sunday.getDay());
+  return toKey(sunday);
+}
+
 // ---------------------------------------------------------------------------
 // Day keys
 //

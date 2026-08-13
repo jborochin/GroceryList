@@ -1,41 +1,38 @@
 import React, { useMemo } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { useAppTheme } from '../../theme/tokens';
-import { parseDateKey, shiftDate, todayKey } from '../../utils/planningWeek';
+import { getSundayWeekStart, parseDateKey, shiftDate, todayKey } from '../../utils/planningWeek';
 import { Text } from '../ui';
-import { WEEKDAY_SHORT } from './weekDays';
 
 interface Props {
   selected: string;
   onSelect: (dateKey: string) => void;
-  /** How many days either side of today to offer. */
-  range?: number;
 }
 
-// A horizontal week of days around today. Scrollable rather than paged so
-// yesterday is always one tap away — backfilling a missed meal is the second
-// most common thing people do in a food diary, after logging today's.
-export function DateStrip({ selected, onSelect, range = 14 }: Props) {
+const WEEKDAY_SUN_FIRST = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+// The current calendar week, Sunday through Saturday — the week containing
+// whichever date is selected, so opening a day from another week (via the
+// Week view) always shows a strip that includes it.
+export function DateStrip({ selected, onSelect }: Props) {
   const t = useAppTheme();
   const today = todayKey();
 
   const days = useMemo(() => {
+    const sunday = getSundayWeekStart(selected);
     const out: Array<{ key: string; weekday: string; date: number }> = [];
-    for (let i = -range; i <= 0; i++) {
-      const key = shiftDate(today, i);
+    for (let i = 0; i < 7; i++) {
+      const key = shiftDate(sunday, i);
       const d = parseDateKey(key);
-      out.push({ key, weekday: WEEKDAY_SHORT[(d.getDay() + 6) % 7], date: d.getDate() });
+      out.push({ key, weekday: WEEKDAY_SUN_FIRST[d.getDay()], date: d.getDate() });
     }
     return out;
-  }, [today, range]);
+  }, [selected]);
 
   return (
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
-      // Anchor at the right edge: today is the last cell and the one that
-      // should be visible on open.
-      contentOffset={{ x: Number.MAX_SAFE_INTEGER, y: 0 }}
       contentContainerStyle={{ gap: t.spacing.xs, paddingVertical: t.spacing.xs }}
     >
       {days.map((day) => {

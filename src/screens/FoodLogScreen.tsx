@@ -187,7 +187,10 @@ export function FoodLogScreen() {
   );
 
   return (
-    <Screen scroll glass headerTitle="Log" bottomBarSpace>
+    // Keyed by mode so the scroll container remounts on Day/Week toggle —
+    // otherwise the scroll offset from a long Week view carries over and
+    // scrolls the shorter Day view's date strip out of view.
+    <Screen key={mode} scroll glass headerTitle="Log" bottomBarSpace>
       <Header
         eyebrow={mode === 'day' ? dateKeyLabel(date) : 'Meal plan'}
         title="Log"
