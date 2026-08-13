@@ -204,7 +204,7 @@ export function FoodLogScreen() {
       <SegmentedControl<Mode>
         items={[
           { value: 'day', label: 'Day', icon: 'notebook-outline' },
-          { value: 'week', label: 'Week', icon: 'calendar-month' },
+          { value: 'week', label: 'Plan', icon: 'calendar-month' },
         ]}
         value={mode}
         onChange={setMode}

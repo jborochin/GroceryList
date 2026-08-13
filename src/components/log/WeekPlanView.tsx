@@ -52,6 +52,13 @@ interface Props {
   onOpenDay: (dateKey: string) => void;
 }
 
+// The day that should be expanded when a week first opens: today, if the
+// viewed week contains it, otherwise Monday.
+function defaultExpandedDay(weekStart: string): number {
+  const isCurrentWeek = weekStart === getWeekStart();
+  return isCurrentWeek ? (new Date().getDay() + 6) % 7 : 0;
+}
+
 // The meal-plan calendar. Formerly the Week tab's own screen; now the Log tab's
 // "Week" mode, so it renders content only — FoodLogScreen owns the scroll
 // container, the header and the ambient background.
@@ -84,6 +91,15 @@ export function WeekPlanView({ onOpenDay }: Props) {
 
   const week = useMemo(() => buildWeek(selectedWeekStart), [selectedWeekStart]);
   const isCurrentWeek = selectedWeekStart === getWeekStart();
+
+  const [expandedDay, setExpandedDay] = useState(() => defaultExpandedDay(selectedWeekStart));
+
+  // Switching weeks (Prev/Next, "Back to this week") should always land on
+  // today (if that week contains it) or Monday — never a stale index left
+  // over from the previous week.
+  useEffect(() => {
+    setExpandedDay(defaultExpandedDay(selectedWeekStart));
+  }, [selectedWeekStart]);
 
   const recipeById = useMemo(() => new Map(recipes.map((r) => [r.id, r])), [recipes]);
 
@@ -170,11 +186,13 @@ export function WeekPlanView({ onOpenDay }: Props) {
       for (const slot of SLOTS) {
         if (!cellsByKey.has(`${day.index}:${slot}`)) {
           assign(day.index, slot, recipeId, servings);
+          setExpandedDay(day.index);
           return;
         }
       }
     }
     assign(0, 'dinner', recipeId, servings);
+    setExpandedDay(0);
   };
 
   if (recipes.length === 0) {
@@ -263,39 +281,102 @@ export function WeekPlanView({ onOpenDay }: Props) {
         </View>
 
         <View style={{ gap: t.spacing.sm }}>
-          {week.map((day) => (
-            <Surface
-              key={day.index}
-              variant="outlined"
-              pad={t.spacing.md}
-              style={day.isToday ? { borderColor: t.palette.primary, borderWidth: 1 } : undefined}
-            >
-              {/* Day header — also the way into that day's log, so planning and
-                  logging are one gesture apart rather than a mode switch. */}
-              <Pressable
+          {week.map((day) => {
+            const isExpanded = day.index === expandedDay;
+
+            // The chevron always jumps to that day's Log.
+            const openDayButton = (
+              <IconButton
+                icon="chevron-right"
                 onPress={() => onOpenDay(cellToDateKey(selectedWeekStart, day.index))}
-                accessibilityRole="button"
+                variant="tonal"
+                size={16}
                 accessibilityLabel={`Open the log for ${day.label} ${day.date}`}
-                style={({ pressed }) => ({
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: t.spacing.sm,
-                  minHeight: 44,
-                  marginBottom: t.spacing.xs,
-                  opacity: pressed ? 0.6 : 1,
-                })}
+              />
+            );
+
+            if (!isExpanded) {
+              return (
+                <Surface key={day.index} variant="outlined" pad={t.spacing.md}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', minHeight: 44 }}>
+                    {/* A button can't nest another button (invalid HTML on
+                        web), so the chevron below is a sibling, not a child,
+                        of this row's own Pressable — same pattern as the
+                        assigned-meal row further down. */}
+                    <Pressable
+                      onPress={() => setExpandedDay(day.index)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Expand ${day.label} ${day.date}`}
+                      style={({ pressed }) => ({
+                        flex: 1,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: t.spacing.sm,
+                        minHeight: 44,
+                        opacity: pressed ? 0.6 : 1,
+                      })}
+                    >
+                      <Text variant="bodyLg" weight="semibold">
+                        {day.label}
+                      </Text>
+                      <Text variant="caption" tone="tertiary" tabularNums>
+                        {day.date}
+                      </Text>
+                      {day.isToday ? <Pill label="Today" tone="primary" size="sm" /> : null}
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: t.spacing.xs,
+                          marginLeft: 'auto',
+                        }}
+                      >
+                        {SLOTS.map((slot) => {
+                          const filled = (cellsByKey.get(`${day.index}:${slot}`) ?? []).length > 0;
+                          return (
+                            <Icon
+                              key={slot}
+                              name={SLOT_ICON[slot]}
+                              size={16}
+                              color={filled ? t.palette.primary : t.palette.textTertiary}
+                            />
+                          );
+                        })}
+                      </View>
+                    </Pressable>
+                    {openDayButton}
+                  </View>
+                </Surface>
+              );
+            }
+
+            return (
+              <Surface
+                key={day.index}
+                variant="outlined"
+                pad={t.spacing.md}
+                style={{ borderColor: t.palette.primary, borderWidth: 1 }}
               >
-                <Text variant="bodyLg" weight="semibold">
-                  {day.label}
-                </Text>
-                <Text variant="caption" tone="tertiary" tabularNums>
-                  {day.date}
-                </Text>
-                {day.isToday ? <Pill label="Today" tone="primary" size="sm" /> : null}
-                <View style={{ marginLeft: 'auto' }}>
-                  <Icon name="chevron-right" size={18} color={t.palette.textTertiary} />
+                {/* Header — expanding is already done; only the chevron
+                    (jump to that day's Log) is interactive here. */}
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: t.spacing.sm,
+                    minHeight: 44,
+                    marginBottom: t.spacing.xs,
+                  }}
+                >
+                  <Text variant="bodyLg" weight="semibold">
+                    {day.label}
+                  </Text>
+                  <Text variant="caption" tone="tertiary" tabularNums>
+                    {day.date}
+                  </Text>
+                  {day.isToday ? <Pill label="Today" tone="primary" size="sm" /> : null}
+                  <View style={{ marginLeft: 'auto' }}>{openDayButton}</View>
                 </View>
-              </Pressable>
 
               {/* Meal slots */}
               <View style={{ gap: t.spacing.xs }}>
@@ -388,8 +469,9 @@ export function WeekPlanView({ onOpenDay }: Props) {
                   );
                 })}
               </View>
-            </Surface>
-          ))}
+              </Surface>
+            );
+          })}
         </View>
 
         <SectionHeader
