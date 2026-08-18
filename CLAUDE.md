@@ -25,7 +25,7 @@ npm run food:probe -- 0038000138416 --off  # force the Open Food Facts fallback
 npx supabase functions deploy food-search           # the Log tab's database (needs FDC_API_KEY set)
 npm run ig:probe -- <instagram-url>        # fetch + parse a live reel from the CLI (no native build needed)
 npx supabase functions deploy fetch-recipe          # needed for Instagram import on web (preset: 'instagram')
-eas build --profile development --platform ios      # barcode scanning + the share extension both need a native build; no Expo Go
+eas build --profile development --platform ios      # barcode scanning, the share extension, and cook-timer notifications all need a native build; no Expo Go
 ```
 
 There is no lint script. TypeScript strict is the only static check.
@@ -114,7 +114,7 @@ Rows older than 60 days are dropped on read, so a dead refresh job decays back t
 
 ### Stores and hydration
 
-Persisted Zustand stores under `src/store/`, each with its own AsyncStorage key (see `STORAGE_KEYS` in `storage.ts`): `useRecipeStore`, `useMealPlanStore`, `useMealScheduleStore`, `useMealDispositionStore`, `usePantryStore`, `useManualItemStore`, `useGroceryRecipeStore` (recipes added straight to the grocery list, off-plan), `useDismissedItemStore`, `useSettingsStore`, `usePriceOverrideStore`, `useItemOverrideStore` (name/quantity/unit/category edits from the grocery-row pencil icon), `useFavoritesStore`, `useFoodLogStore` + `useCustomFoodStore` (the Log tab). Plus `useAuthStore` (Supabase session — initialized separately in `hydration.ts`, not in the persist array) and `useSyncStateStore` (sync metadata).
+Persisted Zustand stores under `src/store/`, each with its own AsyncStorage key (see `STORAGE_KEYS` in `storage.ts`): `useRecipeStore`, `useMealPlanStore`, `useMealScheduleStore`, `useMealDispositionStore`, `usePantryStore`, `useManualItemStore`, `useGroceryRecipeStore` (recipes added straight to the grocery list, off-plan), `useDismissedItemStore`, `useSettingsStore`, `usePriceOverrideStore`, `useItemOverrideStore` (name/quantity/unit/category edits from the grocery-row pencil icon), `useFavoritesStore`, `useFoodLogStore` + `useCustomFoodStore` (the Log tab), `useCookSessionStore` (in-progress cooks — device-local, never synced). Plus `useAuthStore` (Supabase session — initialized separately in `hydration.ts`, not in the persist array) and `useSyncStateStore` (sync metadata).
 
 `useHydration()` in `src/store/hydration.ts` waits for every one of them to rehydrate before `App.tsx` renders the navigator — prevents a flash of empty state. Any new persisted store must be added to the `stores` array there or it will silently block hydration.
 
@@ -215,9 +215,32 @@ Meal-prep creators write **one** `Ingredients` header and then split the list in
 - **`expo-share-intent` is pinned to `~5.1.1`** — the release whose peer range is `expo: ^54`. 6.x wants 55, 7.x wants 56, 8.x wants 57. Don't bump it without bumping Expo.
 - **Adding a new dependency requires restarting Metro.** A dev server started before the install keeps a stale module map and fails with `Unable to resolve module ./ShareIntentProvider` even though the file is on disk. `npx expo start --web --clear`.
 
+### Cook mode
+
+The "Cook" button on `RecipeDetailScreen` / `MealCatalogDetailScreen` opens `CookModeScreen` — the recipe as a working surface rather than a document: checkable ingredients (already scaled to the servings you're cooking), checkable steps, and timers lifted out of the instruction text.
+
+```
+CookModeScreen ── useCookSessionStore (persisted, device-local)
+               ├─ parseStepDurations()   src/utils/stepTimers.ts
+               ├─ useCookTimers()        src/hooks/useCookTimers.ts → src/lib/cookNotifications.ts
+               └─ CookFinishSheet → resolveCookFinish() → useFoodLogStore.addEntry({ fromCellId })
+```
+
+**A running timer stores an absolute `endsAt`, never a countdown.** That one choice makes backgrounding correct for free: JS intervals stop firing when the app is suspended but wall-clock time doesn't, so every countdown is derived from `Date.now()` via `remainingSeconds()`. Pausing is the only thing that converts to a stored remainder, and resuming re-anchors it. Anything that needs the remaining time must go through `cookTimers.ts` rather than reading `endsAt` itself.
+
+**`parseStepDurations` is deliberately conservative: a bare number is never a duration.** "Preheat to 350" and "add 2 tablespoons" must yield nothing, because a phantom chip on every recipe is worse than a missing one. It handles compound (`1 hour 30 minutes` → one timer), ranges (takes the **lower** bound — check early rather than burn), and fractions; it caps at 3 chips per step and ignores anything over 12 hours. Measured over the real catalog: 208 of 513 steps yield a timer.
+
+**Finishing a cook must not touch the schedule.** The finish sheet writes a `FoodLogEntry` carrying `fromCellId`, exactly like the Log tab's "Ate this" — the plan cell survives, because the grocery list is built from cells and those ingredients were already bought. `cookFinish.test.ts` pins both halves (the projected row becomes logged; the day doesn't double-count).
+
+**Sessions are keyed by recipe id and never sync.** They're transient working state, not a record of what you ate; the log is the record. Keying by recipe (rather than tracking one "active" cook) means cooking two things at once just works with no "discard your other session?" prompt. Sessions untouched for 24h are pruned on hydration. Checks are stored as *indices* with the ingredient/step counts snapshotted alongside — `reconcileSession()` drops them if the recipe was edited mid-cook rather than leaving them pointing at shifted rows.
+
+**Catalog meals reach cook mode through `ensureRecipeForMeal`**, the same deterministic clone the grocery path uses, so `CookMode` only ever addresses a `Recipe` and the finish flow gets an id `resolveDay()` can match. Clones stay invisible in "My Recipes" via `catalogCloneIdSet`.
+
+**Notifications are best-effort and never load-bearing.** Every function in `src/lib/cookNotifications.ts` no-ops on web and on a denied permission; permission is requested lazily on the *first timer started*, not at launch. Because the countdown comes from `endsAt`, a timer that never delivers a notification still reads correctly. `expo-notifications` is a native dep and `runtimeVersion.policy` is `fingerprint`, so adding it means a fresh `eas build --profile development`.
+
 ### Navigation topology
 
-`RootNavigator` (native stack) wraps `TabNavigator` (bottom tabs: Home / Recipes / **Log** / List / You) plus modal-style screens (`RecipeDetail`, `AddRecipe`, `Pantry`, and the logging flow `FoodSearch` → `LogFood`, plus `BarcodeScan` and `CustomFood`). Inside tab screens that navigate between tabs, use `useNavigation<BottomTabNavigationProp<TabParamList>>()` — the nested `navigation.getParent()?.navigate(...)` pattern was tried and produces fragile `never` types. Global declaration merging in `src/navigation/types.ts` gives untyped `useNavigation()` calls the right shape elsewhere.
+`RootNavigator` (native stack) wraps `TabNavigator` (bottom tabs: Home / Recipes / **Log** / List / You) plus modal-style screens (`RecipeDetail`, `CookMode` (fullScreenModal), `AddRecipe`, `Pantry`, and the logging flow `FoodSearch` → `LogFood`, plus `BarcodeScan` and `CustomFood`). Inside tab screens that navigate between tabs, use `useNavigation<BottomTabNavigationProp<TabParamList>>()` — the nested `navigation.getParent()?.navigate(...)` pattern was tried and produces fragile `never` types. Global declaration merging in `src/navigation/types.ts` gives untyped `useNavigation()` calls the right shape elsewhere.
 
 There is no `Plan` tab any more. Callers that want the calendar navigate to `Log` with `{ view: 'week' }` (Home's "Plan week" button, and `MealSwipeScreen` after committing a deck).
 
@@ -246,4 +269,6 @@ Only the `src/utils/` modules have tests (see `src/__tests__/`). Screens are int
 - **Hardcoding an exact dollar price in a test** — two independent sources of drift now. `BLS_SERIES` in `scripts/lib/blsPriceMapping.ts` rewrites ~13 bundled prices on `npm run prices:refresh-bls` (this broke `priceEstimator.test.ts`'s chicken-breast assertions once already). Separately, *any* ingredient can be overlaid by the weekly live refresh. Tests never see the overlay unless they seed it (the module cache starts empty), so bundled-price assertions are safe — but assert against a non-BLS-mapped fixture like `tofu`, and seed live prices explicitly via `loadPriceCache()` rather than expecting them.
 - **Adding a persisted store vs. `usePriceCatalogStore`** — that one is deliberately *not* persisted and must stay out of `hydration.ts`; adding it there would block hydration forever waiting for a rehydrate that never fires.
 - **A logged food has two possible nutrition bases, and only one of them is grams.** Database foods carry `per100g`; a custom food saved without a weight carries `perServing` (`FoodItem`, `servingMath.ts`). Anything that turns a food into macros must handle both, or the homemade case — which is most custom foods — silently logs 0 calories. `FoodServing.grams === 0` means "a unit with no mass", not "invalid". This was a real bug, caught in the app rather than in tests; `servingMath.test.ts` and `recentFoods.test.ts` now pin it.
-- **Changing what counts toward a day's totals** — `resolveDay()` feeds both the Log tab and Home's "Today" card, and a planned meal counts before it is confirmed. If you make confirming a meal *add* rather than *replace*, every day double-counts. The paired invariant is that confirming or replacing must leave the grocery total untouched, since the plan cell survives both.
+- **Changing what counts toward a day's totals** — `resolveDay()` feeds both the Log tab and Home's "Today" card, and a planned meal counts before it is confirmed. If you make confirming a meal *add* rather than *replace*, every day double-counts. The paired invariant is that confirming or replacing must leave the grocery total untouched, since the plan cell survives both. Finishing a cook is a third way into that same path and obeys the same rule.
+- **Storing a countdown instead of an end time** — a running `CookTimer` holds an absolute `endsAt` and *nothing else*. Decrementing a stored remainder on an interval looks equivalent and is not: intervals are throttled or suspended in the background, so the timer freezes exactly when the user has walked away from the phone. Read the remainder through `remainingSeconds()` in `cookTimers.ts`; the only conversion to a stored remainder is pausing.
+- **Loosening `parseStepDurations`** — it must never match a bare number. The cost of a miss is one timer the user sets by hand; the cost of a false positive is a bogus chip on nearly every recipe (an oven temperature reading as 350 minutes). If you add a unit, add the "things that are not durations" test cases with it.

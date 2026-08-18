@@ -10,6 +10,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFavoritesStore } from '../store/useFavoritesStore';
 import { useGroceryRecipeStore } from '../store/useGroceryRecipeStore';
+import { useCookSessionStore } from '../store/useCookSessionStore';
 import { getMealCatalog } from '../lib/mealCatalogSync';
 import { ensureRecipeForMeal, recipeIdForMeal } from '../utils/commitMealPlan';
 import { scaleIngredients } from '../utils/recipeScaling';
@@ -62,6 +63,12 @@ export function MealCatalogDetailScreen() {
   // Grocery list only — adding a catalog meal here must not put it on the Week tab.
   const addGroceryRecipe = useGroceryRecipeStore((s) => s.addEntry);
   const removeGroceryRecipe = useGroceryRecipeStore((s) => s.removeEntry);
+
+  // Cook sessions are keyed by the clone's deterministic id, so this resolves
+  // without materializing anything.
+  const cooking = useCookSessionStore(
+    (s) => s.sessions[recipeIdForMeal(mealId)] !== undefined
+  );
 
   // The stepper is seeded from the meal's own servings and stays independent of
   // the grocery list — adding to the list is a fire-and-forget action, so nothing
@@ -126,6 +133,13 @@ export function MealCatalogDetailScreen() {
     });
   };
 
+  // Cook mode only ever addresses a Recipe, so a catalog meal materializes its
+  // clone first — the same deterministic id the grocery path uses, and equally
+  // invisible in "My Recipes".
+  const handleCook = () => {
+    navigation.navigate('CookMode', { recipeId: ensureRecipeForMeal(meal), servings });
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: t.palette.bg }}>
       <AmbientBackground />
@@ -150,10 +164,17 @@ export function MealCatalogDetailScreen() {
           />
           <View style={{ flex: 1 }} />
           <Button
+            label={cooking ? 'Resume' : 'Cook'}
+            icon="chef-hat"
+            size="sm"
+            variant="primary"
+            onPress={handleCook}
+          />
+          <Button
             label="Add"
             icon="cart-plus"
             size="sm"
-            variant="primary"
+            variant="secondary"
             onPress={() => setSheetOpen(true)}
           />
           <Pill label="Public catalog" icon="earth" tone="neutral" size="sm" />

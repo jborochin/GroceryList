@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useRecipeStore } from '../store/useRecipeStore';
 import { useGroceryRecipeStore } from '../store/useGroceryRecipeStore';
+import { useCookSessionStore } from '../store/useCookSessionStore';
 import { Recipe, NutritionPerServing } from '../types';
 import { IngredientEditor } from '../components/IngredientEditor';
 import { ServingStepper } from '../components/ServingStepper';
@@ -52,6 +53,9 @@ export function RecipeDetailScreen() {
   // doesn't turn up on the Week tab. See useGroceryRecipeStore.
   const addGroceryRecipe = useGroceryRecipeStore((s) => s.addEntry);
   const removeGroceryRecipe = useGroceryRecipeStore((s) => s.removeEntry);
+  // A session left open means the user walked away mid-cook; the button says so
+  // rather than silently reopening a half-checked list.
+  const cooking = useCookSessionStore((s) => s.sessions[recipeId] !== undefined);
   const toast = useToast();
 
   const [editing, setEditing] = useState(false);
@@ -224,10 +228,21 @@ export function RecipeDetailScreen() {
         <View style={{ flex: 1 }} />
         {!editing ? (
           <Button
+            label={cooking ? 'Resume' : 'Cook'}
+            icon="chef-hat"
+            size="sm"
+            variant="primary"
+            onPress={() =>
+              navigation.navigate('CookMode', { recipeId, servings: previewServings })
+            }
+          />
+        ) : null}
+        {!editing ? (
+          <Button
             label="Add"
             icon="cart-plus"
             size="sm"
-            variant="primary"
+            variant="secondary"
             onPress={() => setSheetOpen(true)}
           />
         ) : null}

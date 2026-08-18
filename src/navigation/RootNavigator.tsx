@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { TabNavigator } from './TabNavigator';
 import { RecipeDetailScreen } from '../screens/RecipeDetailScreen';
 import { MealCatalogDetailScreen } from '../screens/MealCatalogDetailScreen';
+import { CookModeScreen } from '../screens/CookModeScreen';
 import { AddRecipeScreen } from '../screens/AddRecipeScreen';
 import { PantryScreen } from '../screens/PantryScreen';
 import { AutoMealPrepScreen } from '../screens/AutoMealPrepScreen';
@@ -56,6 +57,13 @@ export function RootNavigator() {
         <Stack.Group>
           <Stack.Screen name="Tabs" component={TabNavigator} />
           <Stack.Screen name="RecipeDetail" component={RecipeDetailScreen} />
+          {/* Cook mode takes the whole screen — tabs and the recipe underneath
+              are both distractions once you're at the stove. */}
+          <Stack.Screen
+            name="CookMode"
+            component={CookModeScreen}
+            options={{ animation: 'slide_from_bottom', presentation: 'fullScreenModal' }}
+          />
           <Stack.Screen
             name="MealCatalogDetail"
             component={MealCatalogDetailScreen}

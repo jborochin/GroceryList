@@ -26,6 +26,10 @@ export type RootStackParamList = {
     date: string;
     replacesCellId?: string;
   };
+  // Cook mode. `servings` carries the detail screen's preview across so amounts
+  // arrive already scaled; the cook session owns it from then on. Catalog meals
+  // get here via ensureRecipeForMeal, so this is only ever a recipe id.
+  CookMode: { recipeId: string; servings?: number };
   // sharedUrl arrives from the OS share sheet (see useShareIntentRouter) and is
   // imported automatically on mount; prefilledUrl only populates the field.
   AddRecipe: { prefilledUrl?: string; sharedUrl?: string } | undefined;

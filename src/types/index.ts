@@ -222,6 +222,54 @@ export interface CustomFood {
   updatedAt: number;
 }
 
+// ---------------------------------------------------------------------------
+// Cook mode
+// ---------------------------------------------------------------------------
+
+export type CookTimerState = 'running' | 'paused' | 'fired';
+
+// A kitchen timer, either lifted from an instruction step or added by hand.
+//
+// A running timer stores an ABSOLUTE `endsAt`, never a countdown. That single
+// choice is what makes backgrounding correct for free: remaining time is always
+// derived from Date.now(), so a timer started before the app was suspended
+// reads right when it comes back, and a JS interval that stopped ticking in the
+// background costs nothing. Everything that needs the countdown must go through
+// remainingSeconds() in cookTimers.ts.
+export interface CookTimer {
+  id: string;
+  label: string; // 'Step 3' — what fired, shown in the bar and the notification
+  stepIndex?: number;
+  totalSeconds: number;
+  endsAt?: number; // epoch ms; set while running
+  remainingSeconds?: number; // set while paused
+  state: CookTimerState;
+  // expo-notifications handle for the scheduled alert, so pausing or deleting
+  // the timer can cancel it. Absent on web and when permission was denied —
+  // cook mode works either way.
+  notificationId?: string;
+}
+
+// One in-progress cook. Device-local and never synced: this is transient
+// working state, not a record of what you ate. The food log is that record.
+//
+// Checks are stored as indices into the recipe's own arrays, with the counts
+// snapshotted alongside. If the recipe is edited mid-cook and the counts no
+// longer match, the checks are dropped rather than left pointing at shifted
+// rows — see reconcileSession() in cookSession.ts.
+export interface CookSession {
+  recipeId: string;
+  title: string;
+  servings: number;
+  checkedIngredients: number[];
+  checkedSteps: number[];
+  ingredientCount: number;
+  stepCount: number;
+  timers: CookTimer[];
+  startedAt: number;
+  updatedAt: number;
+}
+
 export interface PriceOverride {
   name: string;
   pricePerUnit: number;

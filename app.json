@@ -58,6 +58,12 @@
           "iosShareExtensionName": "MealFlow Recipe Import",
           "iosAppGroupIdentifier": "group.com.mealprep.grocery.shareintent"
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#2ECC71"
+        }
       ]
     ],
     "extra": {

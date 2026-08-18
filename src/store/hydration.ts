@@ -14,9 +14,10 @@ import { useAuthStore } from './useAuthStore';
 import { useFavoritesStore } from './useFavoritesStore';
 import { useFoodLogStore } from './useFoodLogStore';
 import { useCustomFoodStore } from './useCustomFoodStore';
+import { useCookSessionStore } from './useCookSessionStore';
 import { getWeekStart } from '../utils/planningWeek';
 
-const stores = [useRecipeStore, useMealPlanStore, useMealScheduleStore, useMealDispositionStore, usePantryStore, useManualItemStore, useGroceryRecipeStore, useDismissedItemStore, useSettingsStore, usePriceOverrideStore, useItemOverrideStore, useFavoritesStore, useFoodLogStore, useCustomFoodStore];
+const stores = [useRecipeStore, useMealPlanStore, useMealScheduleStore, useMealDispositionStore, usePantryStore, useManualItemStore, useGroceryRecipeStore, useDismissedItemStore, useSettingsStore, usePriceOverrideStore, useItemOverrideStore, useFavoritesStore, useFoodLogStore, useCustomFoodStore, useCookSessionStore];
 
 export function useHydration(): boolean {
   const [hydrated, setHydrated] = useState(false);
@@ -40,6 +41,9 @@ export function useHydration(): boolean {
         if (schedule.selectedWeekStart < currentWeek) {
           schedule.setSelectedWeek(currentWeek);
         }
+        // A cook session left open for a day was abandoned, not paused — drop
+        // it so the recipe offers "Cook" again rather than resuming a stale list.
+        useCookSessionStore.getState().pruneStale(Date.now());
         setHydrated(true);
       }
     };

@@ -26,7 +26,13 @@ import { ShareIntentRouter } from './src/components/ShareIntentRouter';
 import { RootStackParamList } from './src/navigation/types';
 import { drainOutbox, migrateLocalToAccount, pullAll, subscribeStores, unsubscribeStores } from './src/lib/sync';
 import { loadPriceCache, refreshPriceCache } from './src/lib/priceCatalogSync';
+import { configureCookNotifications } from './src/lib/cookNotifications';
 import { supabaseConfigured } from './src/lib/supabase';
+
+// Cook-mode timer alerts should surface even with the app foregrounded — during
+// a cook the phone is often face-down or across the kitchen. Set once at module
+// scope; permission itself is requested lazily on the first timer.
+configureCookNotifications();
 
 export default function App() {
   // Single Liquid Glass aesthetic: near-white MealFlow field + dark status bar.
