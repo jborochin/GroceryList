@@ -1,7 +1,6 @@
 import { Ingredient, NutritionPerServing, Recipe } from '../types';
 import { parseIngredient } from './ingredientParser';
-import { ingredientToNutritionQuery } from './nutritionQuery';
-import { computeMissingMacros } from './computeNutrition';
+import { estimateMissingMacros } from './recipeMacros';
 
 function isWebRuntime(): boolean {
   return typeof document !== 'undefined' && typeof window !== 'undefined';
@@ -38,6 +37,12 @@ export class RecipeParseError extends Error {
 
 export type ParsedRecipe = Omit<Recipe, 'id' | 'createdAt' | 'updatedAt'> & {
   estimatedMacros?: Array<keyof NutritionPerServing>;
+  /**
+   * Macros the source didn't state, so a caller can decide whether to run the
+   * CalorieNinjas fallback. Absent means "not determined" rather than "none
+   * missing" — only the caption parser populates it today.
+   */
+  missingMacros?: Array<keyof NutritionPerServing>;
 };
 
 export interface JsonLdExtraction {
@@ -80,28 +85,9 @@ export async function parseRecipeFromUrl(url: string): Promise<ParsedRecipe> {
     mergedParsed = { ...parsed, nutritionPerServing: merged };
   }
   const stillMissing = missing.filter((k) => !filled.includes(k));
-  // Build clean, fraction-formatted query clauses from the parsed ingredients —
-  // raw JSON-LD strings (decimals, embedded commas, parentheticals, "evoo") make
-  // CalorieNinjas wildly overestimate. See nutritionQuery.ts.
-  const nutritionQueries = mergedParsed.ingredients
-    .map(ingredientToNutritionQuery)
-    .filter(Boolean);
-  if (stillMissing.length === 0 || nutritionQueries.length === 0) return mergedParsed;
 
   // Tier 3: CalorieNinjas — estimated values, flagged for the badge.
-  const computed = await computeMissingMacros(nutritionQueries, mergedParsed.servings, stillMissing);
-  if (!computed) return mergedParsed;
-  const finalBase: NutritionPerServing = mergedParsed.nutritionPerServing ?? {
-    calories: 0,
-    proteinG: 0,
-    carbsG: 0,
-    fatG: 0,
-  };
-  return {
-    ...mergedParsed,
-    nutritionPerServing: { ...finalBase, ...computed },
-    estimatedMacros: Object.keys(computed) as Array<keyof NutritionPerServing>,
-  };
+  return estimateMissingMacros(mergedParsed, stillMissing);
 }
 
 async function fetchHtml(url: string): Promise<string> {

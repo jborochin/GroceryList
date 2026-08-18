@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Platform, ScrollView, View } from 'react-native';
 import Animated, {
   Easing,
@@ -22,6 +22,9 @@ import {
   sanitizeImageUrl,
 } from '../utils/recipeUrlParser';
 import { parseRecipeFromCaption } from '../utils/instagramCaptionParser';
+import { importInstagramRecipe, InstagramImportError } from '../utils/instagramImport';
+import { parseSharedUrl } from '../utils/instagramUrl';
+import { estimateMissingMacros } from '../utils/recipeMacros';
 import { IngredientEditor } from '../components/IngredientEditor';
 import { ServingStepper } from '../components/ServingStepper';
 import { Ingredient, NutritionPerServing } from '../types';
@@ -43,7 +46,7 @@ import { useReducedMotion } from '../hooks/useReducedMotion';
 import { haptics } from '../utils/haptics';
 
 type ImportErrorKind = RecipeParseErrorKind | 'unknown';
-type ImportSource = 'url' | 'caption';
+type ImportSource = 'url' | 'caption' | 'instagram';
 
 type ImportErrorCopy = {
   title: string;
@@ -57,6 +60,50 @@ function buildImportErrorCopy(
   rawMessage: string,
   source: ImportSource = 'url',
 ): ImportErrorCopy {
+  // A link import that got far enough to read the caption hands the text back, so
+  // the useful next step is "tidy what we found", not "start over".
+  if (source === 'instagram') {
+    switch (kind) {
+      case 'not-found':
+        return {
+          title: "Couldn't find a recipe in that post.",
+          body:
+            'We read the caption but found no ingredients list — plenty of reels keep the recipe in the video or a link in bio. The caption is below, so you can tidy it up, or switch to Manual.',
+          primaryAction: 'manual',
+          primaryLabel: 'Enter manually',
+        };
+      case 'malformed':
+        return {
+          title: "Couldn't read the ingredients.",
+          body:
+            "We found an ingredients section but couldn't make sense of the lines. Edit the caption below and import again, or enter it manually.",
+          primaryAction: 'manual',
+          primaryLabel: 'Enter manually',
+        };
+      case 'cors':
+        return {
+          title: 'Instagram imports need the app.',
+          body:
+            "A browser can't read instagram.com directly. Open MealFlow on your phone and share the reel to it, or paste the caption below.",
+          primaryAction: 'manual',
+          primaryLabel: 'Switch to Manual',
+        };
+      case 'network':
+        return {
+          title: "Couldn't reach that post.",
+          body: `${rawMessage}. It may be private, deleted, or age-restricted — check your connection and retry.`,
+          primaryAction: 'retry',
+          primaryLabel: 'Retry',
+        };
+      default:
+        return {
+          title: 'Import failed.',
+          body: 'Something unexpected went wrong reading that post. Try again, or paste the caption below.',
+          primaryAction: 'manual',
+          primaryLabel: 'Switch to Manual',
+        };
+    }
+  }
   if (source === 'caption') {
     switch (kind) {
       case 'not-found':
@@ -140,8 +187,22 @@ export function AddRecipeScreen() {
   const reduceMotion = useReducedMotion();
   const addRecipe = useRecipeStore((s) => s.addRecipe);
 
-  const [mode, setMode] = useState<Mode>(route.params?.prefilledUrl ? 'url' : 'manual');
-  const [url, setUrl] = useState(route.params?.prefilledUrl ?? '');
+  // A URL handed over by the OS share sheet. Classified here rather than by the
+  // router so parseSharedUrl stays the single source of truth for what a link is.
+  const sharedUrl = route.params?.sharedUrl;
+  const sharedTarget = useMemo(() => (sharedUrl ? parseSharedUrl(sharedUrl) : null), [sharedUrl]);
+
+  const [mode, setMode] = useState<Mode>(() => {
+    if (sharedTarget?.kind === 'instagram') return 'instagram';
+    if (sharedTarget?.kind === 'web') return 'url';
+    return route.params?.prefilledUrl ? 'url' : 'manual';
+  });
+  const [url, setUrl] = useState(
+    sharedTarget?.kind === 'web' ? sharedTarget.url : route.params?.prefilledUrl ?? '',
+  );
+  const [postUrl, setPostUrl] = useState(
+    sharedTarget?.kind === 'instagram' ? sharedTarget.url : '',
+  );
   const [caption, setCaption] = useState('');
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState<{
@@ -196,7 +257,12 @@ export function AddRecipeScreen() {
   const [nutrition, setNutrition] = useState<NutritionPerServing | undefined>(undefined);
   const [estimatedFields, setEstimatedFields] = useState<Set<keyof NutritionPerServing>>(new Set());
 
+  // Bumped by anything that establishes new macro state, so a background estimate
+  // that resolves late can tell whether it is still the current one.
+  const importSeq = useRef(0);
+
   const applyParsed = (parsed: ParsedRecipe) => {
+    importSeq.current += 1;
     setTitle(parsed.title);
     setImageUrl(parsed.imageUrl ?? '');
     setSourceUrl(parsed.sourceUrl);
@@ -209,33 +275,100 @@ export function AddRecipeScreen() {
     setEstimatedFields(new Set(parsed.estimatedMacros ?? []));
   };
 
-  const handleImport = async () => {
-    const trimmed = url.trim();
-    if (!trimmed) return;
-    setImporting(true);
-    setImportError(null);
-    try {
-      const parsed = await parseRecipeFromUrl(trimmed);
-      applyParsed(parsed);
-      setMode('manual');
-      haptics.success();
-      toast.show({ message: `Imported "${parsed.title}"`, tone: 'success' });
-    } catch (err) {
-      if (err instanceof RecipeParseError) {
-        setImportError({ kind: err.kind, message: err.message, source: 'url' });
-      } else {
-        setImportError({
-          kind: 'unknown',
-          message: err instanceof Error ? err.message : String(err),
-          source: 'url',
-        });
+  const runUrlImport = useCallback(
+    async (target: string) => {
+      const trimmed = target.trim();
+      if (!trimmed) return;
+      setImporting(true);
+      setImportError(null);
+      try {
+        const parsed = await parseRecipeFromUrl(trimmed);
+        applyParsed(parsed);
+        setMode('manual');
+        haptics.success();
+        toast.show({ message: `Imported "${parsed.title}"`, tone: 'success' });
+      } catch (err) {
+        if (err instanceof RecipeParseError) {
+          setImportError({ kind: err.kind, message: err.message, source: 'url' });
+        } else {
+          setImportError({
+            kind: 'unknown',
+            message: err instanceof Error ? err.message : String(err),
+            source: 'url',
+          });
+        }
+      } finally {
+        setImporting(false);
       }
-    } finally {
-      setImporting(false);
-    }
+    },
+    // applyParsed and toast are stable enough for this screen's lifetime; the
+    // import is driven by explicit user action, never by a re-render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
+  const handleImport = () => {
+    void runUrlImport(url);
   };
 
+  // Fetches the post and reads its caption. When the caption came back but held no
+  // recipe, InstagramImportError carries it — drop it into the paste box so the
+  // user can fix a line or two instead of retyping everything.
+  const runInstagramImport = useCallback(
+    async (target: string) => {
+      const trimmed = target.trim();
+      if (!trimmed) return;
+      setImporting(true);
+      setImportError(null);
+      try {
+        const parsed = await importInstagramRecipe(trimmed);
+        applyParsed(parsed);
+        setMode('manual');
+        haptics.success();
+        toast.show({ message: `Imported "${parsed.title}"`, tone: 'success' });
+      } catch (err) {
+        if (err instanceof InstagramImportError && err.recoveredCaption) {
+          setCaption(err.recoveredCaption);
+        }
+        if (err instanceof RecipeParseError) {
+          setImportError({ kind: err.kind, message: err.message, source: 'instagram' });
+        } else {
+          setImportError({
+            kind: 'unknown',
+            message: err instanceof Error ? err.message : String(err),
+            source: 'instagram',
+          });
+        }
+      } finally {
+        setImporting(false);
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
+  const handleImportPost = () => {
+    void runInstagramImport(postUrl);
+  };
+
+  // Arriving from the share sheet should feel like the work is already done, so
+  // import immediately rather than waiting for a button press. Guarded by a ref so
+  // a re-render can't fire a second request for the same share.
+  const autoImported = useRef(false);
+  useEffect(() => {
+    if (!sharedTarget || autoImported.current) return;
+    autoImported.current = true;
+    if (sharedTarget.kind === 'instagram') {
+      void runInstagramImport(sharedTarget.url);
+    } else if (sharedTarget.kind === 'web') {
+      void runUrlImport(sharedTarget.url);
+    }
+  }, [sharedTarget, runInstagramImport, runUrlImport]);
+
   // Caption parsing is pure + synchronous — no network, so no importing spinner.
+  // When the caption states no macros we still estimate them, but in the
+  // background: the form is usable immediately and the numbers land a second or
+  // two later rather than holding a 0ms interaction open on a network call.
   const handleImportCaption = () => {
     const trimmed = caption.trim();
     if (!trimmed) return;
@@ -246,6 +379,16 @@ export function AddRecipeScreen() {
       setMode('manual');
       haptics.success();
       toast.show({ message: `Imported "${parsed.title}"`, tone: 'success' });
+      if (parsed.missingMacros?.length) {
+        const seq = ++importSeq.current;
+        void estimateMissingMacros(parsed, parsed.missingMacros).then((enriched) => {
+          // A newer import — or a value the user has already typed over — must win.
+          if (seq !== importSeq.current) return;
+          if (!enriched.estimatedMacros?.length) return;
+          setNutrition(enriched.nutritionPerServing);
+          setEstimatedFields(new Set(enriched.estimatedMacros));
+        });
+      }
     } catch (err) {
       if (err instanceof RecipeParseError) {
         setImportError({ kind: err.kind, message: err.message, source: 'caption' });
@@ -266,6 +409,11 @@ export function AddRecipeScreen() {
 
   const onCaptionChange = (v: string) => {
     setCaption(v);
+    if (importError) setImportError(null);
+  };
+
+  const onPostUrlChange = (v: string) => {
+    setPostUrl(v);
     if (importError) setImportError(null);
   };
 
@@ -296,6 +444,8 @@ export function AddRecipeScreen() {
   };
 
   const setNutritionField = (key: keyof NutritionPerServing, v: string) => {
+    // Typed macros outrank a background estimate still in flight.
+    importSeq.current += 1;
     const num = parseFloat(v) || 0;
     setNutrition({
       calories: 0,
@@ -354,6 +504,8 @@ export function AddRecipeScreen() {
                   if (copy.primaryAction === 'manual') {
                     setImportError(null);
                     setMode('manual');
+                  } else if (importError.source === 'instagram') {
+                    handleImportPost();
                   } else {
                     handleImport();
                   }
@@ -451,31 +603,70 @@ export function AddRecipeScreen() {
         <Animated.View style={urlBoxStyle}>
           <GlassSurface variant="hero" pad={t.spacing.lg}>
             <Input
-              label="Instagram caption"
-              value={caption}
-              onChangeText={onCaptionChange}
-              placeholder={'Paste the full caption from a reel or post…\n\nIncludes the title, ingredients, and steps.'}
-              multiline
-              inputStyle={{ minHeight: 180, textAlignVertical: 'top' }}
+              label="Reel or post link"
+              value={postUrl}
+              onChangeText={onPostUrlChange}
+              placeholder="https://www.instagram.com/reel/…"
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="url"
+              leftIcon="instagram"
               containerStyle={{ marginBottom: t.spacing.md }}
             />
             <Button
-              label="Import recipe"
+              label={importing ? 'Reading caption…' : 'Import from link'}
               icon="download"
-              onPress={handleImportCaption}
-              disabled={!caption.trim()}
+              onPress={handleImportPost}
+              disabled={importing || !postUrl.trim()}
+              loading={importing}
               fullWidth
             />
+
+            {importing ? (
+              <View style={{ marginTop: t.spacing.md, alignItems: 'center' }}>
+                <ActivityIndicator color={t.palette.primary} />
+                <Text variant="caption" tone="tertiary" style={{ marginTop: t.spacing.sm }}>
+                  Fetching the caption…
+                </Text>
+              </View>
+            ) : null}
 
             {importError ? (
               renderImportError()
             ) : (
               <Text variant="caption" tone="tertiary" style={{ marginTop: t.spacing.md }}>
-                Open a recipe reel, copy the caption, and paste it here. We&apos;ll pull out the
-                title, ingredients, and steps — review them before saving.
+                In Instagram, tap Share on a recipe reel and pick MealFlow — or paste the link here.
+                We read the post&apos;s caption and pull out the title, ingredients, and steps.
               </Text>
             )}
           </GlassSurface>
+
+          {/* Not every caption holds a recipe — some keep it in the video or a link
+              in bio. When the link import recovers text but can't parse it, it
+              lands here already filled in, so a fix is a couple of edits away. */}
+          <SectionHeader
+            title="Or paste the caption"
+            trailing={<Text variant="caption" tone="tertiary">fallback</Text>}
+          />
+          <Surface variant="outlined" pad={t.spacing.md}>
+            <Input
+              label="Instagram caption"
+              value={caption}
+              onChangeText={onCaptionChange}
+              placeholder={'Paste the full caption from a reel or post…\n\nIncludes the title, ingredients, and steps.'}
+              multiline
+              inputStyle={{ minHeight: 140, textAlignVertical: 'top' }}
+              containerStyle={{ marginBottom: t.spacing.md }}
+            />
+            <Button
+              label="Import from caption"
+              icon="text-box-check-outline"
+              variant="secondary"
+              onPress={handleImportCaption}
+              disabled={!caption.trim()}
+              fullWidth
+            />
+          </Surface>
         </Animated.View>
       ) : (
         <View>

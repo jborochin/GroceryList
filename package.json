@@ -17,7 +17,8 @@
     "prices:refresh-kroger": "tsx scripts/refreshKrogerPrices.ts",
     "prices:bootstrap": "tsx scripts/prices/bootstrap.ts",
     "brand:assets": "node scripts/generateBrandAssets.mjs",
-    "food:probe": "tsx scripts/probeFoodSearch.ts"
+    "food:probe": "tsx scripts/probeFoodSearch.ts",
+    "ig:probe": "tsx scripts/probeInstagram.ts"
   },
   "dependencies": {
     "@expo-google-fonts/montserrat": "^0.4.2",
@@ -34,10 +35,13 @@
     "expo-camera": "~17.0.10",
     "expo-constants": "~18.0.13",
     "expo-crypto": "~15.0.9",
+    "expo-dev-client": "~6.0.21",
     "expo-font": "~14.0.11",
     "expo-haptics": "~15.0.8",
     "expo-image": "~3.0.11",
     "expo-linear-gradient": "~15.0.8",
+    "expo-linking": "~8.0.12",
+    "expo-share-intent": "~5.1.1",
     "expo-sharing": "~14.0.8",
     "expo-status-bar": "~3.0.9",
     "expo-updates": "~29.0.19",

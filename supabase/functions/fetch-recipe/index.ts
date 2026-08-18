@@ -25,6 +25,23 @@ const BROWSER_HEADERS: Record<string, string> = {
   'sec-ch-ua-platform': '"macOS"',
 };
 
+// Instagram renders posts client-side and serves a ~600KB JavaScript shell to
+// anything that looks like a browser — BROWSER_HEADERS above gets *no* caption and
+// no og tags at all. Requested as a link-preview crawler, the same URL returns the
+// full caption in its meta tags. Selected by `preset: 'instagram'` in the body;
+// callers that send no preset keep the browser header set unchanged.
+// Kept in sync with INSTAGRAM_HEADERS in src/utils/instagramImport.ts.
+const CRAWLER_HEADERS: Record<string, string> = {
+  'User-Agent': 'facebookexternalhit/1.1',
+  Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'Accept-Language': 'en-US,en;q=0.9',
+};
+
+const HEADER_PRESETS: Record<string, Record<string, string>> = {
+  browser: BROWSER_HEADERS,
+  instagram: CRAWLER_HEADERS,
+};
+
 const FETCH_TIMEOUT_MS = 15_000;
 
 const CORS_HEADERS: Record<string, string> = {
@@ -84,12 +101,17 @@ serve(async (req: Request): Promise<Response> => {
     return json(405, { ok: false, kind: 'method-not-allowed' });
   }
 
-  let body: { url?: unknown };
+  let body: { url?: unknown; preset?: unknown };
   try {
     body = await req.json();
   } catch {
     return json(200, { ok: false, kind: 'bad-request', message: 'invalid json body' });
   }
+
+  // Unknown or absent preset falls back to the browser headers, so existing
+  // callers are unaffected.
+  const headers =
+    (typeof body.preset === 'string' ? HEADER_PRESETS[body.preset] : undefined) ?? BROWSER_HEADERS;
 
   const validated = validateUrl(body.url);
   if ('error' in validated) {
@@ -99,7 +121,7 @@ serve(async (req: Request): Promise<Response> => {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
-    const direct = await fetchDirect(validated.url.toString(), controller.signal);
+    const direct = await fetchDirect(validated.url.toString(), controller.signal, headers);
     if (direct.ok) {
       return json(200, { ok: true, html: direct.html, status: direct.status, finalUrl: direct.finalUrl });
     }
@@ -140,9 +162,13 @@ type DirectFetch =
   | { ok: true; html: string; status: number; finalUrl: string }
   | { ok: false; status: number };
 
-async function fetchDirect(url: string, signal: AbortSignal): Promise<DirectFetch> {
+async function fetchDirect(
+  url: string,
+  signal: AbortSignal,
+  headers: Record<string, string> = BROWSER_HEADERS,
+): Promise<DirectFetch> {
   const res = await fetch(url, {
-    headers: BROWSER_HEADERS,
+    headers,
     signal,
     redirect: 'follow',
   });

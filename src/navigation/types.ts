@@ -26,7 +26,9 @@ export type RootStackParamList = {
     date: string;
     replacesCellId?: string;
   };
-  AddRecipe: { prefilledUrl?: string } | undefined;
+  // sharedUrl arrives from the OS share sheet (see useShareIntentRouter) and is
+  // imported automatically on mount; prefilledUrl only populates the field.
+  AddRecipe: { prefilledUrl?: string; sharedUrl?: string } | undefined;
   Pantry: undefined;
   AutoMealPrep: undefined;
   MealSwipe: { days?: number; slotCounts?: Record<MealSlot, number> } | undefined;
