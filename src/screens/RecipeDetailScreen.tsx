@@ -18,6 +18,7 @@ import { IngredientEditor } from '../components/IngredientEditor';
 import { ServingStepper } from '../components/ServingStepper';
 import { AddToGroceryListSheet } from '../components/AddToGroceryListSheet';
 import { scaleIngredients, scaleNutrition } from '../utils/recipeScaling';
+import { toSections } from '../utils/ingredientSections';
 import { ingredientToNutritionQuery } from '../utils/nutritionQuery';
 import { computeMissingMacros } from '../utils/computeNutrition';
 import { formatEntry } from '../utils/formatters';
@@ -348,32 +349,52 @@ export function RecipeDetailScreen() {
             onChange={(next) => setDraft({ ...draft, ingredients: next })}
           />
         ) : (
-          previewIngredients.map((i, idx) => (
-            <View
-              key={idx}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                paddingVertical: 10,
-                gap: t.spacing.md,
-                borderBottomWidth: idx === previewIngredients.length - 1 ? 0 : 1,
-                borderBottomColor: t.palette.border,
-              }}
-            >
-              <View
-                style={{
-                  width: 6,
-                  height: 6,
-                  borderRadius: 3,
-                  backgroundColor: t.palette.primary,
-                }}
-              />
-              <Text variant="body" style={{ flex: 1 }}>
-                {i.name}
-              </Text>
-              <Text variant="small" tone="secondary" tabularNums>
-                {formatEntry(i.quantity, i.unit)}
-              </Text>
+          // Imported reels split their list into named sub-recipes ("Creamy
+          // Chipotle Sauce"). Recipes without them come back as one untitled
+          // run, so this renders both shapes.
+          toSections(previewIngredients).map((section, sectionIdx) => (
+            <View key={section.title ?? `unsectioned-${sectionIdx}`}>
+              {section.title ? (
+                <Text
+                  variant="caption"
+                  tone="tertiary"
+                  style={{
+                    marginTop: sectionIdx === 0 ? 0 : t.spacing.md,
+                    marginBottom: t.spacing.xs,
+                    letterSpacing: 0.6,
+                  }}
+                >
+                  {section.title.toUpperCase()}
+                </Text>
+              ) : null}
+              {section.items.map(({ ingredient: i, index }) => (
+                <View
+                  key={index}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    paddingVertical: 10,
+                    gap: t.spacing.md,
+                    borderBottomWidth: index === previewIngredients.length - 1 ? 0 : 1,
+                    borderBottomColor: t.palette.border,
+                  }}
+                >
+                  <View
+                    style={{
+                      width: 6,
+                      height: 6,
+                      borderRadius: 3,
+                      backgroundColor: t.palette.primary,
+                    }}
+                  />
+                  <Text variant="body" style={{ flex: 1 }}>
+                    {i.name}
+                  </Text>
+                  <Text variant="small" tone="secondary" tabularNums>
+                    {formatEntry(i.quantity, i.unit)}
+                  </Text>
+                </View>
+              ))}
             </View>
           ))
         )}

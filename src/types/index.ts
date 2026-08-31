@@ -5,6 +5,14 @@ export interface Ingredient {
   quantity: number;
   unit: string;
   raw?: string;
+  // The sub-recipe this ingredient belongs to ("Creamy Chipotle Sauce"). Set by
+  // the Instagram caption parser, which is the only source that states them.
+  //
+  // Presentation only, and deliberately so: aggregate() reads name/quantity/unit
+  // and nothing else, so an ingredient appearing in two sections still merges
+  // into ONE grocery row at the combined quantity. Keeping the split visible in
+  // the recipe and invisible on the list is the whole point of the field.
+  section?: string;
 }
 
 export interface NutritionPerServing {

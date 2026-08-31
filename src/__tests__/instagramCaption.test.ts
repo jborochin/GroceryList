@@ -132,7 +132,11 @@ describe('extraction feeding parseRecipeFromCaption', () => {
     if (!extracted) return;
 
     const recipe = parseRecipeFromCaption(extracted.caption, extracted.canonicalUrl);
-    expect(recipe.title).toBe('Viral chicken broth pasta // recipe');
+    // The caption line is "Viral chicken broth pasta // recipe". It stays a
+    // TITLE rather than becoming an instructions header — that is what the
+    // 4-word cap in detectHeader protects — but the creator's "// recipe"
+    // suffix is trimmed off the dish name.
+    expect(recipe.title).toBe('Viral chicken broth pasta');
     expect(recipe.ingredients.length).toBeGreaterThanOrEqual(5);
     const names = recipe.ingredients.map((i) => i.name);
     expect(names.some((n) => n.includes('pasta'))).toBe(true);

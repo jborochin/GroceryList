@@ -1,4 +1,4 @@
-import { parseRecipeFromCaption } from '../utils/instagramCaptionParser';
+import { cleanTitleLine, parseRecipeFromCaption } from '../utils/instagramCaptionParser';
 import { RecipeParseError } from '../utils/recipeUrlParser';
 
 const TUSCAN_CAPTION = `Creamy Tuscan Chicken 🍗✨
@@ -367,6 +367,190 @@ Crunchy Salad
       const r = parseRecipeFromCaption(TUSCAN_CAPTION);
       expect(r.nutritionPerServing).toBeUndefined();
       expect(r.missingMacros).toEqual(['calories', 'proteinG', 'carbsG', 'fatG']);
+    });
+  });
+
+  describe('sub-recipe sections', () => {
+    const sectionsOf = (caption: string) =>
+      parseRecipeFromCaption(caption).ingredients.map((i) => i.section);
+
+    it('tags each ingredient with the sub-recipe title above it', () => {
+      expect(
+        sectionsOf(
+          'Tacos\n\nIngredients\n\nTaco Beef\n- 500g Ground Beef\n- 2 Tsp Cumin\n\n' +
+            'Lime Sauce\n- 300g Yogurt\n- 50g Honey',
+        ),
+      ).toEqual(['Taco Beef', 'Taco Beef', 'Lime Sauce', 'Lime Sauce']);
+    });
+
+    it('strips decoration off the label', () => {
+      expect(
+        sectionsOf(
+          'Tacos\n\nIngredients\n\n🌮 Taco Beef:\n- 500g Ground Beef\n\n' +
+            'Lime Sauce —\n- 300g Yogurt',
+        ),
+      ).toEqual(['Taco Beef', 'Lime Sauce']);
+    });
+
+    it('never treats a bulleted line as a title', () => {
+      // Creators bullet ingredients and leave the heading bare. A short bulleted
+      // step kept out of the ingredient list by its verb would otherwise become
+      // a section and capture every ingredient below it.
+      const r = parseRecipeFromCaption(
+        'Tacos\n\nIngredients\n\nTaco Beef\n- 500g Ground Beef\n' +
+          '• Assemble now\n\nLime Sauce\n- 300g Yogurt',
+      );
+      expect(r.ingredients.map((i) => i.section)).toEqual(['Taco Beef', 'Lime Sauce']);
+      expect(r.instructions).toEqual(['Assemble now']);
+    });
+
+    it('leaves ingredients stated before the first title untagged', () => {
+      expect(
+        sectionsOf(
+          'Tacos\n\nIngredients\n- 10 Tortillas\n\nTaco Beef\n- 500g Ground Beef\n\n' +
+            'Lime Sauce\n- 300g Yogurt',
+        ),
+      ).toEqual([undefined, 'Taco Beef', 'Lime Sauce']);
+    });
+
+    it('drops a lone section covering the whole list', () => {
+      // One title over every ingredient is a redundant header, not a split —
+      // rendering it would put a label on a list it does not divide.
+      expect(
+        sectionsOf('Tacos\n\nIngredients\n\nTaco Beef\n- 500g Ground Beef\n- 2 Tsp Cumin'),
+      ).toEqual([undefined, undefined]);
+    });
+
+    it('does not promote a short line followed by prose', () => {
+      // "Meal Prep Tip" is the same shape as a real title. What disqualifies it
+      // is the paragraph underneath: a genuine sub-recipe leads straight into
+      // its first ingredient. Without this the tip becomes a section and steals
+      // every ingredient below it.
+      const r = parseRecipeFromCaption(
+        'Bowls\n\nIngredients\n\nChicken\n- 500g Chicken Thighs\n\n' +
+          'Meal Prep Tip\nKeep the salad in separate containers and combine right before eating.\n\n' +
+          'Herb Rice\n- 220g Basmati Rice',
+      );
+      expect(r.ingredients.map((i) => i.section)).toEqual(['Chicken', 'Herb Rice']);
+      expect(r.instructions).toEqual([
+        'Keep the salad in separate containers and combine right before eating.',
+      ]);
+    });
+
+    it('lets a later title supersede one that never got an ingredient', () => {
+      expect(
+        sectionsOf(
+          'Tacos\n\nIngredients\n\nTaco Beef\n- 500g Ground Beef\n\n' +
+            'Optional Extras\n\nLime Sauce\n- 300g Yogurt',
+        ),
+      ).toEqual(['Taco Beef', 'Lime Sauce']);
+    });
+
+    it('does not promote an unquantified ingredient sitting mid-list', () => {
+      // "Salt to taste" is exactly the shape of a heading. What rules it out is
+      // that it does not open a block — a real heading follows a blank line.
+      // Before this it became a section AND was lost as an ingredient.
+      const r = parseRecipeFromCaption(
+        'Wrap\n\nIngredients\n\nFor the chicken\n\n2 lb chicken breast\nSalt to taste\n' +
+          '1 tsp black pepper\n\nFor the sauce :\n\n2 tbsp butter\n1 cup whole milk',
+      );
+      expect(r.ingredients.map((i) => i.section)).toEqual([
+        'For the chicken',
+        'For the chicken',
+        'For the chicken',
+        'For the sauce',
+        'For the sauce',
+      ]);
+      // Recovered as an ingredient rather than dropped; parseIngredient reduces
+      // "Salt to taste" to the purchasable noun.
+      expect(r.ingredients.map((i) => i.name)).toContain('salt');
+    });
+
+    it('leaves an unsectioned caption alone', () => {
+      const r = parseRecipeFromCaption('Shake\n\nIngredients:\n- 300g Yogurt\n- 30g Whey Protein');
+      expect(r.ingredients.every((i) => i.section === undefined)).toBe(true);
+    });
+  });
+
+  describe('titles', () => {
+    // Every input here is a real caption's opening line. The parser used to save
+    // the recipe under the whole sentence.
+    it.each([
+      ['Cinnamon rolls… made in 20 minutes, and every bite is the best', 'Cinnamon rolls'],
+      ['Masters Game Food Dish: Cheesy Buffalo Chicken Stuffed Garlic Bread Recipe:', 'Cheesy Buffalo Chicken Stuffed Garlic Bread'],
+      ['The recipes every home cook should know. Ep 20: Korean Popcorn Chicken', 'Korean Popcorn Chicken'],
+      ['These Air Fried Crispy Chipotle Honey Chicken Tenders Are Insanely Good', 'Air Fried Crispy Chipotle Honey Chicken Tenders'],
+      ['Honey Butter Chicken Alfredo Pasta My Best Meal Prep Recipes Of 2025! Part 1', 'Honey Butter Chicken Alfredo Pasta'],
+      [
+        'If you need an easy dinner recipe using a pound of ground beef, this Sloppy Joe Potato Skillet won’t disappoint!',
+        'Sloppy Joe Potato Skillet',
+      ],
+      ['Viral chicken broth pasta // recipe', 'Viral chicken broth pasta'],
+    ])('reduces a blurb to the dish name: %s', (line, expected) => {
+      expect(cleanTitleLine(line)).toBe(expected);
+    });
+
+    it.each([
+      'Creamy Chipotle Chicken & Potatoes',
+      'Easy High Protein Honey BBQ Chicken Mac & Cheese',
+      'Garlic Butter Chicken & Creamy Potatoes',
+      'Arayes',
+    ])('leaves a line that already reads as a dish name alone: %s', (line) => {
+      expect(cleanTitleLine(line)).toBe(line);
+    });
+
+    it('skips a hook line and takes the dish name below it', () => {
+      const r = parseRecipeFromCaption(
+        'This is seriously one of the best appetizers I’ve ever made, and easy to throw together!\n\n' +
+          'Roasted Tomato Burrata Dip\n\nIngredients\n- 200g cherry tomatoes\n- 1 ball burrata',
+      );
+      expect(r.title).toBe('Roasted Tomato Burrata Dip');
+    });
+
+    it('recovers a title sharing its line with engagement bait', () => {
+      // "SAVE THIS" makes the line noise, which used to discard the title with it.
+      const r = parseRecipeFromCaption(
+        'SAVE THIS ‼️ High Protein Street Corn Chicken Bowl 😍 (recipe 👇🏽)\n\n' +
+          'Ingredients\n- 2 cups corn\n- 200g chicken',
+      );
+      expect(r.title).toBe('High Protein Street Corn Chicken Bowl');
+    });
+
+    it('keeps the blurb rather than guessing when no line reduces cleanly', () => {
+      // A wrong guess is worse than a long title.
+      const blurb = 'I have made this every single week for the last two months honestly';
+      const r = parseRecipeFromCaption(`${blurb}\n\nIngredients\n- 200g pasta\n- 1 tbsp butter`);
+      expect(r.title).toBe(blurb);
+    });
+  });
+
+  describe('where the ingredient-region prose lands', () => {
+    it('appends an aside after the numbered method when there is a real one', () => {
+      // "Let this marinate overnight" sits among the ingredients but is not step
+      // one. With an Instructions header present, the numbered steps lead.
+      const r = parseRecipeFromCaption(
+        'Chicken\n\nIngredients\n\nMarinade\n- 500g Chicken Thighs\n' +
+          'Let this marinate overnight if possible, way more flavor!\n\n' +
+          'Sauce\n- 100g Yogurt\n\nInstructions\n\n1. Marinate the chicken.\n2. Bake for 25 mins.',
+      );
+      expect(r.instructions).toEqual([
+        'Marinate the chicken.',
+        'Bake for 25 mins.',
+        'Let this marinate overnight if possible, way more flavor!',
+      ]);
+    });
+
+    it('keeps document order when the region prose IS the method', () => {
+      // No Instructions header: the interleaved bullets are all the method there
+      // is, so reordering them would scramble the recipe.
+      const r = parseRecipeFromCaption(
+        'Chicken\n\nIngredients\n\nMarinade\n- 500g Chicken Thighs\n' +
+          '• Marinate chicken for 30 mins or overnight for maximum depth of flavor\n' +
+          '• Oven bake or air fry for 25-27 mins at 200C until golden and crisp\n\n' +
+          'Rice\n- 220g Basmati Rice',
+      );
+      expect(r.instructions?.[0]).toMatch(/marinate chicken for 30 mins/i);
+      expect(r.instructions?.[1]).toMatch(/oven bake or air fry/i);
     });
   });
 });

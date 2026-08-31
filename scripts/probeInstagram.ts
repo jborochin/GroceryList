@@ -12,6 +12,7 @@
  */
 import { importInstagramRecipe, InstagramImportError } from '../src/utils/instagramImport';
 import { parseSharedUrl } from '../src/utils/instagramUrl';
+import { toSections } from '../src/utils/ingredientSections';
 
 function formatQuantity(value: number): string {
   return Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/0+$/, '');
@@ -50,10 +51,16 @@ async function main(): Promise<void> {
       `Macros    : ${n ? `${n.calories} cal | ${n.proteinG}g P | ${n.carbsG}g C | ${n.fatG}g F${provenance}` : '(none)'}`,
     );
 
+    // Printed under their sub-recipe titles, because whether the split survived
+    // the parse is exactly what this probe is here to show.
+    const sections = toSections(recipe.ingredients);
     console.log(`\nIngredients (${recipe.ingredients.length}):`);
-    for (const ingredient of recipe.ingredients) {
-      const qty = `${formatQuantity(ingredient.quantity)} ${ingredient.unit}`;
-      console.log(`  ${qty.padEnd(12)} ${ingredient.name}`);
+    for (const section of sections) {
+      if (section.title) console.log(`\n  ${section.title}`);
+      for (const { ingredient } of section.items) {
+        const qty = `${formatQuantity(ingredient.quantity)} ${ingredient.unit}`;
+        console.log(`  ${qty.padEnd(12)} ${ingredient.name}`);
+      }
     }
 
     const steps = recipe.instructions ?? [];

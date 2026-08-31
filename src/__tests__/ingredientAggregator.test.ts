@@ -1,7 +1,17 @@
 import { aggregate } from '../utils/ingredientAggregator';
-import { Recipe } from '../types';
+import { convert } from '../utils/unitConversion';
+import { GroceryEntry, Ingredient, Recipe } from '../types';
 
-function recipe(id: string, servings: number, ingredients: Array<{ name: string; quantity: number; unit: string }>): Recipe {
+/** A merged entry's total, read back in a chosen unit so prettyUnit's choice of
+ *  display unit isn't baked into the assertion. Approximate: the entry has
+ *  already been rounded for display, so compare with a tolerance. */
+function totalIn(entry: GroceryEntry, unit: string): number {
+  const converted = convert(entry.quantity, entry.unit, unit);
+  if (converted === null) throw new Error(`cannot express ${entry.unit} as ${unit}`);
+  return converted;
+}
+
+function recipe(id: string, servings: number, ingredients: Ingredient[]): Recipe {
   return {
     id,
     title: id,
@@ -120,5 +130,42 @@ describe('ingredientAggregator', () => {
     // 1 cup + 4 tbsp = 16 tbsp + 4 tbsp = 20 tbsp = 1.25 cups
     expect(out[0].entries[0].quantity).toBeCloseTo(1.25, 2);
     expect(out[0].entries[0].unit).toBe('cup');
+  });
+
+  it('merges an ingredient repeated across sub-recipe sections of ONE recipe', () => {
+    // Meal-prep captions season two components from the same jar: the chipotle
+    // reel lists garlic powder under both "Chipotle Chicken Marinade" and
+    // "Crispy Seasoned Potatoes". The recipe keeps that split visible; the
+    // grocery list must not — you buy one jar.
+    //
+    // This holds because aggregate() reads name/quantity/unit and never
+    // `section`. The test exists so that stays true: routing sections into the
+    // grouping key would silently double the list.
+    const recipes = [
+      recipe('chipotle', 6, [
+        { name: 'garlic powder', quantity: 3, unit: 'tsp', section: 'Chipotle Chicken Marinade' },
+        { name: 'garlic powder', quantity: 2.5, unit: 'tsp', section: 'Crispy Seasoned Potatoes' },
+      ]),
+    ];
+    const out = aggregate([{ recipeId: 'chipotle', desiredServings: 6 }], recipes);
+    expect(out).toHaveLength(1);
+    expect(out[0].name).toBe('garlic powder');
+    expect(out[0].entries).toHaveLength(1);
+    // Compared back in tsp rather than against a literal, because prettyUnit
+    // promotes the sum to tbsp — which is a display choice, not the total.
+    expect(totalIn(out[0].entries[0], 'tsp')).toBeCloseTo(5.5, 1);
+  });
+
+  it('scales a sectioned ingredient like any other', () => {
+    const recipes = [
+      recipe('chipotle', 6, [
+        { name: 'chipotle paste', quantity: 100, unit: 'g', section: 'Chipotle Chicken Marinade' },
+        { name: 'chipotle paste', quantity: 70, unit: 'g', section: 'Creamy Chipotle Sauce' },
+      ]),
+    ];
+    // Half the servings, so (100 + 70) g halves to 85 g.
+    const out = aggregate([{ recipeId: 'chipotle', desiredServings: 3 }], recipes);
+    expect(out).toHaveLength(1);
+    expect(totalIn(out[0].entries[0], 'g')).toBeCloseTo(85, 0);
   });
 });

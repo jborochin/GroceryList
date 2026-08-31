@@ -11,6 +11,7 @@ import { useMealScheduleStore } from '../store/useMealScheduleStore';
 import { useFoodLogStore } from '../store/useFoodLogStore';
 import { useCookTimers } from '../hooks/useCookTimers';
 import { scaleIngredients } from '../utils/recipeScaling';
+import { toSections } from '../utils/ingredientSections';
 import { scaleNutrition } from '../utils/foodLogDay';
 import { sessionProgress } from '../utils/cookSession';
 import { parseStepDurations } from '../utils/stepTimers';
@@ -212,15 +213,35 @@ export function CookModeScreen() {
         />
         <Surface variant="outlined" pad={t.spacing.lg}>
           {ingredients.length > 0 ? (
-            ingredients.map((ingredient, idx) => (
-              <CookIngredientRow
-                key={`${ingredient.name}-${idx}`}
-                name={ingredient.name}
-                amount={formatEntry(ingredient.quantity, ingredient.unit)}
-                checked={session.checkedIngredients.includes(idx)}
-                onToggle={() => toggleIngredient(recipeId, idx)}
-                isLast={idx === ingredients.length - 1}
-              />
+            // Grouped by sub-recipe so you can gather one component at a time.
+            // Checks stay keyed by the FLAT index (`idx`), which is what the
+            // session stores — never the position within a section.
+            toSections(ingredients).map((section, sectionIdx) => (
+              <View key={section.title ?? `unsectioned-${sectionIdx}`}>
+                {section.title ? (
+                  <Text
+                    variant="caption"
+                    tone="tertiary"
+                    style={{
+                      marginTop: sectionIdx === 0 ? 0 : t.spacing.md,
+                      marginBottom: t.spacing.xs,
+                      letterSpacing: 0.6,
+                    }}
+                  >
+                    {section.title.toUpperCase()}
+                  </Text>
+                ) : null}
+                {section.items.map(({ ingredient, index: idx }) => (
+                  <CookIngredientRow
+                    key={`${ingredient.name}-${idx}`}
+                    name={ingredient.name}
+                    amount={formatEntry(ingredient.quantity, ingredient.unit)}
+                    checked={session.checkedIngredients.includes(idx)}
+                    onToggle={() => toggleIngredient(recipeId, idx)}
+                    isLast={idx === ingredients.length - 1}
+                  />
+                ))}
+              </View>
             ))
           ) : (
             <Text variant="body" tone="tertiary">

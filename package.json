@@ -18,7 +18,9 @@
     "prices:bootstrap": "tsx scripts/prices/bootstrap.ts",
     "brand:assets": "node scripts/generateBrandAssets.mjs",
     "food:probe": "tsx scripts/probeFoodSearch.ts",
-    "ig:probe": "tsx scripts/probeInstagram.ts"
+    "ig:probe": "tsx scripts/probeInstagram.ts",
+    "ig:harvest": "tsx scripts/harvestInstagram.ts",
+    "ig:audit": "tsx scripts/auditCaptions.ts"
   },
   "dependencies": {
     "@expo-google-fonts/montserrat": "^0.4.2",
