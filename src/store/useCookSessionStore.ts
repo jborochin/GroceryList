@@ -14,7 +14,7 @@ import {
   pauseTimer as pauseTimerPure,
   resumeTimer as resumeTimerPure,
 } from '../utils/cookTimers';
-import { zustandStorage, STORAGE_KEYS } from './storage';
+import { STORAGE_KEYS, isRecord, sanitizeList, zustandStorage } from './storage';
 
 // In-progress cooks, keyed by recipe id.
 //
@@ -212,6 +212,16 @@ export const useCookSessionStore = create<CookSessionState>()(
     {
       name: STORAGE_KEYS.cookSessions,
       storage: zustandStorage,
+      merge: (persisted: unknown, current: CookSessionState): CookSessionState => {
+        const raw = (persisted as { sessions?: unknown } | undefined)?.sessions;
+        const sessions: Record<string, CookSession> = {};
+        if (isRecord(raw)) {
+          for (const [k, v] of Object.entries(raw)) {
+            if (isRecord(v) && typeof v.recipeId === 'string') sessions[k] = v as unknown as CookSession;
+          }
+        }
+        return { ...current, sessions };
+      },
     }
   )
 );

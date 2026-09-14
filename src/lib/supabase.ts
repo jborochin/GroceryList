@@ -30,6 +30,12 @@ export function getSupabase(): SupabaseClient {
         autoRefreshToken: true,
         persistSession: true,
         detectSessionInUrl: false,
+        // PKCE, not the implicit flow. Implicit OAuth returns the access and
+        // refresh tokens in the redirect URL to our custom scheme, and on Android
+        // any installed app may register that same scheme and receive them. PKCE
+        // returns a one-time code that is useless without the verifier this
+        // client kept in AsyncStorage when the flow started.
+        flowType: 'pkce',
       },
     });
   }

@@ -237,13 +237,28 @@ export function ingestFoodItems(payload: unknown): FoodItem[] {
     if (source !== 'usda' && source !== 'off' && source !== 'custom') continue;
 
     const p = (item.per100g ?? {}) as Json;
+    // Negative macros are data errors, not deficits; clamp them away.
     const per100g: NutritionPerServing = {
-      calories: num(p.calories),
-      proteinG: num(p.proteinG),
-      carbsG: num(p.carbsG),
-      fatG: num(p.fatG),
+      calories: Math.max(0, num(p.calories)),
+      proteinG: Math.max(0, num(p.proteinG)),
+      carbsG: Math.max(0, num(p.carbsG)),
+      fatG: Math.max(0, num(p.fatG)),
     };
     if (per100g.calories <= 0 && per100g.proteinG <= 0) continue;
+    // Physically impossible per 100 g: nothing is denser than pure fat (~900 kcal),
+    // and no macro can exceed the whole 100 g. Crowd-sourced OFF rows do this (a
+    // per-package value typed into the per-100g field) and would otherwise log a
+    // 5,000-calorie yogurt. Dropped rather than clamped: the rest of the row is
+    // just as suspect.
+    if (
+      per100g.calories > 950 ||
+      per100g.proteinG > 100 ||
+      per100g.carbsG > 100 ||
+      per100g.fatG > 100 ||
+      per100g.proteinG + per100g.carbsG + per100g.fatG > 105
+    ) {
+      continue;
+    }
 
     const servings: FoodServing[] = [];
     for (const s of asArray(item.servings)) {

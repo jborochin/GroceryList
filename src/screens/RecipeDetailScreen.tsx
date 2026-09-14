@@ -11,6 +11,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useRecipeStore } from '../store/useRecipeStore';
+import { removeRecipeEverywhere } from '../store/removeRecipeEverywhere';
 import { useGroceryRecipeStore } from '../store/useGroceryRecipeStore';
 import { useCookSessionStore } from '../store/useCookSessionStore';
 import { Recipe, NutritionPerServing } from '../types';
@@ -49,7 +50,6 @@ export function RecipeDetailScreen() {
   const { recipeId } = route.params;
   const recipe = useRecipeStore((s) => s.getById(recipeId));
   const updateRecipe = useRecipeStore((s) => s.updateRecipe);
-  const deleteRecipe = useRecipeStore((s) => s.deleteRecipe);
   // Adds land on the grocery list only — never the meal plan, so the recipe
   // doesn't turn up on the Week tab. See useGroceryRecipeStore.
   const addGroceryRecipe = useGroceryRecipeStore((s) => s.addEntry);
@@ -133,7 +133,7 @@ export function RecipeDetailScreen() {
       destructive: true,
     });
     if (!ok) return;
-    deleteRecipe(recipe.id);
+    removeRecipeEverywhere(recipe.id);
     navigation.goBack();
   };
 

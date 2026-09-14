@@ -19,10 +19,10 @@ import { AmbientBackground } from './src/components/ui/AmbientBackground';
 import { ParallaxProvider } from './src/components/ui/ParallaxContext';
 import { useHydration } from './src/store/hydration';
 import { seedIfFirstLaunch } from './src/store/seedFirstLaunch';
-import { remapLegacyRecipeIds } from './src/store/remapLegacyRecipeIds';
 import { useAuthStore } from './src/store/useAuthStore';
 import { ToastHost } from './src/components/ui/ToastHost';
 import { ShareIntentRouter } from './src/components/ShareIntentRouter';
+import { AppErrorBoundary } from './src/components/AppErrorBoundary';
 import { RootStackParamList } from './src/navigation/types';
 import { drainOutbox, migrateLocalToAccount, pullAll, subscribeStores, unsubscribeStores } from './src/lib/sync';
 import { loadPriceCache, refreshPriceCache } from './src/lib/priceCatalogSync';
@@ -53,9 +53,8 @@ export default function App() {
 
   useEffect(() => {
     if (hydrated && !seeded) {
-      seedIfFirstLaunch()
-        .then(() => remapLegacyRecipeIds())
-        .finally(() => setSeeded(true));
+      // Legacy recipe ids are remapped inside useHydration, before the week reconcile.
+      seedIfFirstLaunch().finally(() => setSeeded(true));
     }
   }, [hydrated, seeded]);
 
@@ -141,7 +140,9 @@ export default function App() {
                 },
               }}>
                 <ToastHost>
-                  <RootNavigator />
+                  <AppErrorBoundary>
+                    <RootNavigator />
+                  </AppErrorBoundary>
                 </ToastHost>
                 <ShareIntentRouter navigationRef={navigationRef} ready={navReady} />
                 <StatusBar style="dark" translucent />

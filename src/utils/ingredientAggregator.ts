@@ -14,6 +14,9 @@ export function aggregate(plan: MealPlanEntry[], recipes: Recipe[]): GroceryItem
     const recipe = recipesById.get(entry.recipeId);
     if (!recipe) continue;
     const ratio = entry.desiredServings / Math.max(1, recipe.servings);
+    // NaN servings (a bad synced row) or zero desired servings would otherwise scale
+    // every ingredient to NaN/0 and poison the priced total.
+    if (!Number.isFinite(ratio) || ratio <= 0) continue;
     const scaled = scaleIngredients(recipe.ingredients, ratio);
     for (const ing of scaled) {
       const purchasable = toPurchasableName(ing.name);
@@ -78,8 +81,15 @@ export function mergeGroup(name: string, display: string, ings: Ingredient[]): G
     entries.push({ quantity: pretty.quantity, unit: pretty.unit });
   }
 
+  // Units the table doesn't know ("sprigs") can't convert, but identical labels can
+  // still add: two manual "2 sprigs mint" + "3 sprigs mint" read as 5 sprigs, not as
+  // "2 sprigs + 3 sprigs". Order of first appearance is kept.
+  const unknownTotals = new Map<string, number>();
   for (const ing of unknownUnitEntries) {
-    entries.push({ quantity: ing.quantity, unit: ing.unit });
+    unknownTotals.set(ing.unit, (unknownTotals.get(ing.unit) ?? 0) + ing.quantity);
+  }
+  for (const [unit, quantity] of unknownTotals) {
+    entries.push({ quantity, unit });
   }
 
   return {

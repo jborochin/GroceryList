@@ -93,11 +93,30 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       }
 
       const url = new URL(result.url);
-      const params = new URLSearchParams(url.hash.startsWith('#') ? url.hash.slice(1) : url.search);
-      const access_token = params.get('access_token');
-      const refresh_token = params.get('refresh_token');
+      const query = new URLSearchParams(url.search);
+      const hash = new URLSearchParams(url.hash.startsWith('#') ? url.hash.slice(1) : '');
+
+      const oauthError = query.get('error_description') ?? hash.get('error_description');
+      if (oauthError) {
+        set({ loading: false, error: oauthError });
+        return;
+      }
+
+      // PKCE (the client's flowType): the redirect carries a one-time code that
+      // only this client's stored verifier can redeem.
+      const code = query.get('code');
+      if (code) {
+        const { error: exchangeErr } = await supabase.auth.exchangeCodeForSession(code);
+        set({ loading: false, error: exchangeErr?.message ?? null });
+        return;
+      }
+
+      // Implicit-flow fallback, in case the project is still configured to hand
+      // back tokens directly.
+      const access_token = hash.get('access_token');
+      const refresh_token = hash.get('refresh_token');
       if (!access_token || !refresh_token) {
-        set({ loading: false, error: 'Missing tokens in Google redirect.' });
+        set({ loading: false, error: 'Google sign-in did not return a session.' });
         return;
       }
 

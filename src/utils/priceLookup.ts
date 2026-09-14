@@ -82,17 +82,21 @@ export function findPrice(
   const normalized = normalizeName(ingredientName);
   if (!normalized) return null;
 
+  // Own-property lookups throughout: both maps are plain objects keyed by free-text
+  // ingredient names, and `map['constructor']` would otherwise be a function.
+  const own = <T,>(map: Record<string, T>, key: string): T | undefined =>
+    Object.prototype.hasOwnProperty.call(map, key) ? map[key] : undefined;
+
   // 1. Overrides first — a user's own price always wins.
-  if (overrides[normalized]) {
-    const o = overrides[normalized];
-    return { pricePerUnit: o.pricePerUnit, unit: o.unit };
-  }
+  const o = own(overrides, normalized);
+  if (o) return { pricePerUnit: o.pricePerUnit, unit: o.unit };
 
   // 2. Live overlay, exact match only. Guaranteed to carry the same unit as the
   //    bundled row (validated on ingest), so downstream profile/rounding behavior
   //    is identical whether or not a refresh has landed.
   const live = getLivePrices();
-  if (live && live[normalized]) return live[normalized];
+  const liveEntry = live ? own(live, normalized) : undefined;
+  if (liveEntry) return liveEntry;
 
   // 3. Exact normalized match
   const exact = DB_ENTRIES.find((e) => e.normalized === normalized);

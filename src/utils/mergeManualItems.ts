@@ -10,6 +10,15 @@ import { toPurchasableName } from './purchasableName';
  * the user adds always appears. Manual items still merge with recipe-derived items of
  * the same normalized name (family-aware, via the shared aggregator merge).
  */
+/**
+ * The grocery-row key a manual item lands under. Exposed so callers that need to
+ * find or un-dismiss the row a manual add produces (GroceryListScreen) derive the
+ * key the same way this merge does — purchasable name first, then normalized.
+ */
+export function manualItemKey(name: string): string {
+  return normalizeName(toPurchasableName(name.trim()));
+}
+
 export function mergeManualItems(items: GroceryItem[], manual: ManualItem[]): GroceryItem[] {
   if (manual.length === 0) return items;
 
@@ -18,7 +27,7 @@ export function mergeManualItems(items: GroceryItem[], manual: ManualItem[]): Gr
   const groups = new Map<string, { display: string; ings: Ingredient[] }>();
   for (const m of manual) {
     const display = toPurchasableName(m.name.trim());
-    const normalized = normalizeName(display);
+    const normalized = manualItemKey(m.name);
     if (!normalized) continue;
     const ing: Ingredient = {
       name: display,

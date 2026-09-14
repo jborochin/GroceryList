@@ -122,3 +122,11 @@ describe('findPrice substring ordering', () => {
     expect(findPrice('thick cut sirloin steak')).toEqual(sirloinSteak);
   });
 });
+
+describe('findPrice — prototype-safe overrides', () => {
+  it('ignores inherited Object.prototype members when looking up an override', () => {
+    const { findPrice: find } = require('../utils/priceLookup');
+    const p = find('constructor', { egg: { name: 'egg', pricePerUnit: 1, unit: 'each' } });
+    expect(p === null || Number.isFinite(p.pricePerUnit)).toBe(true);
+  });
+});

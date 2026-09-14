@@ -216,3 +216,23 @@ describe('nutritionForCell', () => {
     expect(nutritionForCell(cell(), recipe({ nutritionPerServing: undefined }))).toBeNull();
   });
 });
+
+describe('resolveDay — week independence', () => {
+  it('reads the cells of the date\'s own week, whatever week the planner is looking at', () => {
+    // The Log tab used to re-point the planning week to the tapped date so that
+    // projected rows would "come from the right week". resolveDay never needed
+    // that: it derives the week from the date. Pinned so the screen never has to
+    // touch the (synced, plan-rewriting) selected week just to browse a day.
+    const otherDate = '2026-08-20'; // the following Thursday
+    const other = dateKeyToCell(otherDate);
+    const cells = [
+      cell({ id: 'this-week' }),
+      cell({ id: 'next-week', weekStart: other.weekStart, day: other.day, desiredServings: 1 }),
+    ];
+    const a = resolveDay(DATE, cells, [], [recipe()]);
+    const b = resolveDay(otherDate, cells, [], [recipe()]);
+    expect(a.bySlot.dinner.map((r) => r.cell?.id)).toEqual(['this-week']);
+    expect(b.bySlot.dinner.map((r) => r.cell?.id)).toEqual(['next-week']);
+    expect(b.totals.calories).toBe(400);
+  });
+});

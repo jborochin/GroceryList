@@ -54,3 +54,11 @@ describe('mergeManualItems', () => {
     expect(out).toHaveLength(0);
   });
 });
+
+describe('manualItemKey', () => {
+  it('yields the same key mergeManualItems groups the item under', () => {
+    const { manualItemKey } = require('../utils/mergeManualItems');
+    const out = mergeManualItems([], [manual('1', 'Paper Towels', 2, 'roll')]);
+    expect(manualItemKey('Paper Towels')).toBe(out[0].name);
+  });
+});

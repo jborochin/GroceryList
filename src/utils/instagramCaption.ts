@@ -27,9 +27,12 @@ export interface ExtractedCaption {
  */
 function readMeta(html: string, key: string): string | null {
   const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  // The gaps between "<meta" and each attribute are bounded. Unbounded, every
+  // "<meta" in a hostile page starts a scan to end-of-input (quadratic); the
+  // content capture itself stays unbounded because a full caption is long.
   const patterns = [
-    new RegExp(`<meta[^>]+(?:property|name)=["']${escaped}["'][^>]*\\bcontent=["']([^"']*)["']`, 'i'),
-    new RegExp(`<meta[^>]+\\bcontent=["']([^"']*)["'][^>]*(?:property|name)=["']${escaped}["']`, 'i'),
+    new RegExp(`<meta[^>]{1,512}(?:property|name)=["']${escaped}["'][^>]{0,512}\\bcontent=["']([^"']*)["']`, 'i'),
+    new RegExp(`<meta[^>]{1,512}\\bcontent=["']([^"']*)["'][^>]{0,512}(?:property|name)=["']${escaped}["']`, 'i'),
   ];
   for (const re of patterns) {
     const m = html.match(re);
@@ -133,6 +136,8 @@ export function extractCaptionFromHtml(html: string): ExtractedCaption | null {
     author: best.author,
     // Untrusted remote markup — same guard the JSON-LD importer uses.
     imageUrl: sanitizeImageUrl(rawImage ? decodeHtmlEntities(rawImage) : undefined),
-    canonicalUrl: rawCanonical ? decodeHtmlEntities(rawCanonical) : undefined,
+    // Also untrusted, and it becomes the recipe's sourceUrl, which the detail
+    // screen hands to Linking.openURL — so http(s) only, same as the image.
+    canonicalUrl: sanitizeImageUrl(rawCanonical ? decodeHtmlEntities(rawCanonical) : undefined),
   };
 }

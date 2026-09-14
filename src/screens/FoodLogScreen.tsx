@@ -10,7 +10,7 @@ import { useMealScheduleStore } from '../store/useMealScheduleStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { useFoodLogStore } from '../store/useFoodLogStore';
 import { resolveDay, SLOT_ORDER } from '../utils/foodLogDay';
-import { dateKeyLabel, dateKeyToCell, todayKey } from '../utils/planningWeek';
+import { dateKeyLabel, todayKey } from '../utils/planningWeek';
 import { confirm } from '../utils/confirm';
 import { MealSlot } from '../types';
 import { RootStackParamList, TabParamList } from '../navigation/types';
@@ -57,7 +57,6 @@ export function FoodLogScreen() {
 
   const recipes = useRecipeStore((s) => s.recipes);
   const cells = useMealScheduleStore((s) => s.cells);
-  const setSelectedWeek = useMealScheduleStore((s) => s.setSelectedWeek);
   const settings = useSettingsStore((s) => s.settings);
   const entries = useFoodLogStore((s) => s.entries);
   const addEntry = useFoodLogStore((s) => s.addEntry);
@@ -75,15 +74,15 @@ export function FoodLogScreen() {
     setMode('day');
   }, []);
 
-  // Selecting a day outside the planning week re-points the schedule at it, so
-  // the projected rows come from the right week's cells.
-  const selectDate = useCallback(
-    (dateKey: string) => {
-      setDate(dateKey);
-      setSelectedWeek(dateKeyToCell(dateKey).weekStart);
-    },
-    [setSelectedWeek]
-  );
+  // Browsing a day is read-only with respect to the plan. resolveDay derives the
+  // week from the date itself, so nothing here touches the planning week —
+  // setSelectedWeek re-projects the SYNCED plan entries from the target week's
+  // cells, and the date strip is Sunday-anchored while weeks start on Monday, so
+  // tapping Sunday used to rewrite the plan (and the grocery list) from the
+  // previous week. Week navigation belongs to the Week view alone.
+  const selectDate = useCallback((dateKey: string) => {
+    setDate(dateKey);
+  }, []);
 
   const openSearch = useCallback(
     (slot: MealSlot, replacesCellId?: string) => {

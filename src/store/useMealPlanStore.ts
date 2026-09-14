@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { MealPlanEntry } from '../types';
-import { zustandStorage, STORAGE_KEYS } from './storage';
+import { STORAGE_KEYS, zustandStorage } from './storage';
 
 interface MealPlanState {
   entries: MealPlanEntry[];

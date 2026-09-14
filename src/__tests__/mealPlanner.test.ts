@@ -238,3 +238,28 @@ describe('planMeals', () => {
     expect(dailyDistinct).toBeGreaterThan(batchDistinct);
   });
 });
+
+describe('planMeals — non-finite inputs', () => {
+  it('does not crash the seeded picker when every score is NaN; the slots go unfilled', () => {
+    const meals = [meal({ id: 'a', slots: ['lunch'] }), meal({ id: 'b', slots: ['lunch'] })];
+    const input = baseInput({
+      meals,
+      slots: [{ slot: 'lunch', mealsPerDay: 1 }],
+      targets: { dailyCalories: NaN, macroGrams: { proteinG: 150, carbsG: 200, fatG: 67 } },
+      seed: 7,
+    });
+    expect(() => planMeals(input)).not.toThrow();
+    const result = planMeals(input);
+    expect(result.items).toEqual([]);
+    expect(result.unfilledSlots).toBe(1);
+  });
+
+  it('ignores a meal with NaN macros but still plans with the rest', () => {
+    const meals = [
+      meal({ id: 'broken', slots: ['lunch'], nutritionPerServing: { calories: NaN, proteinG: 1, carbsG: 1, fatG: 1 } }),
+      meal({ id: 'fine', slots: ['lunch'] }),
+    ];
+    const result = planMeals(baseInput({ meals, slots: [{ slot: 'lunch', mealsPerDay: 1 }], seed: 3 }));
+    expect(result.items.map((i) => i.mealId)).toEqual(['fine']);
+  });
+});

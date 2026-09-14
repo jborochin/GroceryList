@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware';
 import 'react-native-get-random-values';
 import { v4 as uuid } from 'uuid';
 import { Recipe } from '../types';
-import { zustandStorage, STORAGE_KEYS } from './storage';
+import { STORAGE_KEYS, isRecord, sanitizeList, zustandStorage } from './storage';
 
 interface RecipeState {
   recipes: Recipe[];
@@ -50,6 +50,18 @@ export const useRecipeStore = create<RecipeState>()(
     {
       name: STORAGE_KEYS.recipes,
       storage: zustandStorage,
+      merge: (persisted, current) => ({
+        ...current,
+        recipes: sanitizeList(
+          (persisted as { recipes?: unknown } | undefined)?.recipes,
+          (x): x is Recipe =>
+            isRecord(x) &&
+            typeof x.id === 'string' &&
+            typeof x.title === 'string' &&
+            Array.isArray(x.ingredients) &&
+            x.ingredients.every(isRecord)
+        ),
+      }),
     }
   )
 );

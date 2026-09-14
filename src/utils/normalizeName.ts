@@ -40,7 +40,8 @@ export function normalizeName(name: string): string {
 }
 
 function singularize(word: string): string {
-  if (IRREGULAR_PLURALS[word]) return IRREGULAR_PLURALS[word];
+  // Own-property check: `IRREGULAR_PLURALS['constructor']` is Object's constructor.
+  if (Object.prototype.hasOwnProperty.call(IRREGULAR_PLURALS, word)) return IRREGULAR_PLURALS[word];
   if (word.length <= 3) return word;
   if (word.endsWith('ies') && word.length > 4) return word.slice(0, -3) + 'y';
   if (word.endsWith('sses')) return word.slice(0, -2);

@@ -72,3 +72,11 @@ describe('applyItemOverrides', () => {
     expect(out[0].estimatedPrice).toBe(5);
   });
 });
+
+describe('applyItemOverrides — prototype-safe', () => {
+  it('does not treat an item named like an Object.prototype member as overridden', () => {
+    const items = [item('constructor', 'constructor', [{ quantity: 1, unit: 'each' }])];
+    const out = applyItemOverrides(items, { egg: override('egg', 'Eggs', 2, 'each', 'Protein') });
+    expect(out[0]).toEqual(items[0]);
+  });
+});

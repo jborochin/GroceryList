@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { zustandStorage, STORAGE_KEYS } from './storage';
+import { STORAGE_KEYS, zustandStorage } from './storage';
 
 interface FavoritesState {
   favoriteIds: string[];

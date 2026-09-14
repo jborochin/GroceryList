@@ -59,3 +59,41 @@ describe('priceEstimator', () => {
     expect(priced.estimatedPrice).toBeCloseTo((400 / 453.592) * 2.77, 2);
   });
 });
+
+describe('estimatePrices partial gaps', () => {
+  it('counts an item that priced only some of its entries as unestimated', () => {
+    const { estimatePrices } = require('../utils/priceEstimator');
+    const partial: GroceryItem = {
+      name: 'tofu',
+      displayName: 'tofu',
+      category: 'Protein',
+      entries: [
+        { quantity: 1, unit: 'lb' },
+        { quantity: 1, unit: 'sprig' },
+      ],
+      hasPriceGap: false,
+    };
+    const out = estimatePrices([partial]);
+    expect(out.items[0].estimatedPrice).toBeDefined();
+    expect(out.items[0].hasPriceGap).toBe(true);
+    expect(out.unestimatedCount).toBe(1);
+  });
+});
+
+describe('estimatePrices — non-finite quantities', () => {
+  it('treats a NaN quantity as a price gap instead of poisoning the total', () => {
+    const { estimatePrices } = require('../utils/priceEstimator');
+    const bad: GroceryItem = {
+      name: 'tofu',
+      displayName: 'tofu',
+      category: 'Protein',
+      entries: [{ quantity: NaN, unit: 'lb' }],
+      hasPriceGap: false,
+    };
+    const out = estimatePrices([bad, item('tofu', 1, 'lb')]);
+    expect(out.items[0].estimatedPrice).toBeUndefined();
+    expect(out.items[0].hasPriceGap).toBe(true);
+    expect(Number.isFinite(out.total)).toBe(true);
+    expect(out.total).toBeCloseTo(3.99, 1);
+  });
+});

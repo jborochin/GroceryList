@@ -208,3 +208,56 @@ describe('parseIngredient', () => {
     });
   });
 });
+
+describe('parseIngredient — mixed numbers next to ranges', () => {
+  it('reads "1 1/2-2" as the range 1.5..2, not 1 + (0.5..2)', () => {
+    const r = parseIngredient('1 1/2-2 cups flour');
+    expect(r.quantity).toBeCloseTo(1.75, 5);
+    expect(r).toMatchObject({ unit: 'cup', name: 'flour' });
+  });
+
+  it('agrees with the spelled-out form', () => {
+    expect(parseIngredient('1 1/2-2 cups flour').quantity).toBeCloseTo(
+      parseIngredient('1 1/2 to 2 cups flour').quantity,
+      5
+    );
+  });
+
+  it('reads "1-1 1/2" as the range 1..1.5', () => {
+    const r = parseIngredient('1-1 1/2 cups flour');
+    expect(r.quantity).toBeCloseTo(1.25, 5);
+    expect(r).toMatchObject({ unit: 'cup', name: 'flour' });
+  });
+});
+
+describe('parseIngredient — leading articles', () => {
+  it('reads "a pinch of salt" as 1 pinch of salt, not an ingredient named "pinch salt"', () => {
+    expect(parseIngredient('a pinch of salt')).toMatchObject({ quantity: 1, unit: 'pinch', name: 'salt' });
+  });
+
+  it('reads "a clove of garlic" with the unit', () => {
+    expect(parseIngredient('a clove of garlic')).toMatchObject({ quantity: 1, unit: 'clove', name: 'garlic' });
+  });
+
+  it('reads "an onion" as one each', () => {
+    expect(parseIngredient('an onion')).toMatchObject({ quantity: 1, unit: 'each', name: 'onion' });
+  });
+
+  it('still strips "the" without inventing a unit', () => {
+    const r = parseIngredient('the zest of 1 lemon');
+    expect(r).toMatchObject({ quantity: 1, unit: 'each' });
+    expect(r.name).toMatch(/^zest\b.*lemon$/);
+  });
+});
+
+describe('prototype-safe lookups', () => {
+  it('treats Object.prototype member names as ordinary text', () => {
+    const { canonicalizeUnit } = require('../utils/ingredientParser');
+    const { normalizeName } = require('../utils/normalizeName');
+    expect(canonicalizeUnit('constructor')).toBe('constructor');
+    expect(canonicalizeUnit('toString')).toBe('tostring');
+    expect(normalizeName('constructor')).toBe('constructor');
+    expect(normalizeName('hasOwnProperty')).toBe('hasownproperty');
+    expect(parseIngredient('2 constructor apples')).toMatchObject({ quantity: 2, unit: 'each' });
+  });
+});

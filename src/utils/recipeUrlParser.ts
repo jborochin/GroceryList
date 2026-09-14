@@ -1,6 +1,7 @@
 import { Ingredient, NutritionPerServing, Recipe } from '../types';
 import { parseIngredient } from './ingredientParser';
 import { estimateMissingMacros } from './recipeMacros';
+import { sanitizeHttpUrl } from './safeUrl';
 
 function isWebRuntime(): boolean {
   return typeof document !== 'undefined' && typeof window !== 'undefined';
@@ -24,6 +25,15 @@ const BROWSER_HEADERS: Record<string, string> = {
 };
 
 const FETCH_TIMEOUT_MS = 15000;
+/** Largest page we will parse. Recipe pages are well under 1 MB. */
+const MAX_HTML_CHARS = 5 * 1024 * 1024;
+/** Upper bound on characters between a tag opening and an attribute we look for. */
+const TAG_GAP = 512;
+/** JSON-LD walks stop descending past this depth instead of overflowing the stack. */
+const MAX_JSONLD_DEPTH = 64;
+/** A recipe with more lines than this is not a recipe we can usefully show or price. */
+const MAX_INGREDIENTS = 200;
+const MAX_INSTRUCTIONS = 200;
 
 export type RecipeParseErrorKind = 'network' | 'cors' | 'not-found' | 'malformed';
 
@@ -51,7 +61,19 @@ export interface JsonLdExtraction {
 }
 
 export async function parseRecipeFromUrl(url: string): Promise<ParsedRecipe> {
-  const html = await fetchHtml(url);
+  // http(s) only, checked before any request. On native, fetch() would happily
+  // read a pasted file:// path from the app sandbox and store it as sourceUrl.
+  // The web path's edge function enforces the same rule server-side.
+  let parsedUrl: URL | null = null;
+  try {
+    parsedUrl = new URL(url.trim());
+  } catch {
+    parsedUrl = null;
+  }
+  if (!parsedUrl || (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:')) {
+    throw new RecipeParseError('network', 'Only web links (http or https) can be imported.');
+  }
+  const html = await fetchHtml(parsedUrl.toString());
   const { blocks, scriptsFound } = extractJsonLdBlocks(html);
   const recipeNode = findRecipeNode(blocks);
   if (!recipeNode) {
@@ -139,7 +161,7 @@ async function fetchHtmlDirect(url: string): Promise<string> {
       signal: controller.signal,
     });
     if (res.ok) {
-      return await res.text();
+      return await readCappedText(res);
     }
     // Bot-protected sites (Cloudflare/Akamai) typically return 403/429/503 even
     // with a real-browser header set. Wayback Machine usually has a recent
@@ -195,7 +217,25 @@ async function fetchHtmlFromWayback(originalUrl: string, signal: AbortSignal): P
     return null;
   }
   if (!rawRes.ok) return null;
-  return await rawRes.text();
+  return await readCappedText(rawRes);
+}
+
+/**
+ * Read a response body, refusing documents past MAX_HTML_CHARS. React Native's
+ * fetch has no streaming body, so this checks Content-Length up front (the common
+ * case) and the decoded length after; a server that lies about the header still
+ * can't hand the regex passes a document large enough to hang them.
+ */
+async function readCappedText(res: Response): Promise<string> {
+  const declared = Number(res.headers?.get?.('content-length') ?? '0');
+  if (Number.isFinite(declared) && declared > MAX_HTML_CHARS) {
+    throw new RecipeParseError('network', 'That page is too large to import.');
+  }
+  const text = await res.text();
+  if (text.length > MAX_HTML_CHARS) {
+    throw new RecipeParseError('network', 'That page is too large to import.');
+  }
+  return text;
 }
 
 export function extractJsonLdBlocks(html: string): JsonLdExtraction {
@@ -217,11 +257,11 @@ export function extractJsonLdBlocks(html: string): JsonLdExtraction {
 }
 
 export function findRecipeNode(blocks: unknown[]): Record<string, unknown> | null {
-  const visit = (node: unknown): Record<string, unknown> | null => {
-    if (!node) return null;
+  const visit = (node: unknown, depth = 0): Record<string, unknown> | null => {
+    if (!node || depth > MAX_JSONLD_DEPTH) return null;
     if (Array.isArray(node)) {
       for (const n of node) {
-        const found = visit(n);
+        const found = visit(n, depth + 1);
         if (found) return found;
       }
       return null;
@@ -231,7 +271,7 @@ export function findRecipeNode(blocks: unknown[]): Record<string, unknown> | nul
       const t = obj['@type'];
       if (isRecipeType(t)) return obj;
       if (obj['@graph']) {
-        const found = visit(obj['@graph']);
+        const found = visit(obj['@graph'], depth + 1);
         if (found) return found;
       }
       // Many sites nest Recipe under an array of mainEntity / itemListElement
@@ -239,7 +279,7 @@ export function findRecipeNode(blocks: unknown[]): Record<string, unknown> | nul
         if (key === '@type') continue;
         const v = obj[key];
         if (v && (Array.isArray(v) || typeof v === 'object')) {
-          const found = visit(v);
+          const found = visit(v, depth + 1);
           if (found) return found;
         }
       }
@@ -269,9 +309,12 @@ interface MappedRecipe {
 function mapRecipeNode(node: Record<string, unknown>, sourceUrl: string): MappedRecipe {
   const title = stringOrEmpty(node.name) || 'Untitled Recipe';
   const servings = parseServings(node.recipeYield);
-  const ingredientStrings = coerceStringArray(node.recipeIngredient ?? node.ingredients);
+  const ingredientStrings = coerceStringArray(node.recipeIngredient ?? node.ingredients).slice(
+    0,
+    MAX_INGREDIENTS
+  );
   const ingredients: Ingredient[] = ingredientStrings.map(parseIngredient);
-  const instructions = parseInstructions(node.recipeInstructions);
+  const instructions = parseInstructions(node.recipeInstructions).slice(0, MAX_INSTRUCTIONS);
 
   const nutritionNode = node.nutrition;
   let nutritionPerServing: NutritionPerServing | undefined;
@@ -300,8 +343,9 @@ function mapRecipeNode(node: Record<string, unknown>, sourceUrl: string): Mapped
 
 export function parseInstructions(raw: unknown): string[] {
   const out: string[] = [];
-  const visit = (node: unknown): void => {
-    if (node === null || node === undefined) return;
+  const visit = (node: unknown, depth = 0): void => {
+    if (node === null || node === undefined || depth > MAX_JSONLD_DEPTH) return;
+    if (out.length >= MAX_INSTRUCTIONS) return;
     if (typeof node === 'string') {
       // A single string may contain the entire method. Split on line breaks so
       // each paragraph becomes a step; most sites use <br> / newlines between steps.
@@ -312,7 +356,7 @@ export function parseInstructions(raw: unknown): string[] {
       return;
     }
     if (Array.isArray(node)) {
-      for (const n of node) visit(n);
+      for (const n of node) visit(n, depth + 1);
       return;
     }
     if (typeof node === 'object') {
@@ -320,7 +364,7 @@ export function parseInstructions(raw: unknown): string[] {
       const t = obj['@type'];
       const isSection = typeof t === 'string' && t === 'HowToSection';
       if (isSection) {
-        visit(obj.itemListElement);
+        visit(obj.itemListElement, depth + 1);
         return;
       }
       if (typeof obj.text === 'string') {
@@ -342,16 +386,27 @@ function stripHtml(s: string): string {
   return s.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ');
 }
 
-function parseServings(raw: unknown): number {
-  if (typeof raw === 'number') return Math.max(1, Math.round(raw));
+const DEFAULT_SERVINGS = 4;
+const MAX_SERVINGS = 100;
+
+// Every per-serving figure downstream divides by this, so it must be a sane finite
+// integer: `recipeYield: 1e999` parses as Infinity and `"999999999"` is a typo, and
+// either one degrades every macro and grocery quantity derived from it.
+function clampServings(n: number): number {
+  if (!Number.isFinite(n)) return DEFAULT_SERVINGS;
+  return Math.min(MAX_SERVINGS, Math.max(1, Math.round(n)));
+}
+
+export function parseServings(raw: unknown): number {
+  if (typeof raw === 'number') return clampServings(raw);
   if (typeof raw === 'string') {
     // Range like "4-6 servings" / "4 to 6": use the rounded average
     const range = raw.match(/(\d+)\s*(?:-|–|—|to)\s*(\d+)/i);
     if (range) {
-      return Math.max(1, Math.round((parseInt(range[1], 10) + parseInt(range[2], 10)) / 2));
+      return clampServings((parseInt(range[1], 10) + parseInt(range[2], 10)) / 2);
     }
     const m = raw.match(/\d+/);
-    if (m) return Math.max(1, parseInt(m[0], 10));
+    if (m) return clampServings(parseInt(m[0], 10));
   }
   if (Array.isArray(raw)) {
     for (const v of raw) {
@@ -359,7 +414,7 @@ function parseServings(raw: unknown): number {
       if (parsed) return parsed;
     }
   }
-  return 4;
+  return DEFAULT_SERVINGS;
 }
 
 export interface ParsedNutrition {
@@ -391,14 +446,18 @@ export function parseNutrition(n: Record<string, unknown>): ParsedNutrition {
   };
 }
 
+// Non-finite or negative values are "missing", not numbers: `"."` matches the digit
+// class and parseFloat's to NaN, and `1e999` arrives from JSON.parse as Infinity.
+// Either one, once stored, renders as NaN on the nutrition bar and syncs as such.
 function parseNumberWithUnit(v: unknown): number | undefined {
   if (v === undefined || v === null) return undefined;
-  if (typeof v === 'number') return v;
-  if (typeof v === 'string') {
+  let n: number | undefined;
+  if (typeof v === 'number') n = v;
+  else if (typeof v === 'string') {
     const m = v.match(/[\d.]+/);
-    if (m) return parseFloat(m[0]);
+    if (m) n = parseFloat(m[0]);
   }
-  return undefined;
+  return n !== undefined && Number.isFinite(n) && n >= 0 ? n : undefined;
 }
 
 // Maps each NutritionPerServing key to the schema.org itemprop / JSON-LD property name.
@@ -412,10 +471,13 @@ const MICRODATA_PROPS: Array<[keyof NutritionPerServing, string]> = [
 function findMicrodataValue(html: string, prop: string): number | undefined {
   const escaped = prop.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   // <meta itemprop="X" content="Y"> in either attribute order.
-  const metaA = new RegExp(`<meta\\b[^>]*itemprop=["']${escaped}["'][^>]*\\bcontent=["']([^"']+)["']`, 'i');
-  const metaB = new RegExp(`<meta\\b[^>]*\\bcontent=["']([^"']+)["'][^>]*itemprop=["']${escaped}["']`, 'i');
+  // Every gap between a tag opening and an attribute is bounded ({0,GAP}). Unbounded,
+  // each "<meta" in the page starts a scan to end-of-input, so a page of repeated
+  // unterminated openings is quadratic: 240 KB froze the JS thread for 22 s.
+  const metaA = new RegExp(`<meta\\b[^>]{0,${TAG_GAP}}itemprop=["']${escaped}["'][^>]{0,${TAG_GAP}}\\bcontent=["']([^"']+)["']`, 'i');
+  const metaB = new RegExp(`<meta\\b[^>]{0,${TAG_GAP}}\\bcontent=["']([^"']+)["'][^>]{0,${TAG_GAP}}itemprop=["']${escaped}["']`, 'i');
   // <span itemprop="X">Y</span> — any non-meta tag, take inner text up to next '<'.
-  const inner = new RegExp(`<(?!meta\\b)[a-z][a-z0-9]*\\b[^>]*itemprop=["']${escaped}["'][^>]*>([^<]+)`, 'i');
+  const inner = new RegExp(`<(?!meta\\b)[a-z][a-z0-9]{0,15}\\b[^>]{0,${TAG_GAP}}itemprop=["']${escaped}["'][^>]{0,${TAG_GAP}}>([^<]+)`, 'i');
   for (const re of [metaA, metaB, inner]) {
     const m = html.match(re);
     if (m) {
@@ -471,6 +533,35 @@ function extractMacrosFromWindow(text: string): Partial<NutritionPerServing> {
   return found;
 }
 
+/**
+ * Replace every `<tag …>…</tag>` block with a space, in linear time.
+ *
+ * The regex form (`/<script\b[^>]*>[\s\S]*?<\/script>/gi`) lazily scans for the
+ * closing tag from every opening; a page of unclosed openings makes that
+ * quadratic. An indexOf walk over a lowercased copy visits each character once.
+ * An opening with no closing tag drops the rest of the document, which is what
+ * a browser does with an unclosed <script> too.
+ */
+function removeElementBlocks(html: string, tag: string): string {
+  const lower = html.toLowerCase();
+  const open = `<${tag}`;
+  const close = `</${tag}>`;
+  let out = '';
+  let pos = 0;
+  for (;;) {
+    let start = lower.indexOf(open, pos);
+    // Require a tag boundary so `<scripted>` isn't treated as `<script>`.
+    while (start !== -1 && /[a-z0-9]/.test(lower.charAt(start + open.length))) {
+      start = lower.indexOf(open, start + 1);
+    }
+    if (start === -1) return out + html.slice(pos);
+    const end = lower.indexOf(close, start + open.length);
+    out += html.slice(pos, start) + ' ';
+    if (end === -1) return out;
+    pos = end + close.length;
+  }
+}
+
 export function scrapeNutritionFromHtml(html: string): Partial<NutritionPerServing> {
   const out: Partial<NutritionPerServing> = {};
 
@@ -485,9 +576,7 @@ export function scrapeNutritionFromHtml(html: string): Partial<NutritionPerServi
   // occurrence of "nutrition" — on real pages it's usually the URL ("/food-nutrition/")
   // or a nav link. Strip script/style blocks (JSON-LD lives in <script>) and then
   // scan every candidate anchor, picking the first window that actually yields macros.
-  const stripped = html
-    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, ' ')
-    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, ' ');
+  const stripped = removeElementBlocks(removeElementBlocks(html, 'script'), 'style');
   ANCHOR_RE.lastIndex = 0;
   let match: RegExpExecArray | null;
   let seen = 0;
@@ -546,26 +635,17 @@ function extractImageUrl(raw: unknown): string | undefined {
 
 // Imported HTML/JSON-LD is untrusted. Only accept absolute http(s) URLs so a
 // malicious page can't smuggle in javascript:/data:/file: schemes that later
-// get handed to an <Image>. Total and non-throwing.
-export function sanitizeImageUrl(raw: unknown): string | undefined {
-  if (typeof raw !== 'string') return undefined;
-  const trimmed = raw.trim();
-  if (!trimmed) return undefined;
-  try {
-    const parsed = new URL(trimmed);
-    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') return trimmed;
-  } catch {
-    // not an absolute URL
-  }
-  return undefined;
-}
+// get handed to an <Image>. Kept under its historical name; the shared
+// implementation lives in safeUrl.ts so sync and the catalog mirror use the same one.
+export const sanitizeImageUrl = sanitizeHttpUrl;
 
 // Fallback when the recipe JSON-LD has no image: most pages still expose a
 // social-share preview via <meta property="og:image"> / twitter:image.
 function extractOgImageFromHtml(html: string): string | undefined {
+  // Gaps bounded for the same reason as findMicrodataValue.
   const patterns = [
-    /<meta[^>]+(?:property|name)=["'](?:og:image(?::secure_url)?|twitter:image(?::src)?)["'][^>]+content=["']([^"']+)["']/i,
-    /<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["'](?:og:image(?::secure_url)?|twitter:image(?::src)?)["']/i,
+    /<meta[^>]{1,512}(?:property|name)=["'](?:og:image(?::secure_url)?|twitter:image(?::src)?)["'][^>]{1,512}content=["']([^"']+)["']/i,
+    /<meta[^>]{1,512}content=["']([^"']+)["'][^>]{1,512}(?:property|name)=["'](?:og:image(?::secure_url)?|twitter:image(?::src)?)["']/i,
   ];
   for (const re of patterns) {
     const m = re.exec(html);

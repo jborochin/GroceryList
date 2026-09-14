@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware';
 import 'react-native-get-random-values';
 import { v4 as uuid } from 'uuid';
 import { ManualItem } from '../types';
-import { zustandStorage, STORAGE_KEYS } from './storage';
+import { STORAGE_KEYS, zustandStorage } from './storage';
 
 interface ManualItemState {
   items: ManualItem[];

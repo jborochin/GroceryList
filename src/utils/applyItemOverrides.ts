@@ -21,7 +21,8 @@ export function applyItemOverrides(
 ): GroceryItem[] {
   if (Object.keys(overrides).length === 0) return items;
   return items.map((item) => {
-    const o = overrides[item.name];
+    // Own property only: an item named "constructor" must not pick up Object's.
+    const o = Object.prototype.hasOwnProperty.call(overrides, item.name) ? overrides[item.name] : undefined;
     if (!o) return item;
     return {
       ...item,

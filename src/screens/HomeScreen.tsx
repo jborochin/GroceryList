@@ -7,14 +7,15 @@ import { useRecipeStore } from '../store/useRecipeStore';
 import { useMealPlanStore } from '../store/useMealPlanStore';
 import { useGroceryRecipeStore } from '../store/useGroceryRecipeStore';
 import { usePantryStore } from '../store/usePantryStore';
+import { useManualItemStore } from '../store/useManualItemStore';
+import { useDismissedItemStore } from '../store/useDismissedItemStore';
+import { useItemOverrideStore } from '../store/useItemOverrideStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { usePriceOverrideStore } from '../store/usePriceOverrideStore';
 import { usePriceCatalogStore } from '../store/usePriceCatalogStore';
 import { useMealScheduleStore } from '../store/useMealScheduleStore';
 import { useFoodLogStore } from '../store/useFoodLogStore';
-import { aggregate } from '../utils/ingredientAggregator';
-import { applyPantry } from '../utils/pantryDeduction';
-import { estimatePrices } from '../utils/priceEstimator';
+import { buildGroceryList } from '../utils/groceryPipeline';
 import { resolveDay } from '../utils/foodLogDay';
 import { todayKey } from '../utils/planningWeek';
 import { NutritionBar } from '../components/NutritionBar';
@@ -43,6 +44,9 @@ export function HomeScreen() {
   const planDays = useMealPlanStore((s) => s.planDays);
   const groceryRecipes = useGroceryRecipeStore((s) => s.entries);
   const pantry = usePantryStore((s) => s.items);
+  const manualItems = useManualItemStore((s) => s.items);
+  const dismissedNames = useDismissedItemStore((s) => s.names);
+  const itemOverrides = useItemOverrideStore((s) => s.overrides);
   const settings = useSettingsStore((s) => s.settings);
   const overrides = usePriceOverrideStore((s) => s.overrides);
   const priceCatalogVersion = usePriceCatalogStore((s) => s.version);
@@ -53,17 +57,25 @@ export function HomeScreen() {
     () => resolveDay(todayKey(), cells, logEntries, recipes),
     [cells, logEntries, recipes]
   );
-  const grocery = useMemo(() => {
-    // Same two sources the Grocery tab aggregates, so the preview doesn't
-    // under-report recipes added straight to the list. Nutrition and the
-    // "meals planned" count below stay plan-only — grocery-only recipes
-    // aren't planned meals.
-    const agg = aggregate([...plan, ...groceryRecipes], recipes);
-    const withPantry = applyPantry(agg, pantry);
-    return estimatePrices(withPantry, overrides);
+  // The exact computation the List tab renders -- same inputs, same steps -- so the
+  // headline number here can never disagree with the list it summarizes. Nutrition and
+  // the "meals planned" count below stay plan-only: grocery-only recipes aren't meals.
+  const grocery = useMemo(
+    () =>
+      buildGroceryList({
+        plan,
+        groceryRecipes,
+        recipes,
+        pantry,
+        manualItems,
+        itemOverrides,
+        priceOverrides: overrides,
+        dismissedNames,
+      }),
     // priceCatalogVersion ticks when a live price refresh lands; findPrice reads
     // the overlay through a module-level cache that React can't otherwise see.
-  }, [plan, groceryRecipes, recipes, pantry, overrides, priceCatalogVersion]);
+    [plan, groceryRecipes, recipes, pantry, manualItems, itemOverrides, overrides, dismissedNames, priceCatalogVersion]
+  );
 
   const totalServings = plan.reduce((acc, p) => acc + p.desiredServings, 0);
   const itemsCount = grocery.items.length;
@@ -120,7 +132,9 @@ export function HomeScreen() {
               variant="caption"
               style={{ color: t.palette.primaryContrast, opacity: 0.7, marginTop: 2 }}
             >
-              {itemsCount > 0 ? `${itemsCount} items to buy` : 'plan a week to see'}
+              {itemsCount > 0
+                ? `${itemsCount} ${itemsCount === 1 ? 'item' : 'items'} to buy`
+                : 'plan a week to see'}
             </Text>
           </View>
         </Surface>

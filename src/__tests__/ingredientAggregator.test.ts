@@ -169,3 +169,38 @@ describe('ingredientAggregator', () => {
     expect(totalIn(out[0].entries[0], 'g')).toBeCloseTo(85, 0);
   });
 });
+
+describe('aggregate — non-finite and zero servings', () => {
+  it('skips a plan entry whose scaling ratio is not a positive finite number', () => {
+    const recipes = [
+      recipe('nan', NaN, [{ name: 'flour', quantity: 1, unit: 'cup' }]),
+      recipe('ok', 2, [{ name: 'sugar', quantity: 1, unit: 'cup' }]),
+    ];
+    const out = aggregate(
+      [
+        { recipeId: 'nan', desiredServings: 2 },
+        { recipeId: 'ok', desiredServings: 0 },
+        { recipeId: 'ok', desiredServings: 2 },
+      ],
+      recipes
+    );
+    expect(out.map((i) => i.name)).toEqual(['sugar']);
+    expect(out[0].entries[0].quantity).toBeCloseTo(1, 5);
+    expect(Number.isFinite(out[0].entries[0].quantity)).toBe(true);
+  });
+});
+
+describe('mergeGroup — unknown units', () => {
+  it('sums entries that share the same unknown unit label', () => {
+    const { mergeGroup } = require('../utils/ingredientAggregator');
+    const out = mergeGroup('mint', 'mint', [
+      { name: 'mint', quantity: 2, unit: 'sprigs' },
+      { name: 'mint', quantity: 3, unit: 'sprigs' },
+      { name: 'mint', quantity: 1, unit: 'handfuls' },
+    ]);
+    expect(out.entries).toEqual([
+      { quantity: 5, unit: 'sprigs' },
+      { quantity: 1, unit: 'handfuls' },
+    ]);
+  });
+});

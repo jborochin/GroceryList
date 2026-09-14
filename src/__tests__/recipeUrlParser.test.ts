@@ -435,3 +435,79 @@ describe('parseNutrition', () => {
     expect(result.missing).toEqual(['calories', 'carbsG', 'fatG']);
   });
 });
+
+describe('numeric hardening', () => {
+  it('parseNutrition treats "." and non-finite values as missing rather than NaN/Infinity', () => {
+    const { parseServings } = require('../utils/recipeUrlParser');
+    const dot = parseNutrition({ calories: '.', proteinContent: '30 g' });
+    expect(dot.values?.calories).toBe(0);
+    expect(dot.missing).toContain('calories');
+    const inf = parseNutrition({ calories: Infinity, proteinContent: -5 });
+    expect(inf.missing).toEqual(expect.arrayContaining(['calories', 'proteinG']));
+    expect(parseServings(1e999)).toBe(4);
+    expect(parseServings('999999999')).toBe(100);
+    expect(parseServings(0)).toBe(1);
+    expect(parseServings('serves 6')).toBe(6);
+  });
+});
+
+describe('parseRecipeFromUrl — scheme guard', () => {
+  it.each(['file:///var/mobile/recipes.json', 'javascript:alert(1)', 'ftp://example.com/r', 'not a url'])(
+    'refuses %s before fetching',
+    async (url) => {
+      const fetchSpy = jest.fn();
+      const original = (global as { fetch?: unknown }).fetch;
+      (global as { fetch?: unknown }).fetch = fetchSpy;
+      try {
+        await expect(parseRecipeFromUrl(url)).rejects.toBeInstanceOf(RecipeParseError);
+        expect(fetchSpy).not.toHaveBeenCalled();
+      } finally {
+        (global as { fetch?: unknown }).fetch = original;
+      }
+    }
+  );
+});
+
+describe('JSON-LD bounds', () => {
+  it('findRecipeNode survives pathologically deep nesting without a stack overflow', () => {
+    let node: unknown = { '@type': 'Recipe', name: 'deep' };
+    for (let i = 0; i < 20000; i++) node = { wrap: node };
+    expect(() => findRecipeNode([node])).not.toThrow();
+  });
+
+  it('parseInstructions survives deep nesting', () => {
+    let node: unknown = 'step';
+    for (let i = 0; i < 20000; i++) node = [node];
+    expect(() => parseInstructions(node)).not.toThrow();
+  });
+
+  it('meta-tag scraping stays fast on thousands of unterminated <meta openings', () => {
+    // Every "<meta " is a fresh regex start whose gap quantifier used to scan to
+    // end-of-input: quadratic in page size. 40k openings is a ~240 KB page.
+    const start = Date.now();
+    scrapeNutritionFromHtml('<meta '.repeat(40_000));
+    scrapeNutritionFromHtml('<div '.repeat(40_000));
+    // Unclosed <script>/<style> blocks: a lazy scan for the closing tag from every
+    // opening is the same quadratic shape.
+    scrapeNutritionFromHtml('<script>'.repeat(30_000));
+    scrapeNutritionFromHtml('<style x'.repeat(30_000));
+    expect(Date.now() - start).toBeLessThan(2000);
+  });
+
+  it('still strips real script and style blocks before the text scan', () => {
+    const html =
+      '<script type="application/ld+json">{"nutrition":"999 calories"}</script>' +
+      '<STYLE>.x{content:"888 calories"}</STYLE>' +
+      '<p>Nutrition per serving: 320 calories, 21g protein</p>';
+    expect(scrapeNutritionFromHtml(html)).toMatchObject({ calories: 320, proteinG: 21 });
+  });
+
+  it('bounded meta scanning still reads real microdata', () => {
+    const html =
+      '<meta data-a="1" data-b="2" itemprop="calories" content="410 kcal">' +
+      '<span class="n" itemprop="proteinContent">32 g</span>' +
+      '<meta content="12 g" itemprop="fatContent">' +
+      '<div itemprop="carbohydrateContent">40g</div>';
+    expect(scrapeNutritionFromHtml(html)).toEqual({ calories: 410, proteinG: 32, carbsG: 40, fatG: 12 });
+  });
+});

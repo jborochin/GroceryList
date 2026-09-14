@@ -26,7 +26,17 @@ import { getSupabase, supabaseConfigured } from './supabase';
 import { enqueue, naturalKey, peekAll, removeMany, OutboxEntry, OutboxTable } from './syncQueue';
 import { useSyncStateStore } from '../store/useSyncStateStore';
 import { useAuthStore } from '../store/useAuthStore';
+import { sanitizeSettings } from '../store/useSettingsStore';
 import { mergeKeyed, diffKeys } from '../utils/syncMerge';
+import { finiteOr, positiveOr, toNutrition } from '../utils/numbers';
+import { sanitizeHttpUrl } from '../utils/safeUrl';
+
+// Every row mapper below coerces rather than casts. Rows come from our own
+// tables, but a column can be NULL, a migration can leave a field absent, and
+// another device on an older build can have written a shape we no longer
+// expect. A bare Number() of any of those is NaN, and NaN survives every clamp
+// in the app (Math.max(1, NaN) is NaN): it reaches the grocery total as `$NaN`
+// and the planner as an empty plan. See src/utils/numbers.ts.
 
 // Suppress push subscriptions while applying remote data to local stores.
 // A counter (not a boolean) so overlapping appliers can't clear each other's
@@ -61,12 +71,15 @@ function rowToRecipe(row: Record<string, unknown>): Recipe {
   return {
     id: row.id as string,
     title: row.title as string,
-    sourceUrl: (row.source_url as string | null) ?? undefined,
-    servings: Number(row.servings),
-    ingredients: (row.ingredients as Recipe['ingredients']) ?? [],
-    instructions: (row.instructions as string[] | null) ?? undefined,
-    nutritionPerServing: (row.nutrition_per_serving as Recipe['nutritionPerServing']) ?? undefined,
-    imageUrl: (row.image_url as string | null) ?? undefined,
+    sourceUrl: sanitizeHttpUrl(row.source_url),
+    servings: positiveOr(row.servings, 1),
+    ingredients: Array.isArray(row.ingredients) ? (row.ingredients as Recipe['ingredients']) : [],
+    instructions: Array.isArray(row.instructions)
+      ? row.instructions.filter((s): s is string => typeof s === 'string')
+      : undefined,
+    nutritionPerServing:
+      row.nutrition_per_serving == null ? undefined : toNutrition(row.nutrition_per_serving),
+    imageUrl: sanitizeHttpUrl(row.image_url),
     createdAt: row.created_at ? new Date(row.created_at as string).getTime() : Date.now(),
     updatedAt: row.updated_at ? new Date(row.updated_at as string).getTime() : Date.now(),
   };
@@ -84,7 +97,7 @@ function mealEntryToRow(e: MealPlanEntry, userId: string) {
 function rowToMealEntry(row: Record<string, unknown>): MealPlanEntry {
   return {
     recipeId: row.recipe_id as string,
-    desiredServings: Number(row.desired_servings),
+    desiredServings: positiveOr(row.desired_servings, 1),
   };
 }
 
@@ -103,7 +116,7 @@ function rowToPantry(row: Record<string, unknown>): PantryItem {
   return {
     id: row.id as string,
     name: row.name as string,
-    quantity: row.quantity == null ? undefined : Number(row.quantity),
+    quantity: row.quantity == null ? undefined : finiteOr(row.quantity, 0),
     unit: (row.unit as string | null) ?? undefined,
   };
 }
@@ -142,8 +155,6 @@ function foodLogToRow(e: FoodLogEntry, userId: string) {
   };
 }
 
-const ZERO_NUTRITION: NutritionPerServing = { calories: 0, proteinG: 0, carbsG: 0, fatG: 0 };
-
 function asSlot(v: unknown): MealSlot {
   return v === 'breakfast' || v === 'lunch' || v === 'dinner' || v === 'snack' ? v : 'snack';
 }
@@ -152,16 +163,6 @@ function asFoodSource(v: unknown): FoodSource {
   return v === 'usda' || v === 'off' || v === 'custom' || v === 'recipe' || v === 'quick'
     ? v
     : 'quick';
-}
-
-function asNutrition(v: unknown): NutritionPerServing {
-  const n = (v ?? {}) as Partial<NutritionPerServing>;
-  return {
-    calories: Number(n.calories) || 0,
-    proteinG: Number(n.proteinG) || 0,
-    carbsG: Number(n.carbsG) || 0,
-    fatG: Number(n.fatG) || 0,
-  };
 }
 
 function rowToFoodLog(row: Record<string, unknown>): FoodLogEntry {
@@ -177,10 +178,11 @@ function rowToFoodLog(row: Record<string, unknown>): FoodLogEntry {
     source: asFoodSource(row.source),
     sourceId: (row.source_id as string | null) ?? undefined,
     barcode: (row.barcode as string | null) ?? undefined,
-    servingQty: Number(row.serving_qty),
+    servingQty: positiveOr(row.serving_qty, 1),
     servingLabel: (row.serving_label as string | null) ?? 'g',
-    gramsPerServing: row.grams_per_serving == null ? undefined : Number(row.grams_per_serving),
-    nutrition: asNutrition(row.nutrition) ?? ZERO_NUTRITION,
+    gramsPerServing:
+      row.grams_per_serving == null ? undefined : positiveOr(row.grams_per_serving, 0) || undefined,
+    nutrition: toNutrition(row.nutrition),
     fromCellId: (row.from_cell_id as string | null) ?? undefined,
     replacesCellId: (row.replaces_cell_id as string | null) ?? undefined,
     createdAt: row.created_at ? new Date(row.created_at as string).getTime() : Date.now(),
@@ -210,8 +212,9 @@ function rowToCustomFood(row: Record<string, unknown>): CustomFood {
     name: row.name as string,
     brand: (row.brand as string | null) ?? undefined,
     servingLabel: (row.serving_label as string | null) ?? 'serving',
-    gramsPerServing: row.grams_per_serving == null ? undefined : Number(row.grams_per_serving),
-    nutritionPerServing: asNutrition(row.nutrition_per_serving),
+    gramsPerServing:
+      row.grams_per_serving == null ? undefined : positiveOr(row.grams_per_serving, 0) || undefined,
+    nutritionPerServing: toNutrition(row.nutrition_per_serving),
     barcode: (row.barcode as string | null) ?? undefined,
     createdAt: row.created_at ? new Date(row.created_at as string).getTime() : Date.now(),
     updatedAt: row.updated_at ? new Date(row.updated_at as string).getTime() : Date.now(),
@@ -251,7 +254,9 @@ function asStringArray(v: unknown): string[] {
 }
 
 function rowToSettings(row: Record<string, unknown>): UserSettings {
-  return {
+  // sanitizeSettings applies the same clamps the local setters use; without it a
+  // NULL daily_calorie_target lands as NaN and the planner fills zero slots.
+  return sanitizeSettings({
     dailyCalorieTarget: Number(row.daily_calorie_target),
     macroSplit: {
       proteinPct: Number(row.protein_pct),
@@ -270,7 +275,7 @@ function rowToSettings(row: Record<string, unknown>): UserSettings {
     cookingFrequency: asCookingFrequency(row.cooking_frequency),
     cookingEasePreference: asEasePreference(row.cooking_ease_preference),
     tdeeInputs: (row.tdee_inputs as TdeeInputs | null) ?? null,
-  };
+  });
 }
 
 // ---------- Push helpers ----------
@@ -292,7 +297,10 @@ async function safePush(
 
 async function pushRecipe(r: Recipe, userId: string) {
   const row = recipeToRow(r, userId);
-  await safePush('recipes', 'upsert', row, () => getSupabase().from('recipes').upsert(row));
+  // recipes is keyed (user_id, id): catalog clones share an id across accounts.
+  await safePush('recipes', 'upsert', row, () =>
+    getSupabase().from('recipes').upsert(row, { onConflict: 'user_id,id' })
+  );
 }
 
 async function pushRecipeDelete(id: string, userId: string) {
@@ -535,8 +543,8 @@ async function doPullAll(userId: string): Promise<void> {
           (row) => row.normalized_name as string,
           (row): PriceOverride => ({
             name: (row.display_name as string) ?? (row.normalized_name as string),
-            pricePerUnit: Number(row.price_per_unit),
-            unit: row.unit as string,
+            pricePerUnit: positiveOr(row.price_per_unit, 0),
+            unit: String(row.unit ?? 'each'),
           }),
           snapOverrides,
           current,
@@ -628,7 +636,9 @@ export async function drainOutbox(userId: string): Promise<void> {
         let res: { error: PostgrestError | null };
         if (e.op === 'upsert') {
           const opts =
-            e.table === 'meal_plan_entries'
+            e.table === 'recipes'
+              ? { onConflict: 'user_id,id' }
+              : e.table === 'meal_plan_entries'
               ? { onConflict: 'user_id,recipe_id' }
               : e.table === 'price_overrides'
               ? { onConflict: 'user_id,normalized_name' }
@@ -801,7 +811,10 @@ export async function migrateLocalToAccount(userId: string): Promise<void> {
   if (recipes.length > 0) {
     await supabase
       .from('recipes')
-      .upsert(recipes.map((r) => recipeToRow(r, userId)), { ignoreDuplicates: true });
+      .upsert(recipes.map((r) => recipeToRow(r, userId)), {
+        onConflict: 'user_id,id',
+        ignoreDuplicates: true,
+      });
   }
   if (entries.length > 0) {
     await supabase

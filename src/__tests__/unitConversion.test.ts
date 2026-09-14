@@ -50,3 +50,20 @@ describe('unitConversion', () => {
     expect(r.quantity).toBeCloseTo(1, 2);
   });
 });
+
+describe('prettyUnit at a promotion boundary', () => {
+  it('promotes an accumulated sum that lands a hair under the threshold', () => {
+    const { prettyUnit } = require('../utils/unitConversion');
+    let cups = 0;
+    for (let i = 0; i < 6; i++) cups += 1 / 6; // 0.9999999999999999
+    expect(prettyUnit(cups, 'cup')).toEqual({ quantity: 1, unit: 'cup' });
+    let tenths = 0;
+    for (let i = 0; i < 10; i++) tenths += 0.1;
+    expect(prettyUnit(tenths, 'cup')).toEqual({ quantity: 1, unit: 'cup' });
+  });
+
+  it('does not promote a value that is genuinely below the threshold', () => {
+    const { prettyUnit } = require('../utils/unitConversion');
+    expect(prettyUnit(15, 'tbsp').unit).toBe('tbsp');
+  });
+});

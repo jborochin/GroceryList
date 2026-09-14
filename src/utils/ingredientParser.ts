@@ -31,6 +31,15 @@ const SYNONYM_LOOKUP: Record<string, string> = (() => {
 
 const STOP_WORDS = new Set(['of', 'the', 'a', 'an']);
 
+/**
+ * Own-property lookup. SYNONYM_LOOKUP is a plain object, so `SYNONYM_LOOKUP['constructor']`
+ * is Object's constructor function — truthy, and not a unit. Ingredient text is free user
+ * input, so every lookup keyed by it goes through here.
+ */
+function synonymFor(alias: string): string | undefined {
+  return Object.prototype.hasOwnProperty.call(SYNONYM_LOOKUP, alias) ? SYNONYM_LOOKUP[alias] : undefined;
+}
+
 // Instagram captions (and plenty of recipe sites) glue the quantity to the unit:
 // "300g pasta", "1tbs paprika", "1/2tbs oregano". extractQuantity tokenizes on
 // spaces, so "300g" matches no numeric pattern and the whole line falls through
@@ -66,7 +75,7 @@ export function splitGluedUnits(text: string): string {
 export function canonicalizeUnit(unit: string): string {
   const u = unit.trim().toLowerCase().replace(/\.$/, '');
   if (!u) return 'each';
-  return SYNONYM_LOOKUP[u] ?? u;
+  return synonymFor(u) ?? u;
 }
 
 export function parseIngredient(raw: string): Ingredient {
@@ -100,6 +109,13 @@ export function parseIngredient(raw: string): Ingredient {
   // Short-circuit "to taste" / "as needed" / "pinch of X" (tolerate ", to taste")
   const tailMatch = text.match(/^(.*?)(?:[,;]\s*|\s+)(?:to\s+taste|as\s+needed)$/);
   if (tailMatch) text = tailMatch[1].trim();
+
+  // A leading article is a quantity of one: "a pinch of salt" is 1 pinch, "an onion"
+  // is 1 each. Left in place it blocks unit extraction (the unit must come first) and
+  // the line became an ingredient named "pinch salt" — a second, unpriceable grocery
+  // row beside "salt". "the" carries no count and is simply dropped.
+  if (/^(?:a|an)\s+(?!\d)/.test(text)) text = text.replace(/^(?:a|an)\s+/, '1 ');
+  else text = text.replace(/^the\s+/, '');
 
   // Try to extract quantity (mixed fraction, simple fraction, decimal, integer, or sum of partials like "1 0.5" from unicode expansion)
   const quantity = extractQuantity(text);
@@ -153,13 +169,36 @@ function extractQuantity(text: string): QtyExtract {
     const rangeMatch = tok.match(/^(\d+(?:\.\d+)?|\d+\/\d+)-(\d+(?:\.\d+)?|\d+\/\d+)$/);
     if (rangeMatch) {
       const lo = numericToken(rangeMatch[1]);
-      const hi = numericToken(rangeMatch[2]);
+      let hi = numericToken(rangeMatch[2]);
       if (lo !== null && hi !== null) {
+        let width = 1;
+        // "1-1 1/2": the upper bound is a mixed number, so the bare fraction that
+        // follows belongs to it rather than being a second quantity to add.
+        if (/^\d+$/.test(rangeMatch[2]) && i + 1 < tokens.length && /^\d+\/\d+$/.test(tokens[i + 1])) {
+          hi += parseFraction(tokens[i + 1]);
+          width = 2;
+        }
         value += (lo + hi) / 2;
-        consumed = i + 1;
-        i++;
+        consumed = i + width;
+        i += width;
         continue;
       }
+    }
+    // Mixed number opening a range: "1 1/2-2" tokenizes as ["1", "1/2-2"]. Without this
+    // the "1" is read as a whole quantity and "1/2-2" as a second range added to it.
+    const mixedRange =
+      /^\d+$/.test(tok) && i + 1 < tokens.length
+        ? tokens[i + 1].match(/^(\d+\/\d+)-(\d+(?:\.\d+)?|\d+\/\d+)$/)
+        : null;
+    if (mixedRange) {
+      const lo = Number(tok) + parseFraction(mixedRange[1]);
+      let hi = numericToken(mixedRange[2]) ?? lo;
+      // "1 1/2-3/4" means 1½–1¾: a bare-fraction upper bound shares the whole number.
+      if (hi < lo) hi += Number(tok);
+      value += (lo + hi) / 2;
+      consumed = i + 2;
+      i += 2;
+      continue;
     }
     // Mixed like "1 1/2": next token is a simple fraction
     if (/^\d+$/.test(tok) && i + 1 < tokens.length && /^\d+\/\d+$/.test(tokens[i + 1])) {
@@ -220,7 +259,7 @@ function extractUnit(text: string): UnitExtract {
   for (const len of [2, 1]) {
     if (tokens.length < len) continue;
     const candidate = tokens.slice(0, len).join(' ');
-    const canonical = SYNONYM_LOOKUP[candidate];
+    const canonical = synonymFor(candidate);
     if (canonical) {
       return { canonical, remainder: tokens.slice(len).join(' ') };
     }
@@ -228,8 +267,9 @@ function extractUnit(text: string): UnitExtract {
 
   // Handle trailing period: "tbsp." form
   const first = tokens[0].replace(/\.$/, '');
-  if (SYNONYM_LOOKUP[first]) {
-    return { canonical: SYNONYM_LOOKUP[first], remainder: tokens.slice(1).join(' ') };
+  const firstCanonical = synonymFor(first);
+  if (firstCanonical) {
+    return { canonical: firstCanonical, remainder: tokens.slice(1).join(' ') };
   }
 
   return { canonical: null, remainder: text };

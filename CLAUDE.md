@@ -39,13 +39,15 @@ Offline-first Expo + React Native app. State lives in Zustand stores persisted t
 
 ### The grocery-list pipeline
 
-This is the core compute path, invoked by `HomeScreen` and `GroceryListScreen`:
+This is the core compute path. It lives in **one** function, `buildGroceryList()` (`src/utils/groceryPipeline.ts`), and both `HomeScreen` and `GroceryListScreen` call it:
 
 ```
-plan + groceryRecipes + recipes → aggregate() → applyPantry() → mergeManualItems() → roundToPurchasable() → applyItemOverrides() → estimatePrices() → render
+plan + groceryRecipes + recipes → aggregate() → applyPantry() → mergeManualItems() → roundToPurchasable() → applyItemOverrides() → estimatePrices() → drop dismissed names → render
 ```
 
-Each step is a pure function in `src/utils/` that takes and returns plain `GroceryItem[]` (see `src/types/index.ts`). Downstream screens recompute via `useMemo` over the store inputs. When editing this pipeline, prefer adding another pure step in the chain over mutating stores.
+Each step is a pure function in `src/utils/` that takes and returns plain `GroceryItem[]` (see `src/types/index.ts`). Downstream screens recompute via `useMemo` over the store inputs. When editing this pipeline, prefer adding another pure step in the chain over mutating stores — and add it inside `buildGroceryList`, never in a screen. Home used to run a shorter copy of the chain and its "Estimated cost" disagreed with the List tab whenever rounding, a manual item, an edit or a dismissal applied; `groceryPipeline.test.ts` pins the full chain. `unestimatedCount` counts **any** price gap, including an item that priced some entries but not others.
+
+**User-typed units are canonicalized at the store boundary.** `useItemOverrideStore.setOverride` and `usePriceOverrideStore.setOverride` run `canonicalizeUnit` and key by `normalizeName`. A raw `lbs` is not in `UNIT_TABLE`, so `convert` returns null and the edited row silently dropped out of the total. Both setters also reject non-positive or non-finite numbers.
 
 `aggregate()` is fed **two** entry sources concatenated: the meal plan (`useMealPlanStore`) and grocery-only recipe adds (`useGroceryRecipeStore`, the "Add to grocery list" button on the Recipe/Meal-Catalog detail screens). Grocery-only adds are additive — a recipe in both lists contributes twice (an intentional double batch) — and deliberately never reach the Week tab or the nutrition summary, which read plan entries only. They persist device-locally and are **not** synced.
 
@@ -121,11 +123,23 @@ Persisted Zustand stores under `src/store/`, each with its own AsyncStorage key 
 
 `useHydration()` in `src/store/hydration.ts` waits for every one of them to rehydrate before `App.tsx` renders the navigator — prevents a flash of empty state. Any new persisted store must be added to the `stores` array there or it will silently block hydration.
 
+**A corrupt blob must never block hydration.** zustand's persist middleware does not mark a store hydrated when `getItem`/parse throws, so one truncated AsyncStorage value used to leave the launch spinner up until reinstall. Every store uses `zustandStorage` from `storage.ts`, whose `getItem` catches the parse error, removes the key and returns null (the store hydrates with defaults). `useHydration` also has a 4 s fallback, and `AppErrorBoundary` wraps the navigator with a "Reset local data" action. List-shaped stores (recipes, food log, pantry, cook sessions) pass a `merge` that drops malformed entries an older build may have written. Always use `zustandStorage` — never `createJSONStorage` directly.
+
+**Deleting a recipe goes through `removeRecipeEverywhere()`** (`src/store/removeRecipeEverywhere.ts`), which also drops its plan entry, calendar cells in every week, grocery-only add, favorite, cook session and deck disposition. `useRecipeStore.deleteRecipe` alone leaves all of those dangling.
+
+**Coerce, don't cast, at every boundary.** Server rows (`sync.ts`, `mealCatalogSync.ts`), imported JSON-LD and persisted blobs go through `finiteOr` / `positiveOr` / `toNutrition` (`src/utils/numbers.ts`) and URLs through `sanitizeHttpUrl` (`src/utils/safeUrl.ts`). A single NaN survives every clamp (`Math.max(1, NaN)` is NaN), prints `$NaN` on the grocery total, and made the seeded planner throw.
+
 `seedIfFirstLaunch()` in `src/store/seedFirstLaunch.ts` runs once per install (gated by the `STORAGE_KEYS.seeded` flag) to insert sample recipes and a starter pantry. Don't seed from within store definitions — stores are hydrated before the flag is read. It skips seeding when a Supabase session exists (account state arrives via sync).
 
 ### Supabase backend & the shared meal catalog
 
-`supabase/schema.sql` defines per-user tables (RLS, synced from device) plus a shared `public.meals` catalog that is **public-read, service-role-write only** (no client write policy). Two edge functions: `compute-nutrition` (CalorieNinjas, keeps the key server-side) and `fetch-recipe` (server-side URL fetch for web / bot-protected sites).
+`supabase/schema.sql` defines per-user tables (RLS, synced from device) plus a shared `public.meals` catalog that is **public-read, service-role-write only** (no client write policy). Two edge functions: `compute-nutrition` (CalorieNinjas, keeps the key server-side) and `fetch-recipe` (server-side URL fetch for web / bot-protected sites). Schema changes also land as files in `supabase/migrations/`; `schema.sql` stays the idempotent full picture.
+
+**`public.recipes` is keyed `(user_id, id)`, not `id`.** Catalog clones and seed recipes use a deterministic UUIDv5 id, so every account holds the same id for the same meal. With `id` alone as the key, the first account to sync a clone owned the row, every other account's push failed against RLS and looped in the outbox forever, and `meal_plan_entries`' single-column FK let one user's account deletion cascade into everyone's plan. Recipe upserts must pass `onConflict: 'user_id,id'`.
+
+**Edge functions are public.** The anon key ships in the app, and `verify_jwt` accepts it. So each function decides what an anonymous caller may do, using the helpers in `supabase/functions/_shared/http.ts`. It caps request bodies, never returns runtime or upstream error text (the FDC key travels in a URL), and gates spend behind `isSignedIn(req)`. Signed-out callers of `resolve-prices` get published prices only, with no demand row and no Kroger call, and names must match `NAME_RE`. Only signed-in callers reach `fetch-recipe`'s ScrapingBee tier. CORS is restricted by the `ALLOWED_ORIGINS` secret when it is set. **Never deploy these with `--no-verify-jwt`**: `callerRole` reads the JWT's role claim without re-verifying the signature.
+
+**`fetch-recipe` validates every redirect hop** via `supabase/functions/_shared/urlGuard.ts` (Deno-free, so `urlGuard.test.ts` runs it under Jest). Following redirects after validating only the first URL let any public host 302 the function into `169.254.169.254`. The guard reads WHATWG-canonical hostnames, so `::ffff:127.0.0.1` arrives as `::ffff:7f00:1`. The client's native import path refuses non-http(s) URLs before fetching, too.
 
 The catalog is two-tier: bundled `src/data/mealCatalog.json` is the offline source of truth; `public.meals` is its updatable mirror, pulled fire-and-forget by `refreshMealCatalogCache()` in `src/lib/mealCatalogSync.ts` (falls back to the bundled JSON). `mealPlanner.ts` consumes it — filters hard on `dietaryTags`, weights protein 3×, bonuses preferred `cuisine`.
 
@@ -293,7 +307,10 @@ Only the `src/utils/` modules have tests (see `src/__tests__/`). Screens are int
 
 ## Things that are easy to get wrong
 
-- **Adding a new persisted store** — also wire it into `src/store/hydration.ts` and add a key to `STORAGE_KEYS`.
+- **Adding a new persisted store** — also wire it into `src/store/hydration.ts`, add a key to `STORAGE_KEYS`, and use `zustandStorage` (its `getItem` is what keeps a corrupt blob from hanging launch). A recipe-id-bearing store also belongs in `removeRecipeEverywhere` and `remapLegacyRecipeIds`.
+- **Browsing a date must not touch the planning week.** `setSelectedWeek` re-projects the *synced* plan entries from the target week's cells. The Log tab's date strip is Sunday-anchored while weeks start Monday, so calling it on date selection rewrote the plan and the grocery list whenever the tapped day crossed a Monday. `resolveDay()` derives the week from the date itself; only the Week view navigates weeks.
+- **Looking up a free-text key in a plain object** — use `Object.prototype.hasOwnProperty.call`. `SYNONYM_LOOKUP['constructor']` is a function, and `"2 constructor apples"` used to parse with a function as its unit.
+- **Regexes over fetched HTML** — bound every gap quantifier between a tag opening and an attribute (`[^>]{0,512}`), and strip `<script>`/`<style>` with `removeElementBlocks`, not a lazy regex. Unbounded, a 240 KB page of repeated `<meta ` openings froze the JS thread for 22 s.
 - **Adding a new unit** — add aliases to `unitSynonyms.json` *and* a row to `UNIT_TABLE` in `unitConversion.ts` with the correct family and base conversion *and* a label in `UNIT_LABELS` (`formatters.ts`) or it renders raw. Note that `unitSynonyms.json` now also drives `splitGluedUnits` (below), so a new alias immediately becomes something a digit can be split from.
 - **Quantities glued to their unit** — `parseIngredient` runs `splitGluedUnits` (`ingredientParser.ts`) so `"300g pasta"` → `300 g pasta`. Instagram captions write metric quantities this way almost universally, and without it `extractQuantity` (which tokenizes on spaces) found no number and the line became `1 each :: "300g pasta"` — unpriceable and un-aggregatable. **The split is driven by the alias table itself, not a generic letter run**, which is what protects `9x13`, `7up`, `350f` and `1st`. Known accepted false positive: `180c` → `180 cup`, since `c` is a cup alias — oven temperatures live in instructions, not ingredient lines. A caption writing the quantity *after* the name (`"Chicken - 200-300 grams"`) is still not recovered; that's asserted as a documented limitation in `instagramCaption.test.ts`. Retail "pack" units (`block`/`bag`/`bottle`…) are `count` family with `toBase: 1`; cross-family pricing goes through purchase-profile `grams`, never `convert()`.
 - **Adding a meal whose ingredient is sold discretely but priced by weight/volume** (e.g. an onion priced per `lb`, a spice used by `tsp`) — the default profile won't round a fractional `each`/won't price across families. Add an explicit `purchaseProfiles.json` entry with a `grams` bridge; `purchaseProfileCoverage.test.ts` fails on any catalog ingredient that rounds to a fractional count.

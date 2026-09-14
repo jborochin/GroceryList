@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { zustandStorage, STORAGE_KEYS } from './storage';
+import { STORAGE_KEYS, zustandStorage } from './storage';
 
 // How the user has triaged a meal in the cookbook swipe deck:
 // - 'rejected' (swipe left / torn out): hidden from future decks until reset.

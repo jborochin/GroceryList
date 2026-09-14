@@ -20,8 +20,10 @@ export function computeNutritionSummary(
 
   for (const entry of plan) {
     const recipe = byId.get(entry.recipeId);
-    if (!recipe) continue;
-    if (!recipe.nutritionPerServing) {
+    // A dangling id (recipe deleted, or not yet synced to this device) is a meal the
+    // totals can't see. Flag it like missing nutrition so the UI can say so, instead
+    // of silently understating the week.
+    if (!recipe || !recipe.nutritionPerServing) {
       hasMissingData = true;
       continue;
     }

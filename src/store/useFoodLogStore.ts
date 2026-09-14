@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware';
 import 'react-native-get-random-values';
 import { v4 as uuid } from 'uuid';
 import { FoodLogEntry } from '../types';
-import { zustandStorage, STORAGE_KEYS } from './storage';
+import { STORAGE_KEYS, isRecord, sanitizeList, zustandStorage } from './storage';
 
 // What the user actually ate. Synced (see src/lib/sync.ts) — a food diary you
 // lose on reinstall isn't a diary. The meal *plan* it is displayed against
@@ -44,6 +44,13 @@ export const useFoodLogStore = create<FoodLogState>()(
     {
       name: STORAGE_KEYS.foodLog,
       storage: zustandStorage,
+      merge: (persisted, current) => ({
+        ...current,
+        entries: sanitizeList(
+          (persisted as { entries?: unknown } | undefined)?.entries,
+          (x): x is FoodLogEntry => isRecord(x) && typeof x.id === 'string'
+        ),
+      }),
     }
   )
 );

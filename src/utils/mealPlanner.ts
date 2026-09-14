@@ -247,7 +247,11 @@ export function planMeals(input: PlannerInput): PlannerResult {
           easeBias
         );
         return { meal, servings, s };
-      });
+      })
+        // A NaN score (NaN targets, a meal with NaN macros) compares false with
+        // everything: the seedless argmax skips it, but the seeded band filter
+        // would produce an empty band and `band[i].meal` would throw.
+        .filter((c) => Number.isFinite(c.s));
 
       let best: Meal | null = null;
       let bestServings = 1;

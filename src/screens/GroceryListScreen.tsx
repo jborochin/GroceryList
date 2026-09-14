@@ -24,13 +24,8 @@ import { useMealScheduleStore } from '../store/useMealScheduleStore';
 import { usePriceCatalogStore } from '../store/usePriceCatalogStore';
 import { requestPrices } from '../lib/priceDemand';
 import { debounce } from '../utils/debounce';
-import { aggregate } from '../utils/ingredientAggregator';
-import { applyPantry } from '../utils/pantryDeduction';
-import { mergeManualItems } from '../utils/mergeManualItems';
-import { roundToPurchasable } from '../utils/purchaseRounding';
-import { applyItemOverrides } from '../utils/applyItemOverrides';
-import { estimatePrices } from '../utils/priceEstimator';
-import { normalizeName } from '../utils/normalizeName';
+import { buildGroceryList } from '../utils/groceryPipeline';
+import { manualItemKey } from '../utils/mergeManualItems';
 import { weekLabel } from '../utils/planningWeek';
 import { formatEntry } from '../utils/formatters';
 import { confirm } from '../utils/confirm';
@@ -100,6 +95,7 @@ export function GroceryListScreen() {
   const dismiss = useDismissedItemStore((s) => s.dismiss);
   const dismissMany = useDismissedItemStore((s) => s.dismissMany);
   const prune = useDismissedItemStore((s) => s.prune);
+  const restore = useDismissedItemStore((s) => s.restore);
   const overrides = usePriceOverrideStore((s) => s.overrides);
   const setOverride = usePriceOverrideStore((s) => s.setOverride);
   const removeOverride = usePriceOverrideStore((s) => s.removeOverride);
@@ -115,62 +111,57 @@ export function GroceryListScreen() {
   const [burstAt, setBurstAt] = useState(0);
   const completedRef = React.useRef(false);
 
-  const priced = useMemo(() => {
-    // Both sources feed the aggregator. A recipe in both the plan and the
-    // grocery-only list contributes twice — an intentional double batch.
-    const agg = aggregate([...plan, ...groceryRecipes], recipes);
-    const withPantry = applyPantry(agg, pantry);
-    const withManual = mergeManualItems(withPantry, manualItems);
-    // Round each item to what the store actually sells (whole avocados, a head of broccoli)
-    // before pricing, so the total reflects the real purchase.
-    const purchasable = roundToPurchasable(withManual);
-    // User-edited name/quantity/unit/category, applied after rounding (a typed
-    // quantity shouldn't be re-rounded to a pack size) and before pricing (so
-    // the edited quantity/unit gets priced).
-    const overridden = applyItemOverrides(purchasable, itemOverrides);
-    return estimatePrices(overridden, overrides);
+  const grocery = useMemo(
+    () =>
+      buildGroceryList({
+        plan,
+        groceryRecipes,
+        recipes,
+        pantry,
+        manualItems,
+        itemOverrides,
+        priceOverrides: overrides,
+        dismissedNames,
+      }),
     // priceCatalogVersion ticks when a live price refresh lands; findPrice reads
     // the overlay through a module-level cache that React can't otherwise see.
-  }, [plan, groceryRecipes, recipes, pantry, manualItems, itemOverrides, overrides, priceCatalogVersion]);
-
-  // Items the user has swiped away are filtered out of the computed list, and the
-  // displayed totals are re-derived from what remains.
-  const dismissed = useMemo(() => new Set(dismissedNames), [dismissedNames]);
-  const visible = useMemo(() => {
-    const items = priced.items.filter((i) => !dismissed.has(i.name));
-    const total = items.reduce((s, i) => s + (i.estimatedPrice ?? 0), 0);
-    const unestimated = items.filter((i) => i.hasPriceGap && i.estimatedPrice === undefined).length;
-    return { items, total, unestimated };
-  }, [priced.items, dismissed]);
+    [plan, groceryRecipes, recipes, pantry, manualItems, itemOverrides, overrides, dismissedNames, priceCatalogVersion]
+  );
+  // Kept under the old name: everything below renders the visible slice.
+  const visible = grocery;
 
   // Self-clean: drop dismissals whose item is no longer in the computed list (e.g. its
-  // recipe was removed), so the same item reappears if it comes back later.
+  // recipe was removed), so the same item reappears if it comes back later. Prunes
+  // against `all`, not `items` -- a dismissed name is by definition not in `items`.
   useEffect(() => {
-    prune(priced.items.map((i) => i.name));
-  }, [priced.items, prune]);
+    prune(grocery.all.map((i) => i.name));
+  }, [grocery.all, prune]);
 
   // Ask the server to freshen prices for whatever is actually on the list.
   //
-  // Debounced because this memo recomputes on every plan/pantry/manual/override change,
-  // and adding one recipe produces a burst of them — the trailing call is the one holding
+  // Debounced because the memo recomputes on every plan/pantry/manual/override change,
+  // and adding one recipe produces a burst of them -- the trailing call is the one holding
   // the settled list. Sends every visible name rather than only the unpriced ones: the
   // server owns the freshness decision, so the TTL can be retuned in SQL without an app
   // release. Fire-and-forget; a resolve that lands re-renders through priceCatalogVersion.
-  const namesKey = useMemo(() => visible.items.map((i) => i.name).sort().join(' '), [visible.items]);
+  //
+  // The effect keys on a joined string so a recompute that yields the same names is a
+  // no-op, but the array itself is what gets sent -- names must never be re-split.
+  const namesKey = grocery.names.join('\n');
   const requestPricesDebounced = useMemo(
     () => debounce((names: string[]) => void requestPrices(names), PRICE_REQUEST_DEBOUNCE_MS),
     []
   );
   useEffect(() => {
     if (!namesKey) return;
-    requestPricesDebounced(namesKey.split(' '));
+    requestPricesDebounced(namesKey.split('\n'));
   }, [namesKey, requestPricesDebounced]);
   useEffect(() => () => requestPricesDebounced.cancel(), [requestPricesDebounced]);
 
   const handleDelete = (item: GroceryItem) => {
     // Remove any manual contribution outright; hide any recipe-derived remainder.
     for (const m of manualItems) {
-      if (normalizeName(m.name) === item.name) removeManualItem(m.id);
+      if (manualItemKey(m.name) === item.name) removeManualItem(m.id);
     }
     dismiss(item.name);
     toast.show({ message: `Removed ${item.displayName}`, tone: 'neutral' });
@@ -342,7 +333,7 @@ export function GroceryListScreen() {
               remaining={remainingTotal}
               itemCount={itemCount}
               checkedCount={checkedCount}
-              unestimated={visible.unestimated}
+              unestimated={visible.unestimatedCount}
               progress={progress}
               onShare={handleShare}
               onAdd={() => {
@@ -433,6 +424,9 @@ export function GroceryListScreen() {
       <AddItemSheet
         visible={addOpen}
         onAdd={(name, quantity, unit) => {
+          // An earlier swipe/"Clear list" may have dismissed this name; adding it back
+          // is the strongest possible signal the user wants to see it.
+          restore(manualItemKey(name));
           addManualItem({ name, quantity, unit });
           setAddOpen(false);
         }}

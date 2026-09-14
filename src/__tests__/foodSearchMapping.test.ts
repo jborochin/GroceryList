@@ -313,3 +313,17 @@ describe('ingestFoodItems', () => {
     expect(ingestFoodItems({ foods: [] })).toEqual([]);
   });
 });
+
+describe('ingestFoodItems — physically impossible values', () => {
+  it('clamps negative macros to zero and drops foods denser than pure fat', () => {
+    const { ingestFoodItems: ingest } = require('../utils/foodSearchMapping');
+    const base = { name: 'x', source: 'usda', servings: [] };
+    const out = ingest([
+      { ...base, sourceId: 'neg', per100g: { calories: 100, proteinG: -5000, carbsG: 10, fatG: 1 } },
+      { ...base, sourceId: 'dense', per100g: { calories: 5000, proteinG: 10, carbsG: 10, fatG: 10 } },
+      { ...base, sourceId: 'grams', per100g: { calories: 300, proteinG: 150, carbsG: 10, fatG: 10 } },
+    ]);
+    expect(out.map((f: { sourceId: string }) => f.sourceId)).toEqual(['neg']);
+    expect(out[0].per100g.proteinG).toBe(0);
+  });
+});

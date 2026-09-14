@@ -22,10 +22,30 @@ export interface OutboxEntry {
 let inMemory: OutboxEntry[] | null = null;
 let writeChain: Promise<void> = Promise.resolve();
 
+function isEntry(x: unknown): x is OutboxEntry {
+  if (!x || typeof x !== 'object') return false;
+  const e = x as Record<string, unknown>;
+  return (
+    typeof e.id === 'string' &&
+    typeof e.table === 'string' &&
+    (e.op === 'upsert' || e.op === 'delete') &&
+    !!e.payload &&
+    typeof e.payload === 'object'
+  );
+}
+
 async function read(): Promise<OutboxEntry[]> {
   if (inMemory) return inMemory;
-  const raw = await AsyncStorage.getItem(STORAGE_KEYS.outbox);
-  inMemory = raw ? (JSON.parse(raw) as OutboxEntry[]) : [];
+  // A corrupt outbox must not take every push down with it. Anything that isn't a
+  // list of well-formed entries is treated as empty; the next persist overwrites it.
+  let parsed: unknown = [];
+  try {
+    const raw = await AsyncStorage.getItem(STORAGE_KEYS.outbox);
+    parsed = raw ? JSON.parse(raw) : [];
+  } catch {
+    parsed = [];
+  }
+  inMemory = Array.isArray(parsed) ? parsed.filter(isEntry) : [];
   return inMemory;
 }
 

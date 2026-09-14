@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { GroceryRecipeEntry } from '../types';
-import { zustandStorage, STORAGE_KEYS } from './storage';
+import { STORAGE_KEYS, zustandStorage } from './storage';
 
 // Recipes queued straight onto the grocery list from a detail screen, without
 // being planned. This is the second source feeding aggregate() — see the

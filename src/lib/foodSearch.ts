@@ -97,6 +97,11 @@ export async function searchFoods(query: string): Promise<FoodItem[]> {
  */
 export async function lookupBarcode(barcode: string): Promise<FoodItem> {
   const code = barcode.trim();
+  // EAN-8 through GTIN-14, digits only — the same rule the edge function enforces.
+  // Anything else (a QR payload, a URL) is a miss, not a query to send.
+  if (!/^\d{8,14}$/.test(code)) {
+    throw new FoodSearchError('not-found', 'That code is not a product barcode.');
+  }
   const key = `upc:${code}`;
   const hit = cache.get(key);
   if (hit?.[0]) return hit[0];

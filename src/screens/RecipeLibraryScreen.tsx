@@ -8,6 +8,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRecipeStore } from '../store/useRecipeStore';
+import { removeRecipeEverywhere } from '../store/removeRecipeEverywhere';
 import { useMealPlanStore } from '../store/useMealPlanStore';
 import { useFavoritesStore } from '../store/useFavoritesStore';
 import { RecipeGridCard } from '../components/RecipeGridCard';
@@ -65,12 +66,10 @@ export function RecipeLibraryScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<Nav>();
   const recipes = useRecipeStore((s) => s.recipes);
-  const deleteRecipe = useRecipeStore((s) => s.deleteRecipe);
   const plan = useMealPlanStore((s) => s.entries);
   const addEntry = useMealPlanStore((s) => s.addEntry);
   const favoriteIds = useFavoritesStore((s) => s.favoriteIds);
   const toggleFavorite = useFavoritesStore((s) => s.toggleFavorite);
-  const removeFavorite = useFavoritesStore((s) => s.removeFavorite);
   const toast = useToast();
 
   const [mode, setMode] = useState<Mode>('mine');
@@ -133,8 +132,7 @@ export function RecipeLibraryScreen() {
       destructive: true,
     });
     if (ok) {
-      deleteRecipe(id);
-      removeFavorite(id);  // clean up any lingering favorite entry
+      removeRecipeEverywhere(id);
     }
   };
 

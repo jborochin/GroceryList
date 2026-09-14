@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware';
 import 'react-native-get-random-values';
 import { v4 as uuid } from 'uuid';
 import { MealSlot, ScheduleCell } from '../types';
-import { zustandStorage, STORAGE_KEYS } from './storage';
+import { STORAGE_KEYS, zustandStorage } from './storage';
 import { useMealPlanStore } from './useMealPlanStore';
 import { sumServingsByRecipe } from '../utils/scheduleToPlan';
 import { getWeekStart } from '../utils/planningWeek';
@@ -30,6 +30,8 @@ interface MealScheduleState {
   moveCell: (id: string, day: number, slot: MealSlot) => void;
   setFromPlanned: (placed: PlannedCell[]) => void;
   clearSchedule: () => void;
+  /** Drop every cell of a recipe in every week and its synced plan entry — for recipe deletion. */
+  removeRecipe: (recipeId: string) => void;
 }
 
 // Project the affected recipes' total servings (summed across their cells in
@@ -119,6 +121,13 @@ export const useMealScheduleStore = create<MealScheduleState>()(
         // get added. Other weeks' cells are untouched.
         const affected = [...prevWeekCells.map((c) => c.recipeId), ...fresh.map((c) => c.recipeId)];
         reconcileRecipes(next, selectedWeekStart, affected);
+      },
+      removeRecipe: (recipeId) => {
+        const next = get().cells.filter((c) => c.recipeId !== recipeId);
+        if (next.length !== get().cells.length) set({ cells: next });
+        // Not reconcileRecipes: that leaves an entry with no cell alone (it may have
+        // been synced from another device). Here the recipe is gone, so the entry goes too.
+        useMealPlanStore.getState().removeEntry(recipeId);
       },
       clearSchedule: () => {
         const { cells, selectedWeekStart } = get();

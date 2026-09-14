@@ -31,11 +31,13 @@ export function estimatePriceForItem(
     const converted =
       convert(e.quantity, e.unit, priceEntry.unit) ??
       convertMeasure(e.quantity, e.unit, priceEntry.unit, profile);
-    if (converted === null) {
+    const price = converted === null ? NaN : converted * priceEntry.pricePerUnit;
+    // A NaN quantity or price is a gap, never a contribution: one non-finite entry
+    // would otherwise turn the whole list total into `$NaN`.
+    if (!Number.isFinite(price)) {
       gap = true;
       return { ...e, price: undefined, priceReason: 'unit-conflict' as const };
     }
-    const price = converted * priceEntry.pricePerUnit;
     total += price;
     return { ...e, price };
   });
@@ -57,7 +59,9 @@ export function estimatePrices(
   const enriched = items.map((item) => {
     const priced = estimatePriceForItem(item, overrides);
     if (priced.estimatedPrice !== undefined) total += priced.estimatedPrice;
-    if (priced.hasPriceGap && priced.estimatedPrice === undefined) unestimatedCount += 1;
+    // A partial gap (one entry priced, another unit-conflicted) still means the total is
+    // missing money the user will spend, so it counts as unestimated too.
+    if (priced.hasPriceGap) unestimatedCount += 1;
     return priced;
   });
   return { items: enriched, total, unestimatedCount };

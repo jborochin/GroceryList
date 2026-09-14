@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware';
 import 'react-native-get-random-values';
 import { v4 as uuid } from 'uuid';
 import { PantryItem } from '../types';
-import { zustandStorage, STORAGE_KEYS } from './storage';
+import { STORAGE_KEYS, isRecord, sanitizeList, zustandStorage } from './storage';
 
 interface PantryState {
   items: PantryItem[];
@@ -31,6 +31,13 @@ export const usePantryStore = create<PantryState>()(
     {
       name: STORAGE_KEYS.pantry,
       storage: zustandStorage,
+      merge: (persisted, current) => ({
+        ...current,
+        items: sanitizeList(
+          (persisted as { items?: unknown } | undefined)?.items,
+          (x): x is PantryItem => isRecord(x) && typeof x.id === 'string'
+        ),
+      }),
     }
   )
 );

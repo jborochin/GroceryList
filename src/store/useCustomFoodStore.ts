@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware';
 import 'react-native-get-random-values';
 import { v4 as uuid } from 'uuid';
 import { CustomFood } from '../types';
-import { zustandStorage, STORAGE_KEYS } from './storage';
+import { STORAGE_KEYS, zustandStorage } from './storage';
 
 // Foods the user defined by hand. Synced alongside the log — a custom food is
 // only useful if the entries referencing it can still be re-logged elsewhere.

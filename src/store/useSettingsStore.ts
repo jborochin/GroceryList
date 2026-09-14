@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { CookingFrequency, TdeeInputs, UserSettings } from '../types';
-import { zustandStorage, STORAGE_KEYS } from './storage';
+import { finiteOr } from '../utils/numbers';
+import { STORAGE_KEYS, zustandStorage } from './storage';
 
 type OnboardingPayload = {
   onboardingCompleted: true;
@@ -45,9 +46,44 @@ const DEFAULT_SETTINGS: UserSettings = {
   cookingEasePreference: 0.5,
 };
 
-const clampCalorie = (v: number) => Math.max(1000, Math.min(6000, Math.round(v)));
-const clampGram = (v: number) => Math.max(0, Math.min(1000, Math.round(v)));
-const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
+// Every clamp is NaN-safe: Math.max(1000, NaN) is NaN, so without the finiteOr a
+// NULL server column would sail through and the planner would score every meal NaN.
+const clampCalorie = (v: number) =>
+  Math.max(1000, Math.min(6000, Math.round(finiteOr(v, DEFAULT_SETTINGS.dailyCalorieTarget))));
+const clampGram = (v: number, fallback = 0) =>
+  Math.max(0, Math.min(1000, Math.round(finiteOr(v, fallback))));
+const clamp01 = (v: number) => Math.max(0, Math.min(1, finiteOr(v, 0.5)));
+const isFrequency = (v: unknown): v is CookingFrequency =>
+  v === 'batch' || v === 'few_days' || v === 'daily';
+
+/**
+ * Bring an untrusted UserSettings (a server row, an older persisted blob) inside
+ * the same bounds the local setters enforce. Total: never throws, never yields NaN.
+ */
+export function sanitizeSettings(s: UserSettings): UserSettings {
+  const split = s.macroSplit ?? DEFAULT_SETTINGS.macroSplit;
+  const splitValid = [split.proteinPct, split.carbsPct, split.fatPct].every(
+    (p) => Number.isFinite(p) && p >= 0
+  );
+  const grams = s.macroGrams ?? DEFAULT_SETTINGS.macroGrams;
+  return {
+    ...s,
+    dailyCalorieTarget: clampCalorie(s.dailyCalorieTarget),
+    macroSplit: splitValid ? split : DEFAULT_SETTINGS.macroSplit,
+    macroGrams: {
+      proteinG: clampGram(grams.proteinG, DEFAULT_SETTINGS.macroGrams.proteinG),
+      carbsG: clampGram(grams.carbsG, DEFAULT_SETTINGS.macroGrams.carbsG),
+      fatG: clampGram(grams.fatG, DEFAULT_SETTINGS.macroGrams.fatG),
+    },
+    reduceVisualEffects: Boolean(s.reduceVisualEffects),
+    onboardingCompleted: Boolean(s.onboardingCompleted),
+    tdeeInputs: s.tdeeInputs ?? null,
+    cuisinePreferences: dedupedStrings(s.cuisinePreferences),
+    dietaryRestrictions: dedupedStrings(s.dietaryRestrictions),
+    cookingFrequency: isFrequency(s.cookingFrequency) ? s.cookingFrequency : 'few_days',
+    cookingEasePreference: clamp01(s.cookingEasePreference),
+  };
+}
 const dedupedStrings = (xs: unknown): string[] => {
   if (!Array.isArray(xs)) return [];
   const out: string[] = [];
@@ -148,7 +184,7 @@ export const useSettingsStore = create<SettingsState>()(
         });
       },
       resetSettings: () => set({ settings: DEFAULT_SETTINGS }),
-      hydrateFromServer: (settings) => set({ settings }),
+      hydrateFromServer: (settings) => set({ settings: sanitizeSettings(settings) }),
     }),
     {
       name: STORAGE_KEYS.settings,

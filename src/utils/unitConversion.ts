@@ -76,23 +76,28 @@ export function convert(qty: number, fromUnit: string, toUnit: string): number |
  * when the value crosses a threshold. Leaves unknown units untouched.
  */
 export function prettyUnit(qty: number, unit: string): { quantity: number; unit: string } {
-  const def = UNIT_TABLE[unit];
+  const def = Object.prototype.hasOwnProperty.call(UNIT_TABLE, unit) ? UNIT_TABLE[unit] : undefined;
   if (!def) return { quantity: qty, unit };
+
+  // Relative tolerance on every threshold. Summed fractions land a hair under the
+  // line — six 1/6-cup entries total 0.9999999999999999 cup — and a strict `>=`
+  // then renders "16 tbsp" for what is exactly one cup.
+  const atLeast = (value: number, threshold: number) => value >= threshold * (1 - 1e-9);
 
   if (def.family === 'volume') {
     const tsp = qty * def.toBase;
-    if (tsp >= 768) return { quantity: round(tsp / 768), unit: 'gallon' };
-    if (tsp >= 192) return { quantity: round(tsp / 192), unit: 'quart' };
-    if (tsp >= 48) return { quantity: round(tsp / 48), unit: 'cup' };
-    if (tsp >= 3) return { quantity: round(tsp / 3), unit: 'tbsp' };
+    if (atLeast(tsp, 768)) return { quantity: round(tsp / 768), unit: 'gallon' };
+    if (atLeast(tsp, 192)) return { quantity: round(tsp / 192), unit: 'quart' };
+    if (atLeast(tsp, 48)) return { quantity: round(tsp / 48), unit: 'cup' };
+    if (atLeast(tsp, 3)) return { quantity: round(tsp / 3), unit: 'tbsp' };
     return { quantity: round(tsp), unit: 'tsp' };
   }
 
   if (def.family === 'weight') {
     const g = qty * def.toBase;
-    if (g >= 1000) return { quantity: round(g / 1000), unit: 'kg' };
-    if (g >= 453.592) return { quantity: round(g / 453.592), unit: 'lb' };
-    if (g >= 28.3495) return { quantity: round(g / 28.3495), unit: 'oz' };
+    if (atLeast(g, 1000)) return { quantity: round(g / 1000), unit: 'kg' };
+    if (atLeast(g, 453.592)) return { quantity: round(g / 453.592), unit: 'lb' };
+    if (atLeast(g, 28.3495)) return { quantity: round(g / 28.3495), unit: 'oz' };
     return { quantity: round(g), unit: 'g' };
   }
 

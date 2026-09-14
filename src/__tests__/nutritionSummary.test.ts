@@ -64,3 +64,15 @@ describe('computeNutritionSummary', () => {
     expect(s.variancePct.calories).toBeCloseTo(0, 5);
   });
 });
+
+describe('computeNutritionSummary — dangling recipe ids', () => {
+  it('flags hasMissingData when a plan entry points at a recipe that no longer exists', () => {
+    const s = computeNutritionSummary(
+      [{ recipeId: 'gone', desiredServings: 2 }],
+      [recipe('a', 700, 50)],
+      settings
+    );
+    expect(s.hasMissingData).toBe(true);
+    expect(s.weekly.calories).toBe(0);
+  });
+});
