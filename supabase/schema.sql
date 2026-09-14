@@ -7,6 +7,7 @@
 create or replace function public.touch_updated_at()
 returns trigger
 language plpgsql
+set search_path = public, pg_temp
 as $$
 begin
   new.updated_at = now();
@@ -42,9 +43,16 @@ create policy "profiles_delete_own" on public.profiles for delete using (auth.ui
 
 -- =====================================================================
 -- 2. recipes
+--
+-- Keyed by (user_id, id), NOT id alone. Catalog clones and seed recipes carry
+-- a deterministic id (UUIDv5 of the meal slug, src/utils/deterministicId.ts),
+-- so two accounts legitimately hold the same recipe id. With `id` as the whole
+-- key the first account to sync a clone owned it and every other account's
+-- upsert failed against a row its RLS can't see — forever, via the outbox.
+-- Existing installs are migrated by the DO block after the create.
 -- =====================================================================
 create table if not exists public.recipes (
-  id uuid primary key,
+  id uuid not null,
   user_id uuid not null references auth.users(id) on delete cascade,
   title text not null,
   source_url text,
@@ -55,12 +63,36 @@ create table if not exists public.recipes (
   image_url text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  deleted_at timestamptz
+  deleted_at timestamptz,
+  primary key (user_id, id)
 );
 
 -- Migration for existing installs (the create-table above is a no-op once the
 -- table exists): add the recipe photo column captured during web import.
 alter table public.recipes add column if not exists image_url text;
+
+-- Migration for existing installs: single-column PK → (user_id, id). The old
+-- meal_plan_entries FK depends on the old PK, so it goes first; the composite
+-- FK is (re)created in section 3 below.
+do $$
+begin
+  if exists (
+    select 1 from pg_constraint where conname = 'meal_plan_entries_recipe_id_fkey'
+  ) then
+    alter table public.meal_plan_entries drop constraint meal_plan_entries_recipe_id_fkey;
+  end if;
+  if exists (
+    select 1
+    from pg_constraint c
+    join pg_class t on t.oid = c.conrelid
+    join pg_namespace n on n.oid = t.relnamespace
+    where n.nspname = 'public' and t.relname = 'recipes' and c.contype = 'p'
+      and array_length(c.conkey, 1) = 1
+  ) then
+    alter table public.recipes drop constraint recipes_pkey;
+    alter table public.recipes add constraint recipes_pkey primary key (user_id, id);
+  end if;
+end $$;
 
 create index if not exists recipes_user_updated_idx on public.recipes(user_id, updated_at);
 
@@ -85,12 +117,28 @@ create policy "recipes_delete_own" on public.recipes for delete using (auth.uid(
 -- =====================================================================
 create table if not exists public.meal_plan_entries (
   user_id uuid not null references auth.users(id) on delete cascade,
-  recipe_id uuid not null references public.recipes(id) on delete cascade,
+  recipe_id uuid not null,
   desired_servings numeric not null,
   updated_at timestamptz not null default now(),
   deleted_at timestamptz,
-  primary key (user_id, recipe_id)
+  primary key (user_id, recipe_id),
+  -- Composite: a plan entry may only reference a recipe its own user owns, and a
+  -- cascade can only ever reach that user's rows.
+  constraint meal_plan_entries_recipe_fkey
+    foreign key (user_id, recipe_id) references public.recipes(user_id, id) on delete cascade
 );
+
+-- Migration for existing installs: add the composite FK if the create above was a no-op.
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'meal_plan_entries_recipe_fkey'
+  ) then
+    alter table public.meal_plan_entries
+      add constraint meal_plan_entries_recipe_fkey
+      foreign key (user_id, recipe_id) references public.recipes(user_id, id) on delete cascade;
+  end if;
+end $$;
 
 create index if not exists meal_plan_user_updated_idx on public.meal_plan_entries(user_id, updated_at);
 
@@ -212,7 +260,7 @@ create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, pg_temp
 as $$
 begin
   insert into public.profiles(id) values (new.id) on conflict do nothing;
@@ -220,6 +268,12 @@ begin
   return new;
 end;
 $$;
+
+-- SECURITY DEFINER + the default PUBLIC execute grant would let any anon caller
+-- invoke this through /rest/v1/rpc. Only the auth service's role needs it.
+revoke execute on function public.handle_new_user() from public, anon, authenticated;
+grant execute on function public.handle_new_user() to supabase_auth_admin;
+revoke execute on function public.touch_updated_at() from public, anon, authenticated;
 
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
@@ -474,8 +528,11 @@ as $$
     in_catalog = public.ingredient_demand.in_catalog or excluded.in_catalog;
 $$;
 
--- Service role only, same as the table it writes.
-revoke execute on function public.bump_ingredient_demand(text, boolean) from anon, authenticated;
+-- Service role only, same as the table it writes. PUBLIC must be in the revoke:
+-- Postgres grants EXECUTE to PUBLIC on every new function and anon/authenticated
+-- inherit it, so revoking from those two alone changes nothing.
+revoke execute on function public.bump_ingredient_demand(text, boolean) from public, anon, authenticated;
+grant execute on function public.bump_ingredient_demand(text, boolean) to service_role;
 
 -- =====================================================================
 -- 12. food_log_entries (per user)

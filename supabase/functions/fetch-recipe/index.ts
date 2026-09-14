@@ -1,8 +1,20 @@
 // Supabase Edge Function: fetch-recipe
 // Fetches an arbitrary recipe URL server-side so the web client can bypass CORS.
 // Native (iOS/Android) clients do not call this function — they fetch directly.
+//
+// This is an open fetch proxy reachable with the public anon key, so it is the
+// most exposed thing in the project. Three guards, all load-bearing:
+//   1. Every hop is validated, not just the first URL. `redirect: 'follow'` let a
+//      public host 302 the function into 169.254.169.254 or an internal service
+//      and hand the body back to the caller.
+//   2. Bodies are capped (request and upstream), and only HTML-ish content types
+//      are read at all.
+//   3. The paid residential-proxy tier (ScrapingBee) is only reachable by a
+//      signed-in user, never by the bare anon key.
 
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
+import { corsHeaders, isSignedIn, jsonResponse, readJsonBody, readTextCapped } from '../_shared/http.ts';
+import { fetchFollowingSafeRedirects, validateFetchUrl as validateUrl } from '../_shared/urlGuard.ts';
 
 const DESKTOP_UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
@@ -43,69 +55,20 @@ const HEADER_PRESETS: Record<string, Record<string, string>> = {
 };
 
 const FETCH_TIMEOUT_MS = 15_000;
-
-const CORS_HEADERS: Record<string, string> = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
-
-function json(status: number, body: unknown): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
-  });
-}
-
-function isPrivateHostname(hostname: string): boolean {
-  const h = hostname.toLowerCase().replace(/^\[|\]$/g, '');
-  if (h === 'localhost' || h.endsWith('.localhost')) return true;
-  if (h.endsWith('.local') || h.endsWith('.internal')) return true;
-  if (h === '::1' || h === '0:0:0:0:0:0:0:1') return true;
-  const ipv4 = h.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
-  if (ipv4) {
-    const a = parseInt(ipv4[1], 10);
-    const b = parseInt(ipv4[2], 10);
-    if (a === 0 || a === 127 || a === 10) return true;
-    if (a === 169 && b === 254) return true;
-    if (a === 172 && b >= 16 && b <= 31) return true;
-    if (a === 192 && b === 168) return true;
-  }
-  return false;
-}
-
-type ValidationResult = { url: URL } | { error: string };
-
-function validateUrl(input: unknown): ValidationResult {
-  if (typeof input !== 'string' || !input.trim()) return { error: 'url is required' };
-  let parsed: URL;
-  try {
-    parsed = new URL(input.trim());
-  } catch {
-    return { error: 'url is malformed' };
-  }
-  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-    return { error: 'only http(s) urls are allowed' };
-  }
-  if (isPrivateHostname(parsed.hostname)) {
-    return { error: 'hostname is not allowed' };
-  }
-  return { url: parsed };
-}
+/** Largest upstream document read. Recipe pages are well under 1 MB; Instagram's shell ~600 KB. */
+const MAX_HTML_BYTES = 5 * 1024 * 1024;
 
 serve(async (req: Request): Promise<Response> => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: CORS_HEADERS });
+    return new Response('ok', { headers: corsHeaders(req) });
   }
   if (req.method !== 'POST') {
-    return json(405, { ok: false, kind: 'method-not-allowed' });
+    return jsonResponse(req, 405, { ok: false, kind: 'method-not-allowed' });
   }
 
-  let body: { url?: unknown; preset?: unknown };
-  try {
-    body = await req.json();
-  } catch {
-    return json(200, { ok: false, kind: 'bad-request', message: 'invalid json body' });
+  const body = await readJsonBody<{ url?: unknown; preset?: unknown }>(req);
+  if (!body) {
+    return jsonResponse(req, 200, { ok: false, kind: 'bad-request', message: 'invalid json body' });
   }
 
   // Unknown or absent preset falls back to the browser headers, so existing
@@ -115,15 +78,21 @@ serve(async (req: Request): Promise<Response> => {
 
   const validated = validateUrl(body.url);
   if ('error' in validated) {
-    return json(200, { ok: false, kind: 'bad-request', message: validated.error });
+    return jsonResponse(req, 200, { ok: false, kind: 'bad-request', message: validated.error });
   }
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
-    const direct = await fetchDirect(validated.url.toString(), controller.signal, headers);
+    const direct = await fetchDirect(validated.url, controller.signal, headers);
     if (direct.ok) {
-      return json(200, { ok: true, html: direct.html, status: direct.status, finalUrl: direct.finalUrl });
+      return jsonResponse(req, 200, { ok: true, html: direct.html, status: direct.status, finalUrl: direct.finalUrl });
+    }
+    if (direct.kind === 'blocked-redirect') {
+      return jsonResponse(req, 200, { ok: false, kind: 'bad-request', message: 'hostname is not allowed' });
+    }
+    if (direct.kind === 'too-large' || direct.kind === 'not-html') {
+      return jsonResponse(req, 200, { ok: false, kind: 'upstream', message: 'unsupported document' });
     }
     // Bot-protected sites (Cloudflare/Akamai) typically return 403/429/503 to
     // datacenter IPs even with a real-browser header set. Fall back to the most
@@ -131,28 +100,32 @@ serve(async (req: Request): Promise<Response> => {
     if (isBlockedStatus(direct.status)) {
       const archived = await fetchViaWayback(validated.url.toString(), controller.signal);
       if (archived) {
-        return json(200, { ok: true, html: archived.html, status: 200, finalUrl: archived.finalUrl, viaWayback: true });
+        return jsonResponse(req, 200, { ok: true, html: archived.html, status: 200, finalUrl: archived.finalUrl, viaWayback: true });
       }
       // Third-tier fallback for never-archived URLs: a residential-IP scraping
       // service. Gated on SCRAPINGBEE_API_KEY so dev/test environments without
-      // the secret keep the original failure mode instead of erroring out.
-      const scraped = await fetchViaScrapingBee(validated.url.toString(), controller.signal);
-      if (scraped) {
-        return json(200, { ok: true, html: scraped.html, status: 200, finalUrl: scraped.finalUrl, viaScrapingBee: true });
+      // the secret keep the original failure mode, and on a signed-in caller so
+      // the public anon key cannot spend credits.
+      if (isSignedIn(req)) {
+        const scraped = await fetchViaScrapingBee(validated.url.toString(), controller.signal);
+        if (scraped) {
+          return jsonResponse(req, 200, { ok: true, html: scraped.html, status: 200, finalUrl: scraped.finalUrl, viaScrapingBee: true });
+        }
       }
     }
-    return json(200, {
+    return jsonResponse(req, 200, {
       ok: false,
       kind: 'upstream',
       status: direct.status,
       message: `HTTP ${direct.status}`,
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'fetch failed';
     if (err instanceof DOMException && err.name === 'AbortError') {
-      return json(200, { ok: false, kind: 'timeout', message: 'fetch timed out' });
+      return jsonResponse(req, 200, { ok: false, kind: 'timeout', message: 'fetch timed out' });
     }
-    return json(200, { ok: false, kind: 'network', message });
+    // Runtime error text can carry the URL and internals; log it, don't return it.
+    console.error('fetch-recipe failed', err instanceof Error ? err.message : err);
+    return jsonResponse(req, 200, { ok: false, kind: 'network', message: 'fetch failed' });
   } finally {
     clearTimeout(timer);
   }
@@ -160,24 +133,40 @@ serve(async (req: Request): Promise<Response> => {
 
 type DirectFetch =
   | { ok: true; html: string; status: number; finalUrl: string }
-  | { ok: false; status: number };
+  | { ok: false; status: number; kind: 'http' | 'blocked-redirect' | 'too-large' | 'not-html' };
 
+function isHtmlContentType(value: string | null): boolean {
+  if (!value) return true; // some hosts omit it; the parser copes with non-HTML
+  const type = value.split(';')[0].trim().toLowerCase();
+  return type === 'text/html' || type === 'application/xhtml+xml' || type === 'text/plain';
+}
+
+/**
+ * Fetch with every redirect hop re-validated (see _shared/urlGuard.ts). A redirect
+ * into a private range is reported as `blocked-redirect` without being requested;
+ * the caller turns that into the same error the initial check gives.
+ */
 async function fetchDirect(
-  url: string,
+  start: URL,
   signal: AbortSignal,
   headers: Record<string, string> = BROWSER_HEADERS,
 ): Promise<DirectFetch> {
-  const res = await fetch(url, {
-    headers,
-    signal,
-    redirect: 'follow',
-  });
+  const result = await fetchFollowingSafeRedirects(start, { headers, signal });
+  if (result.kind === 'blocked-redirect') return { ok: false, status: result.status, kind: 'blocked-redirect' };
+  if (result.kind !== 'response') return { ok: false, status: result.status, kind: 'http' };
+  const res = result.response;
   if (!res.ok) {
     // Drain body so the connection can be reused / closed cleanly.
-    try { await res.arrayBuffer(); } catch { /* ignore */ }
-    return { ok: false, status: res.status };
+    await res.arrayBuffer().catch(() => undefined);
+    return { ok: false, status: res.status, kind: 'http' };
   }
-  return { ok: true, html: await res.text(), status: res.status, finalUrl: res.url };
+  if (!isHtmlContentType(res.headers.get('content-type'))) {
+    await res.body?.cancel().catch(() => undefined);
+    return { ok: false, status: res.status, kind: 'not-html' };
+  }
+  const html = await readTextCapped(res, MAX_HTML_BYTES);
+  if (html === null) return { ok: false, status: res.status, kind: 'too-large' };
+  return { ok: true, html, status: res.status, finalUrl: result.url };
 }
 
 function isBlockedStatus(status: number): boolean {
@@ -207,6 +196,7 @@ async function fetchViaWayback(
   if (!closest?.available || !closest.timestamp) return null;
   // 2) The `id_` modifier returns the raw archived HTML without the Wayback toolbar
   // injection, which keeps JSON-LD blocks byte-identical to the original page.
+  // Wayback's own redirects stay on web.archive.org, so following them is safe.
   const rawUrl = `https://web.archive.org/web/${closest.timestamp}id_/${originalUrl}`;
   let rawRes: Response;
   try {
@@ -214,8 +204,9 @@ async function fetchViaWayback(
   } catch {
     return null;
   }
-  if (!rawRes.ok) return null;
-  return { html: await rawRes.text(), finalUrl: rawRes.url };
+  if (!rawRes.ok || !rawRes.url.startsWith('https://web.archive.org/')) return null;
+  const html = await readTextCapped(rawRes, MAX_HTML_BYTES);
+  return html === null ? null : { html, finalUrl: rawRes.url };
 }
 
 async function fetchViaScrapingBee(
@@ -241,8 +232,9 @@ async function fetchViaScrapingBee(
     return null;
   }
   if (!res.ok) {
-    try { await res.arrayBuffer(); } catch { /* ignore */ }
+    await res.arrayBuffer().catch(() => undefined);
     return null;
   }
-  return { html: await res.text(), finalUrl: originalUrl };
+  const html = await readTextCapped(res, MAX_HTML_BYTES);
+  return html === null ? null : { html, finalUrl: originalUrl };
 }

@@ -35,6 +35,7 @@ import {
   mapUsdaSearch,
 } from '../../../src/utils/foodSearchMapping.ts';
 import type { FoodItem } from '../../../src/types/index.ts';
+import { corsHeaders, jsonResponse, readJsonBody } from '../_shared/http.ts';
 
 const FDC_SEARCH = 'https://api.nal.usda.gov/fdc/v1/foods/search';
 const FDC_DETAIL = 'https://api.nal.usda.gov/fdc/v1/food';
@@ -54,19 +55,6 @@ const OFF_HEADERS: Record<string, string> = {
   'User-Agent': 'MealFlow/1.0 (https://github.com/jborochin/mealflow)',
   Accept: 'application/json',
 };
-
-const CORS_HEADERS: Record<string, string> = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
-
-function json(status: number, body: unknown): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
-  });
-}
 
 // ---------------------------------------------------------------------------
 // Cache (public.food_cache — service role only)
@@ -248,15 +236,12 @@ function cleanFdcId(v: unknown): string {
 }
 
 serve(async (req: Request): Promise<Response> => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS_HEADERS });
-  if (req.method !== 'POST') return json(405, { ok: false, kind: 'method-not-allowed' });
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders(req) });
+  if (req.method !== 'POST') return jsonResponse(req, 405, { ok: false, kind: 'method-not-allowed' });
+  const json = (status: number, body: unknown) => jsonResponse(req, status, body);
 
-  let body: { query?: unknown; barcode?: unknown; fdcId?: unknown };
-  try {
-    body = await req.json();
-  } catch {
-    return json(200, { ok: false, kind: 'bad-request', message: 'invalid json body' });
-  }
+  const body = await readJsonBody<{ query?: unknown; barcode?: unknown; fdcId?: unknown }>(req);
+  if (!body) return json(200, { ok: false, kind: 'bad-request', message: 'invalid json body' });
 
   const barcode = cleanBarcode(body.barcode);
   const fdcId = cleanFdcId(body.fdcId);
@@ -305,8 +290,10 @@ serve(async (req: Request): Promise<Response> => {
 
     return json(200, { ok: true, foods });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'fetch failed';
-    return json(200, { ok: false, kind: 'network', message });
+    // NEVER return err.message: the FDC key travels in the request URL, and Deno's
+    // transport errors read "error sending request for url (<full url>)".
+    console.error('food-search upstream failure', err instanceof Error ? err.name : err);
+    return json(200, { ok: false, kind: 'network', message: 'food database unavailable' });
   } finally {
     clearTimeout(timer);
   }

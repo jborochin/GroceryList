@@ -30,19 +30,20 @@ import { resolveIngredient } from '../../../scripts/lib/resolveIngredient.ts';
 import type { ResolveProfile } from '../../../scripts/lib/resolveIngredient.ts';
 import { normalizeName } from '../../../src/utils/normalizeName.ts';
 import { convertMeasure } from '../_shared/measure.ts';
+import { corsHeaders, isSignedIn, jsonResponse, readJsonBody } from '../_shared/http.ts';
 
-const CORS_HEADERS: Record<string, string> = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
+/** Most raw names one request will even look at, before de-duplication. */
+const MAX_RAW_NAMES = 50;
 
-function json(status: number, body: unknown): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
-  });
-}
+/**
+ * What a normalized ingredient name may look like before it is allowed to touch
+ * the database: lowercase words, digits, spaces and a little punctuation, 2–48
+ * chars. Anything else is answered `unknown` without a demand row. Without this,
+ * anyone holding the anon key could fill `ingredient_demand` with arbitrary
+ * strings of any length and steer both the weekly Kroger budget and the human
+ * enrollment queue it feeds.
+ */
+const NAME_RE = /^[a-z0-9][a-z0-9 '&.\-]{1,47}$/;
 
 /** Fallbacks used only when app_config is unreachable — same values as its defaults. */
 const CONFIG_FALLBACK = {
@@ -51,9 +52,17 @@ const CONFIG_FALLBACK = {
   ondemand_batch_max: 5,
   ondemand_store_count: 3,
   ondemand_lease_seconds: 120,
-} as const;
+};
 
-type Config = typeof CONFIG_FALLBACK;
+// Widened, not `typeof` an `as const` object: that made every field its literal
+// default (price_ttl_days: 14), so no tuned value from app_config type-checked.
+type Config = {
+  price_ttl_days: number;
+  ondemand_enabled: boolean;
+  ondemand_batch_max: number;
+  ondemand_store_count: number;
+  ondemand_lease_seconds: number;
+};
 
 /**
  * Coerce a jsonb config value to a number, tolerating `14` and `"14"` alike.
@@ -178,19 +187,22 @@ async function claimLease(
 }
 
 serve(async (req: Request): Promise<Response> => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS_HEADERS });
-  if (req.method !== 'POST') return json(405, { ok: false, kind: 'method-not-allowed' });
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders(req) });
+  if (req.method !== 'POST') return jsonResponse(req, 405, { ok: false, kind: 'method-not-allowed' });
+  const json = (status: number, body: unknown) => jsonResponse(req, status, body);
 
-  let body: { names?: unknown };
-  try {
-    body = await req.json();
-  } catch {
-    return json(200, { ok: false, kind: 'bad-request', message: 'invalid json body' });
-  }
+  const body = await readJsonBody<{ names?: unknown }>(req);
+  if (!body) return json(200, { ok: false, kind: 'bad-request', message: 'invalid json body' });
 
   if (!Array.isArray(body.names)) {
     return json(200, { ok: false, kind: 'bad-request', message: 'names must be an array' });
   }
+
+  // The anon key is public, so an anonymous caller is served from what is already
+  // published and nothing more: no demand row, no Kroger call. Signed-in users
+  // drive freshness. Silent from the client's point of view -- it only ever merges
+  // rows that carry a price.
+  const canSpend = isSignedIn(req);
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -208,14 +220,16 @@ serve(async (req: Request): Promise<Response> => {
 
   const config = await loadConfig(supabase);
 
-  // De-duplicate and normalize before anything else, so a list with "Tomatoes" and
-  // "tomato" on it costs one lookup rather than two.
+  // Cap BEFORE normalizing, so an oversized array costs nothing; then de-duplicate
+  // and normalize, so a list with "Tomatoes" and "tomato" on it costs one lookup
+  // rather than two; then admit only names shaped like ingredients.
   const names = Array.from(
     new Set(
       body.names
-        .filter((n): n is string => typeof n === 'string')
+        .slice(0, MAX_RAW_NAMES)
+        .filter((n): n is string => typeof n === 'string' && n.length <= 200)
         .map((n) => normalizeName(n))
-        .filter((n) => n.length > 0)
+        .filter((n) => NAME_RE.test(n))
     )
   ).slice(0, Math.max(1, config.ondemand_batch_max));
 
@@ -251,7 +265,9 @@ serve(async (req: Request): Promise<Response> => {
     ])
   );
 
-  await Promise.all(names.map((n) => recordDemand(supabase, n, sources.has(n))));
+  if (canSpend) {
+    await Promise.all(names.map((n) => recordDemand(supabase, n, sources.has(n))));
+  }
 
   const ttlMs = config.price_ttl_days * 24 * 60 * 60 * 1000;
   const results: Result[] = [];
@@ -276,7 +292,7 @@ serve(async (req: Request): Promise<Response> => {
     toResolve.push(source);
   }
 
-  if (!config.ondemand_enabled) {
+  if (!config.ondemand_enabled || !canSpend) {
     for (const source of toResolve) {
       const current = prices.get(source.normalized_name);
       results.push({ name: source.normalized_name, status: 'disabled', price: current });
@@ -357,6 +373,7 @@ serve(async (req: Request): Promise<Response> => {
           results.push({ name, status: 'rejected', reason: resolution.status, price: stale });
         }
       } catch (err) {
+        // Kept in the internal review table (service-role only), never in the response.
         const message = err instanceof Error ? err.message.slice(0, 80) : 'unknown';
         await supabase
           .from('price_sources')

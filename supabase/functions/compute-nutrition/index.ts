@@ -10,18 +10,7 @@ const CALORIENINJAS_ENDPOINT = 'https://api.calorieninjas.com/v1/nutrition';
 const FETCH_TIMEOUT_MS = 15_000;
 const MAX_QUERY_LENGTH = 1800; // CalorieNinjas accepts ~2000 chars per request
 
-const CORS_HEADERS: Record<string, string> = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
-
-function json(status: number, body: unknown): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
-  });
-}
+import { corsHeaders, jsonResponse, readJsonBody } from '../_shared/http.ts';
 
 interface RequestBody {
   ingredients?: unknown;
@@ -108,18 +97,15 @@ function buildQuery(ingredients: string[]): string {
 
 serve(async (req: Request): Promise<Response> => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: CORS_HEADERS });
+    return new Response('ok', { headers: corsHeaders(req) });
   }
   if (req.method !== 'POST') {
-    return json(405, { ok: false, kind: 'method-not-allowed' });
+    return jsonResponse(req, 405, { ok: false, kind: 'method-not-allowed' });
   }
+  const json = (status: number, body: unknown) => jsonResponse(req, status, body);
 
-  let raw: RequestBody;
-  try {
-    raw = await req.json();
-  } catch {
-    return json(200, { ok: false, kind: 'bad-request', message: 'invalid json body' });
-  }
+  const raw = await readJsonBody<RequestBody>(req);
+  if (!raw) return json(200, { ok: false, kind: 'bad-request', message: 'invalid json body' });
 
   const validated = validate(raw);
   if ('error' in validated) {
@@ -143,12 +129,14 @@ serve(async (req: Request): Promise<Response> => {
       signal: controller.signal,
     });
     if (!res.ok) {
+      // Log the upstream body for debugging; never reflect it to the caller.
       const text = await res.text().catch(() => '');
+      console.error('compute-nutrition upstream', res.status, text.slice(0, 300));
       return json(200, {
         ok: false,
         kind: 'upstream',
         status: res.status,
-        message: text ? text.slice(0, 300) : `CalorieNinjas HTTP ${res.status}`,
+        message: `CalorieNinjas HTTP ${res.status}`,
       });
     }
     const data = (await res.json()) as CalorieNinjasResponse;
@@ -190,8 +178,8 @@ serve(async (req: Request): Promise<Response> => {
     if (err instanceof DOMException && err.name === 'AbortError') {
       return json(200, { ok: false, kind: 'timeout', message: 'CalorieNinjas request timed out' });
     }
-    const message = err instanceof Error ? err.message : 'fetch failed';
-    return json(200, { ok: false, kind: 'network', message });
+    console.error('compute-nutrition failed', err instanceof Error ? err.name : err);
+    return json(200, { ok: false, kind: 'network', message: 'nutrition service unavailable' });
   } finally {
     clearTimeout(timer);
   }

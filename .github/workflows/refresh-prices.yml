@@ -40,6 +40,12 @@ concurrency:
   group: refresh-prices
   cancel-in-progress: false
 
+# The job only needs to read the repo. Without this it inherits the repository's
+# default GITHUB_TOKEN scope while SUPABASE_SERVICE_ROLE_KEY sits in the same
+# environment, so a compromised dependency in `npm ci` would get both.
+permissions:
+  contents: read
+
 jobs:
   refresh:
     runs-on: ubuntu-latest
